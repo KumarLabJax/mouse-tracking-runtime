@@ -329,6 +329,10 @@ class PoseHighResolutionNet(nn.Module):
         )
 
         self.pretrained_layers = cfg['MODEL']['EXTRA']['PRETRAINED_LAYERS']
+        if 'FROZEN_LAYERS' in cfg['MODEL']['EXTRA']:
+            self.frozen_layers = cfg['MODEL']['EXTRA']['FROZEN_LAYERS']
+        else:
+            self.frozen_layers = []
 
     def _make_transition_layer(
             self, num_channels_pre_layer, num_channels_cur_layer):
@@ -490,6 +494,11 @@ class PoseHighResolutionNet(nn.Module):
         elif pretrained:
             logger.error('=> please download pre-trained models first!')
             raise ValueError('{} is not exist!'.format(pretrained))
+
+        if self.frozen_layers:
+            for name, param in self.named_parameters():
+                if name.split('.')[0] in self.frozen_layers:
+                    param.requires_grad = False
 
 
 def get_pose_net(cfg, is_train, **kwargs):
