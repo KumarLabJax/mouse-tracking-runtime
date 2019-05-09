@@ -59,6 +59,7 @@ htmlcov/
 .coverage
 .coverage.*
 .cache
+.dirconf
 nosetests.xml
 coverage.xml
 *,cover
@@ -85,10 +86,14 @@ lib/pycocotools/_mask.c
 lib/nms/cpu_nms.c
 
 output/*
+output-*/*
 models/*
 log/*
+log-*/*
 data/*
 external/
+temp/
+model-archive/
 
 draws/
 plot/
