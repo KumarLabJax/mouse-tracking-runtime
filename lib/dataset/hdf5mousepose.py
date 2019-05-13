@@ -6,6 +6,8 @@ import h5py
 import numpy as np
 import random
 import torch
+from torchvision.transforms import ColorJitter
+from torchvision.transforms.functional import to_pil_image, to_tensor
 
 from dataset.JointsDataset import JointsDataset
 from utils.transforms import affine_transform
@@ -39,8 +41,17 @@ class HDF5MousePose(JointsDataset):
 
     def __init__(self, cfg, root, image_set, is_train, transform=None):
         super().__init__(cfg, root, image_set, is_train, transform)
+
+        self.prob_randomized_occlusion = cfg.DATASET.PROB_RANDOMIZED_OCCLUSION
+        self.max_occlusion_size = cfg.DATASET.MAX_OCCLUSION_SIZE
+        self.occlusion_opacities = cfg.DATASET.OCCLUSION_OPACITIES
+        self.prob_randomized_center = cfg.DATASET.PROB_RANDOMIZED_CENTER
+        self.jitter_center = cfg.DATASET.JITTER_CENTER
+        self.jitter_brightness = cfg.DATASET.JITTER_BRIGHTNESS
+        self.jitter_contrast = cfg.DATASET.JITTER_CONTRAST
+        self.jitter_saturation = cfg.DATASET.JITTER_SATURATION
+
         self.num_joints = 12
-        # self.pixel_std = 200
 
         self.flip_pairs = [
             [LEFT_EAR_INDEX, RIGHT_EAR_INDEX],
@@ -121,6 +132,13 @@ class HDF5MousePose(JointsDataset):
             r = np.clip(np.random.randn()*rf, -rf*2, rf*2) \
                 if random.random() <= 0.6 else 0
 
+            if self.prob_randomized_center > 0 and random.random() <= self.prob_randomized_center:
+                c[0] = data_numpy.shape[1] * random.random()
+                c[1] = data_numpy.shape[0] * random.random()
+            elif self.jitter_center > 0:
+                c[0] += self.image_size[0] * self.jitter_center * np.random.randn()
+                c[1] += self.image_size[1] * self.jitter_center * np.random.randn()
+
             if self.flip and random.random() <= 0.5:
                 data_numpy = data_numpy[:, ::-1, :]
                 joints, joints_vis = fliplr_joints(
@@ -133,6 +151,16 @@ class HDF5MousePose(JointsDataset):
             trans,
             (int(self.image_size[0]), int(self.image_size[1])),
             flags=cv2.INTER_LINEAR)
+
+        if self.is_train:
+            if self.jitter_brightness > 0 or self.jitter_contrast > 0 or self.jitter_saturation > 0:
+                input = to_pil_image(input)
+                input = ColorJitter(self.jitter_brightness, self.jitter_contrast, self.jitter_saturation)(input)
+                input = to_tensor(input).squeeze(0).numpy()
+                input = (input * 255).astype(np.uint8)
+
+            if self.prob_randomized_occlusion > 0 and random.random() <= self.prob_randomized_occlusion:
+                random_occlusion(input, self.max_occlusion_size, np.random.choice(self.occlusion_opacities))
 
         if self.transform:
             input = self.transform(input)
@@ -161,3 +189,35 @@ class HDF5MousePose(JointsDataset):
         input = torch.stack([input.squeeze(0)] * 3)
 
         return input, target, target_weight, meta
+
+
+def random_occlusion(img, max_occlusion_size, opacity):
+    img_height, img_width = img.shape
+
+    occ_center_x = np.random.rand() * img_width
+    occ_center_y = np.random.rand() * img_height
+
+    if np.random.rand() < 0.5:
+        occ_min_x = occ_center_x - max_occlusion_size / 2
+        occ_min_y = occ_center_y - max_occlusion_size / 2
+
+        random_points = (
+            np.random.rand(1, np.random.randint(3, 7), 2) * max_occlusion_size
+            + np.array([[[occ_min_x, occ_min_y]]])
+        )
+        random_points = random_points.astype(np.int32)
+
+        mask = np.zeros([img_height, img_width], dtype=np.uint8)
+        cv2.fillPoly(mask, random_points, 255)
+    else:
+        mask = np.zeros([img_height, img_width], dtype=np.uint8)
+        cv2.ellipse(
+            mask,
+            (int(occ_center_x), int(occ_center_y)),
+            (int(max_occlusion_size * np.random.rand() / 2), int(max_occlusion_size * np.random.rand() / 2)),
+            np.random.randint(0, 359),
+            0, 360, 255, -1)
+    mask = mask.astype(np.bool)
+
+    img_float = img.astype(np.float32)
+    img[mask] = img_float[mask] * (1 - opacity) + np.random.randint(0, 255) * opacity

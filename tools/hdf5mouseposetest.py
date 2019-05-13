@@ -60,16 +60,13 @@ def main():
         ])
     )
 
-    for i in itertools.chain(range(0, 20, 2), range(400, 410)):
+    for i in itertools.chain(range(0, 20, 2), range(400, 410), range(500, 510)):
         print('doing', i)
         input, target, target_weight, meta = train_dataset[i]
 
-        print(input.shape)
-        print(target.shape)
-
-        plt.imshow(input.squeeze(0).numpy(), cmap='gray')
+        plt.imshow(input[0, ...].numpy(), cmap='gray')
         plt.show()
-        plt.imshow(target[0, ...].numpy())
+        plt.imshow(target.sum(dim=0).numpy())
         plt.show()
 
 
