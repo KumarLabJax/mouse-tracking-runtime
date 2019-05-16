@@ -206,7 +206,7 @@ def main():
         if best_perf is None or perf_indicator >= best_perf:
             best_perf = perf_indicator
             best_model = True
-            print('*** NEW BEST ***')
+            print('*** NEW BEST ***', perf_indicator)
         else:
             best_model = False
 
