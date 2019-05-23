@@ -274,6 +274,9 @@ blocks_dict = {
 class PoseHighResolutionNet(nn.Module):
 
     def __init__(self, cfg, **kwargs):
+        # self.in_out_ratio = cfg['MODEL']['IMAGE_SIZE'][0] // cfg['MODEL']['HEATMAP_SIZE'][0]
+        # assert self.in_out_ratio == 4 or self.in_out_ratio == 1
+
         self.inplanes = 64
         extra = cfg.MODEL.EXTRA
         super(PoseHighResolutionNet, self).__init__()
@@ -320,13 +323,62 @@ class PoseHighResolutionNet(nn.Module):
         self.stage4, pre_stage_channels = self._make_stage(
             self.stage4_cfg, num_channels, multi_scale_output=False)
 
-        self.final_layer = nn.Conv2d(
-            in_channels=pre_stage_channels[0],
-            out_channels=cfg.MODEL.NUM_JOINTS,
-            kernel_size=extra.FINAL_CONV_KERNEL,
-            stride=1,
-            padding=1 if extra.FINAL_CONV_KERNEL == 3 else 0
-        )
+        self.head_arch = 'SIMPLE_CONV'
+        if 'HEAD_ARCH' in cfg['MODEL']['EXTRA']:
+            self.head_arch = cfg['MODEL']['EXTRA']['HEAD_ARCH']
+
+        # if self.in_out_ratio == 4:
+        if self.head_arch == 'SIMPLE_CONV':
+            self.final_layer = nn.Conv2d(
+                in_channels=pre_stage_channels[0],
+                out_channels=cfg.MODEL.NUM_JOINTS,
+                kernel_size=extra.FINAL_CONV_KERNEL,
+                stride=1,
+                padding=1 if extra.FINAL_CONV_KERNEL == 3 else 0
+            )
+        # elif self.in_out_ratio == 1:
+        elif self.head_arch == 'CONV_TRANS_UPSCALE_5x5':
+            half_chan_diff = (pre_stage_channels[0] - cfg.MODEL.NUM_JOINTS) // 2
+            convtrans1_chans = pre_stage_channels[0] - half_chan_diff
+            self.convtrans1 = nn.ConvTranspose2d(
+                in_channels=pre_stage_channels[0],
+                out_channels=convtrans1_chans,
+                kernel_size=5,
+                stride=2,
+                padding=2,
+                output_padding=1,
+            )
+            self.bn3 = nn.BatchNorm2d(convtrans1_chans, momentum=BN_MOMENTUM)
+            self.convtrans2 = nn.ConvTranspose2d(
+                in_channels=convtrans1_chans,
+                out_channels=cfg.MODEL.NUM_JOINTS,
+                kernel_size=5,
+                stride=2,
+                padding=2,
+                output_padding=1,
+            )
+        elif self.head_arch == 'CONV_TRANS_UPSCALE_3x3':
+            half_chan_diff = (pre_stage_channels[0] - cfg.MODEL.NUM_JOINTS) // 2
+            convtrans1_chans = pre_stage_channels[0] - half_chan_diff
+            self.convtrans1 = nn.ConvTranspose2d(
+                in_channels=pre_stage_channels[0],
+                out_channels=convtrans1_chans,
+                kernel_size=3,
+                stride=2,
+                padding=1,
+                output_padding=1,
+            )
+            self.bn3 = nn.BatchNorm2d(convtrans1_chans, momentum=BN_MOMENTUM)
+            self.convtrans2 = nn.ConvTranspose2d(
+                in_channels=convtrans1_chans,
+                out_channels=cfg.MODEL.NUM_JOINTS,
+                kernel_size=3,
+                stride=2,
+                padding=1,
+                output_padding=1,
+            )
+        else:
+            raise Exception('unexpected HEAD_ARCH of {}'.format(self.head_arch))
 
         self.pretrained_layers = cfg['MODEL']['EXTRA']['PRETRAINED_LAYERS']
         if 'FROZEN_LAYERS' in cfg['MODEL']['EXTRA']:
@@ -459,7 +511,14 @@ class PoseHighResolutionNet(nn.Module):
                 x_list.append(y_list[i])
         y_list = self.stage4(x_list)
 
-        x = self.final_layer(y_list[0])
+        # if self.in_out_ratio == 4:
+        if self.head_arch == 'SIMPLE_CONV':
+            x = self.final_layer(y_list[0])
+        else:
+            x = self.convtrans1(y_list[0])
+            x = self.bn3(x)
+            x = self.relu(x)
+            x = self.convtrans2(x)
 
         return x
 

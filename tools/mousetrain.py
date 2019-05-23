@@ -9,6 +9,7 @@ from __future__ import division
 from __future__ import print_function
 
 import argparse
+import csv
 import os
 import pprint
 import shutil
@@ -188,46 +189,62 @@ def main():
         last_epoch=last_epoch
     )
 
-    print('entering epoch loop from:', begin_epoch, 'to', cfg.TRAIN.END_EPOCH)
-    for epoch in range(begin_epoch, cfg.TRAIN.END_EPOCH):
-        lr_scheduler.step()
+    train_table_fname = os.path.join(final_output_dir, 'training.tsv')
+    val_table_fname = os.path.join(final_output_dir, 'validation.tsv')
+    with    open(train_table_fname, 'w', newline='') as train_table_f, \
+            open(val_table_fname, 'w', newline='') as val_table_f:
 
-        # train for one epoch
-        train(cfg, train_loader, model, criterion, optimizer, epoch,
-              final_output_dir, tb_log_dir, writer_dict)
+        train_header = ['Epoch', 'Batch', 'Loss', 'Accuracy', 'Batch Time', 'Batch Size']
+        train_table_writer = csv.DictWriter(train_table_f, fieldnames=train_header, delimiter='\t')
+        train_table_writer.writeheader()
+
+        val_header = ['Epoch', 'Loss', 'Accuracy', 'Performance Indicator']
+        val_table_writer = csv.DictWriter(val_table_f, fieldnames=val_header, delimiter='\t')
+        val_table_writer.writeheader()
+
+        print('entering epoch loop from:', begin_epoch, 'to', cfg.TRAIN.END_EPOCH)
+        for epoch in range(begin_epoch, cfg.TRAIN.END_EPOCH):
+            lr_scheduler.step()
+
+            # train for one epoch
+            train(
+                cfg, train_loader, model, criterion, optimizer, epoch,
+                final_output_dir, tb_log_dir, writer_dict,
+                dict_writer=train_table_writer)
 
 
-        # evaluate on validation set
-        perf_indicator = validate(
-            cfg, valid_loader, valid_dataset, model, criterion,
-            final_output_dir, tb_log_dir, writer_dict
+            # evaluate on validation set
+            perf_indicator = validate(
+                cfg, valid_loader, valid_dataset, model, criterion,
+                final_output_dir, tb_log_dir, writer_dict,
+                dict_writer=val_table_writer, epoch=epoch,
+            )
+
+            if best_perf is None or perf_indicator >= best_perf:
+                best_perf = perf_indicator
+                best_model = True
+                print('*** NEW BEST ***', perf_indicator)
+            else:
+                best_model = False
+
+            logger.info('=> saving checkpoint to {}'.format(final_output_dir))
+            save_checkpoint({
+                'epoch': epoch + 1,
+                'model': cfg.MODEL.NAME,
+                'state_dict': model.state_dict(),
+                'best_state_dict': model.module.state_dict(),
+                'perf': perf_indicator,
+                'optimizer': optimizer.state_dict(),
+            }, best_model, final_output_dir)
+
+        final_model_state_file = os.path.join(
+            final_output_dir, 'final_state.pth'
         )
-
-        if best_perf is None or perf_indicator >= best_perf:
-            best_perf = perf_indicator
-            best_model = True
-            print('*** NEW BEST ***', perf_indicator)
-        else:
-            best_model = False
-
-        logger.info('=> saving checkpoint to {}'.format(final_output_dir))
-        save_checkpoint({
-            'epoch': epoch + 1,
-            'model': cfg.MODEL.NAME,
-            'state_dict': model.state_dict(),
-            'best_state_dict': model.module.state_dict(),
-            'perf': perf_indicator,
-            'optimizer': optimizer.state_dict(),
-        }, best_model, final_output_dir)
-
-    final_model_state_file = os.path.join(
-        final_output_dir, 'final_state.pth'
-    )
-    logger.info('=> saving final model state to {}'.format(
-        final_model_state_file)
-    )
-    torch.save(model.module.state_dict(), final_model_state_file)
-    writer_dict['writer'].close()
+        logger.info('=> saving final model state to {}'.format(
+            final_model_state_file)
+        )
+        torch.save(model.module.state_dict(), final_model_state_file)
+        writer_dict['writer'].close()
 
 
 if __name__ == '__main__':

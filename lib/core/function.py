@@ -25,7 +25,7 @@ logger = logging.getLogger(__name__)
 
 
 def train(config, train_loader, model, criterion, optimizer, epoch,
-          output_dir, tb_log_dir, writer_dict):
+          output_dir, tb_log_dir, writer_dict, dict_writer=None):
     batch_time = AverageMeter()
     data_time = AverageMeter()
     losses = AverageMeter()
@@ -68,7 +68,8 @@ def train(config, train_loader, model, criterion, optimizer, epoch,
         acc.update(avg_acc, cnt)
 
         # measure elapsed time
-        batch_time.update(time.time() - end)
+        elapsed_time = time.time() - end
+        batch_time.update(elapsed_time)
         end = time.time()
 
         if i % config.PRINT_FREQ == 0:
@@ -93,9 +94,19 @@ def train(config, train_loader, model, criterion, optimizer, epoch,
             save_debug_images(config, input, meta, target, pred*4, output,
                               prefix)
 
+        if dict_writer:
+            dict_writer.writerow({
+                'Epoch': epoch,
+                'Batch': i,
+                'Loss': loss.item(),
+                'Accuracy': avg_acc,
+                'Batch Time': elapsed_time,
+                'Batch Size': input.size(0),
+            })
+
 
 def validate(config, val_loader, val_dataset, model, criterion, output_dir,
-             tb_log_dir, writer_dict=None):
+             tb_log_dir, writer_dict=None, dict_writer=None, epoch=None):
     batch_time = AverageMeter()
     losses = AverageMeter()
     acc = AverageMeter()
@@ -240,6 +251,14 @@ def validate(config, val_loader, val_dataset, model, criterion, output_dir,
                     global_steps
                 )
             writer_dict['valid_global_steps'] = global_steps + 1
+
+        if dict_writer:
+            dict_writer.writerow({
+                'Epoch': epoch,
+                'Loss': losses.avg,
+                'Accuracy': acc.avg,
+                'Performance Indicator': perf_indicator,
+            })
 
     return perf_indicator
 
