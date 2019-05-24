@@ -25,7 +25,7 @@ logger = logging.getLogger(__name__)
 
 
 def train(config, train_loader, model, criterion, optimizer, epoch,
-          output_dir, tb_log_dir, writer_dict, dict_writer=None):
+          output_dir, tb_log_dir, writer_dict=None, dict_writer=None):
     batch_time = AverageMeter()
     data_time = AverageMeter()
     losses = AverageMeter()
@@ -84,11 +84,12 @@ def train(config, train_loader, model, criterion, optimizer, epoch,
                       data_time=data_time, loss=losses, acc=acc)
             logger.info(msg)
 
-            writer = writer_dict['writer']
-            global_steps = writer_dict['train_global_steps']
-            writer.add_scalar('train_loss', losses.val, global_steps)
-            writer.add_scalar('train_acc', acc.val, global_steps)
-            writer_dict['train_global_steps'] = global_steps + 1
+            if writer_dict:
+                writer = writer_dict['writer']
+                global_steps = writer_dict['train_global_steps']
+                writer.add_scalar('train_loss', losses.val, global_steps)
+                writer.add_scalar('train_acc', acc.val, global_steps)
+                writer_dict['train_global_steps'] = global_steps + 1
 
             prefix = '{}_{}'.format(os.path.join(output_dir, 'train'), i)
             save_debug_images(config, input, meta, target, pred*4, output,

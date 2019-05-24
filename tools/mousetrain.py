@@ -100,11 +100,11 @@ def main():
         final_output_dir)
     # logger.info(pprint.pformat(model))
 
-    writer_dict = {
-        'writer': SummaryWriter(log_dir=tb_log_dir),
-        'train_global_steps': 0,
-        'valid_global_steps': 0,
-    }
+    # writer_dict = {
+    #     'writer': SummaryWriter(log_dir=tb_log_dir),
+    #     'train_global_steps': 0,
+    #     'valid_global_steps': 0,
+    # }
 
     # THIS FUNCTIONALITY IS BROKEN UNTIL
     # https://github.com/pytorch/pytorch/issues/19374 IS FIXED
@@ -209,14 +209,14 @@ def main():
             # train for one epoch
             train(
                 cfg, train_loader, model, criterion, optimizer, epoch,
-                final_output_dir, tb_log_dir, writer_dict,
+                final_output_dir, tb_log_dir, writer_dict=None,
                 dict_writer=train_table_writer)
 
 
             # evaluate on validation set
             perf_indicator = validate(
                 cfg, valid_loader, valid_dataset, model, criterion,
-                final_output_dir, tb_log_dir, writer_dict,
+                final_output_dir, tb_log_dir, writer_dict=None,
                 dict_writer=val_table_writer, epoch=epoch,
             )
 
@@ -244,7 +244,7 @@ def main():
             final_model_state_file)
         )
         torch.save(model.module.state_dict(), final_model_state_file)
-        writer_dict['writer'].close()
+        # writer_dict['writer'].close()
 
 
 if __name__ == '__main__':

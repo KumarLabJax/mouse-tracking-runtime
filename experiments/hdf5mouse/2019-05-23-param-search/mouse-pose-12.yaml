@@ -53,6 +53,7 @@ MODEL:
     HEAD_ARCH: 'SIMPLE_CONV'
     # HEAD_ARCH: 'CONV_TRANS_UPSCALE_5x5'
     # HEAD_ARCH: 'CONV_TRANS_UPSCALE_3x3'
+    PRETRAINED_LAYERS: []
     # PRETRAINED_LAYERS:
     # - 'conv1'
     # - 'bn1'
@@ -65,6 +66,7 @@ MODEL:
     # - 'stage3'
     # - 'transition3'
     # - 'stage4'
+    FROZEN_LAYERS: []
     # FROZEN_LAYERS:
     # - 'conv1'
     # - 'bn1'
