@@ -32,9 +32,14 @@ then
             if [[ -f "${VIDEO_FILE}" ]]
             then
                 echo "BEGIN PROCESSING: ${VIDEO_FILE}"
-                #singularity run --nv deep-hres-net-2019-05-13.simg -c "python3 /pipeline-environment/deep-hres-net/tools/mousetrain.py --cfg '${CONFIG_FILE}'"
-                H5_OUT_FILE="${VIDEO_FILE%.*}_pose_est_v3.h5"
-                singularity run --nv ~/deep-hres-net-2019-05-13.simg -c "python3 /pipeline-environment/deep-hres-net/tools/infermousepose.py --model-file ~/projects/deep-hres-hyperparams/hyper-param1-output/hdf5mousepose/pose_hrnet/hyper-param1/model_best.pth ~/projects/deep-hres-hyperparams/hyper-param1.yaml '${VIDEO_FILE}' '${H5_OUT_FILE}'"
+                module load singularity
+                H5_OUT_FILE="${VIDEO_FILE%.*}_pose_est_v4.h5"
+                singularity exec --nv ~/deep-hres-net-2019-05-27.simg \
+                    python3 /pipeline-environment/deep-hres-net/tools/infermousepose.py \
+                    --model-file ~/projects/deep-hres-hyperparams-2019-05-24/output-full-mouse-pose/hdf5mousepose/pose_hrnet/mouse-pose-6/model_best.pth \
+                    ~/projects/deep-hres-hyperparams-2019-05-24/experiments/hdf5mouse/2019-05-23-param-search/mouse-pose-6.yaml \
+                    '${VIDEO_FILE}' \
+                    '${H5_OUT_FILE}'
                 echo "FINISHED PROCESSING: ${VIDEO_FILE}"
             else
                 echo "ERROR: could not find configuration file: ${VIDEO_FILE}" >&2

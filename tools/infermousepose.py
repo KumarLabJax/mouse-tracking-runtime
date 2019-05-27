@@ -117,7 +117,9 @@ def main():
                 batch.clear()
 
                 inf_out = model(batch_tensor)
-                inf_out = torchfunc.upsample(inf_out, scale_factor=4, mode='bicubic', align_corners=False)
+                in_out_ratio = batch_tensor.size(-1) // inf_out.size(-1)
+                if in_out_ratio == 4:
+                    inf_out = torchfunc.upsample(inf_out, scale_factor=4, mode='bicubic', align_corners=False)
                 inf_out = inf_out.cpu().numpy()
 
                 preds, maxvals = get_max_preds(inf_out)
