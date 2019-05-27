@@ -91,22 +91,6 @@ def main():
 
     with torch.no_grad():
 
-        batch = []
-        def perform_inference():
-            if batch:
-                batch_tensor = torch.stack([xform(img) for img in batch]).cuda()
-                batch.clear()
-
-                inf_out = model(batch_tensor)
-                inf_out = torchfunc.upsample(inf_out, scale_factor=4, mode='bicubic', align_corners=False)
-                inf_out = inf_out.cpu().numpy()
-
-                preds, maxvals = get_max_preds(inf_out)
-                preds = preds.astype(np.uint16)
-                maxvals = maxvals.squeeze(2)
-
-                return preds, maxvals
-
         with h5py.File(cfg.DATASET.ROOT, 'r') as hdf5file:
             l2_pixel_err_sum = None
             l2_pixel_err_max = None
