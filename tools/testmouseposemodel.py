@@ -3,6 +3,8 @@ import h5py
 import numpy as np
 import time
 
+import matplotlib.pyplot as plt
+
 import torch
 import torch.nn.parallel
 import torch.nn.functional as torchfunc
@@ -42,6 +44,26 @@ BASE_TAIL_INDEX = 9
 MID_TAIL_INDEX = 10
 TIP_TAIL_INDEX = 11
 
+INDEX_NAMES = [
+    'Nose',
+
+    'Left Ear',
+    'Right Ear',
+
+    'Base Neck',
+
+    'Left Front Paw',
+    'Right Front Paw',
+
+    'Center Spine',
+
+    'Left Rear Paw',
+    'Right Rear Paw',
+
+    'Base Tail',
+    'Mid Tail',
+    'Tip Tail',
+]
 
 def main():
     parser = argparse.ArgumentParser()
@@ -51,6 +73,20 @@ def main():
         help='the model file to use for inference',
         default=None,
     )
+
+    parser.add_argument(
+        '--show-err-thresh',
+        help='for each keypoint where pixel error is >= this threshold we print a message and'
+             ' show a debug image.',
+        default=None,
+        type=float,
+    )
+
+    # parser.add_argument(
+    #     '--out-dir',
+    #     help='the output directory to use',
+    #     default='temp',
+    # )
 
     parser.add_argument(
         'cfg',
@@ -131,6 +167,21 @@ def main():
                         l2_pixel_err = np.linalg.norm(pixel_err, ord=2, axis=2)
                         # print(l2_pixel_err)
 
+                        if args.show_err_thresh is not None:
+                            over_thresh = np.transpose(np.nonzero(
+                                l2_pixel_err >= args.show_err_thresh))
+
+                            for curr_over_thresh in over_thresh:
+                                print('Bad value for:   ', INDEX_NAMES[curr_over_thresh[1]])
+                                print('Confidence:      ', maxvals[curr_over_thresh[0], curr_over_thresh[1]])
+                                print('Pixel Distance:  ', l2_pixel_err[curr_over_thresh[0], curr_over_thresh[1]])
+
+                                curr_heatmap = inf_out[curr_over_thresh[0], curr_over_thresh[1], ...]
+                                curr_heatmap = np.ma.masked_where(curr_heatmap < 0.1, curr_heatmap)
+                                plt.imshow(data_numpy, cmap='gray', vmin=0, vmax=255)
+                                plt.imshow(curr_heatmap, cmap=plt.get_cmap('YlOrRd'), alpha=0.4)
+                                plt.show()
+
                         if l2_pixel_err_sum is None:
                             l2_pixel_err_sum = l2_pixel_err.copy()
                             l2_pixel_err_max = l2_pixel_err.copy()
@@ -143,6 +194,7 @@ def main():
         l2_pixel_err_mean = l2_pixel_err_sum / frame_count
         l2_pixel_err_mean = l2_pixel_err_mean.squeeze(0)
         l2_pixel_err_max = l2_pixel_err_max.squeeze(0)
+
         print('L2 Pixel Error Mean of Means:  ', l2_pixel_err_mean.mean(), l2_pixel_err_max.max())
         print('NOSE Pixel Error:              ', l2_pixel_err_mean[NOSE_INDEX], 'Max:', l2_pixel_err_max[NOSE_INDEX])
 
