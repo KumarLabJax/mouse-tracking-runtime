@@ -1,6 +1,7 @@
 import argparse
 import itertools
 import matplotlib.pyplot as plt
+import random
 
 import torchvision.transforms as transforms
 
@@ -60,7 +61,8 @@ def main():
         ])
     )
 
-    for i in itertools.chain(range(0, 20, 2), range(400, 410), range(500, 510)):
+    for _ in range(100):
+        i = random.randrange(len(train_dataset))
         print('doing', i)
         input, target, target_weight, meta = train_dataset[i]
 

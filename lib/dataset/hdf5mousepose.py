@@ -37,6 +37,27 @@ TIP_TAIL_INDEX = 11
 logger = logging.getLogger(__name__)
 
 
+def centered_transform_mat(center_xy, rot_deg, scale, out_wh):
+    half_width = out_wh[0] / 2.0
+    half_height = out_wh[1] / 2.0
+    translate_mat = np.float32([
+        [1.0, 0.0, -center_xy[0] + half_width],
+        [0.0, 1.0, -center_xy[1] + half_height],
+        [0.0, 0.0, 1.0],
+    ])
+
+    rot_rad = rot_deg * np.pi / 180
+    alpha = scale * np.cos(rot_rad)
+    beta = scale * np.sin(rot_rad)
+    rot_scale_mat = np.float32([
+        [alpha, beta, (1 - alpha) * half_width - beta * half_height],
+        [-beta, alpha, beta * half_width + (1 - alpha) * half_height],
+        [0.0, 0.0, 1.0],
+    ])
+
+    return rot_scale_mat @ translate_mat
+
+
 class HDF5MousePose(JointsDataset):
 
     def __init__(self, cfg, root, image_set, is_train, transform=None):
@@ -127,10 +148,8 @@ class HDF5MousePose(JointsDataset):
 
         if self.is_train:
             sf = self.scale_factor
-            rf = self.rotation_factor
             s = s * np.clip(np.random.randn()*sf + 1, 1 - sf, 1 + sf)
-            r = np.clip(np.random.randn()*rf, -rf*2, rf*2) \
-                if random.random() <= 0.6 else 0
+            r = 360 * random.random() if random.random() <= 0.8 else 0
 
             if self.prob_randomized_center > 0 and random.random() <= self.prob_randomized_center:
                 c[0] = data_numpy.shape[1] * random.random()
@@ -145,10 +164,10 @@ class HDF5MousePose(JointsDataset):
                     joints, joints_vis, data_numpy.shape[1], self.flip_pairs)
                 c[0] = data_numpy.shape[1] - c[0] - 1
 
-        trans = get_affine_transform(c, s, r, self.image_size)
+        trans = centered_transform_mat(c, r, s[0], self.image_size)
         input = cv2.warpAffine(
             data_numpy,
-            trans,
+            trans[:2, :],
             (int(self.image_size[0]), int(self.image_size[1])),
             flags=cv2.INTER_LINEAR)
 
@@ -171,8 +190,10 @@ class HDF5MousePose(JointsDataset):
 
         target, target_weight = self.generate_target(joints, joints_vis)
 
-        target = torch.from_numpy(target)
-        target_weight = torch.from_numpy(target_weight)
+        if not torch.is_tensor(target):
+            target = torch.from_numpy(target)
+        if not torch.is_tensor(target_weight):
+            target_weight = torch.from_numpy(target_weight)
 
         meta = {
             'image': db_rec['image'],

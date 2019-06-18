@@ -43,6 +43,7 @@ _C.MODEL.TARGET_TYPE = 'gaussian'
 _C.MODEL.IMAGE_SIZE = [256, 256]  # width * height, ex: 192 * 256
 _C.MODEL.HEATMAP_SIZE = [64, 64]  # width * height, ex: 24 * 32
 _C.MODEL.SIGMA = 2
+_C.MODEL.EXP_DECAY_LAMBDA = 0.3
 _C.MODEL.EXTRA = CN(new_allowed=True)
 
 _C.LOSS = CN()
@@ -50,6 +51,7 @@ _C.LOSS.USE_OHKM = False
 _C.LOSS.TOPK = 8
 _C.LOSS.USE_TARGET_WEIGHT = True
 _C.LOSS.USE_DIFFERENT_JOINTS_WEIGHT = False
+_C.LOSS.USE_FOCAL_LOSS = False
 
 # DATASET related params
 _C.DATASET = CN()

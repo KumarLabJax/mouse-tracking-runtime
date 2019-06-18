@@ -27,6 +27,7 @@ import _init_paths
 from config import cfg
 from config import update_config
 from core.loss import JointsMSELoss
+from core.focalloss import bce_focal_loss
 from core.function import train
 from core.function import validate
 from utils.utils import get_optimizer
@@ -118,9 +119,16 @@ def main():
     model = torch.nn.DataParallel(model, device_ids=cfg.GPUS).cuda()
 
     # define loss function (criterion) and optimizer
-    criterion = JointsMSELoss(
-        use_target_weight=cfg.LOSS.USE_TARGET_WEIGHT
-    ).cuda()
+    if cfg.LOSS.USE_FOCAL_LOSS:
+        print('USING FOCAL LOSS')
+        def fl_crit(input, target, target_weight):
+            return bce_focal_loss(input, target)
+        criterion = fl_crit
+    else:
+        print('USING MSE LOSS')
+        criterion = JointsMSELoss(
+            use_target_weight=cfg.LOSS.USE_TARGET_WEIGHT
+        ).cuda()
 
     # Data loading code
     # normalize = transforms.Normalize(
