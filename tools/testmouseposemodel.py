@@ -75,10 +75,23 @@ def main():
     )
 
     parser.add_argument(
+        '--dataset-root',
+        help='the dataset to use for inference',
+        default=None,
+    )
+
+    parser.add_argument(
         '--show-err-thresh',
         help='for each keypoint where pixel error is >= this threshold we print a message and'
              ' show a debug image.',
         default=None,
+        type=float,
+    )
+
+    parser.add_argument(
+        '--confidence-threshold',
+        help='minimum confidence threshold to test',
+        default=0.0,
         type=float,
     )
 
@@ -98,6 +111,8 @@ def main():
     cfg.merge_from_file(args.cfg)
     if args.model_file:
         cfg.TEST.MODEL_FILE = args.model_file
+    if args.dataset_root:
+        cfg.DATASET.ROOT = args.dataset_root
     cfg.freeze()
 
     print('=> loading configuration from {}'.format(args.cfg))
@@ -128,8 +143,9 @@ def main():
     with torch.no_grad():
 
         with h5py.File(cfg.DATASET.ROOT, 'r') as hdf5file:
-            l2_pixel_err_sum = None
-            l2_pixel_err_max = None
+            l2_pixel_err_sum = np.zeros(12, dtype=np.float32)
+            l2_pixel_err_max = np.zeros(12, dtype=np.float32)
+            accepted_point_count = np.zeros(12, dtype=np.uint32)
             frame_count = 0
             for name, group in hdf5file[cfg.DATASET.TEST_SET].items():
                 if 'frames' in group and 'points' in group:
@@ -156,7 +172,13 @@ def main():
                         # print('inf_out.shape:', inf_out.shape)
 
                         preds, maxvals = get_max_preds(inf_out)
-                        preds = preds.astype(np.uint16)
+                        preds = preds.astype(np.uint16).squeeze(0)
+                        maxvals = maxvals.squeeze(2).squeeze(0)
+
+                        over_threshold = maxvals >= args.confidence_threshold
+
+                        # print('preds:', preds.shape, preds.dtype)
+                        # print('maxvals:', maxvals.shape, maxvals.dtype)
 
                         # print(preds)
 
@@ -164,23 +186,26 @@ def main():
                         pixel_err = preds.astype(np.float32) - grp_frame_pts
                         # print(pixel_err)
 
-                        l2_pixel_err = np.linalg.norm(pixel_err, ord=2, axis=2)
+                        l2_pixel_err = np.linalg.norm(pixel_err, ord=2, axis=1)
+
+                        # print('l2_pixel_err:', l2_pixel_err.shape, l2_pixel_err.dtype)
+                        l2_pixel_err[~over_threshold] = 0
                         # print(l2_pixel_err)
 
-                        if args.show_err_thresh is not None:
-                            over_thresh = np.transpose(np.nonzero(
-                                l2_pixel_err >= args.show_err_thresh))
+                        # if args.show_err_thresh is not None:
+                        #     over_thresh = np.transpose(np.nonzero(
+                        #         l2_pixel_err >= args.show_err_thresh))
 
-                            for curr_over_thresh in over_thresh:
-                                print('Bad value for:   ', INDEX_NAMES[curr_over_thresh[1]])
-                                print('Confidence:      ', maxvals[curr_over_thresh[0], curr_over_thresh[1]])
-                                print('Pixel Distance:  ', l2_pixel_err[curr_over_thresh[0], curr_over_thresh[1]])
+                        #     for curr_over_thresh in over_thresh:
+                        #         print('Bad value for:   ', INDEX_NAMES[curr_over_thresh[1]])
+                        #         print('Confidence:      ', maxvals[curr_over_thresh[0], curr_over_thresh[1]])
+                        #         print('Pixel Distance:  ', l2_pixel_err[curr_over_thresh[0], curr_over_thresh[1]])
 
-                                curr_heatmap = inf_out[curr_over_thresh[0], curr_over_thresh[1], ...]
-                                curr_heatmap = np.ma.masked_where(curr_heatmap < 0.1, curr_heatmap)
-                                plt.imshow(data_numpy, cmap='gray', vmin=0, vmax=255)
-                                plt.imshow(curr_heatmap, cmap=plt.get_cmap('YlOrRd'), alpha=0.4)
-                                plt.show()
+                        #         curr_heatmap = inf_out[curr_over_thresh[0], curr_over_thresh[1], ...]
+                        #         curr_heatmap = np.ma.masked_where(curr_heatmap < 0.1, curr_heatmap)
+                        #         plt.imshow(data_numpy, cmap='gray', vmin=0, vmax=255)
+                        #         plt.imshow(curr_heatmap, cmap=plt.get_cmap('YlOrRd'), alpha=0.4)
+                        #         plt.show()
 
                         if l2_pixel_err_sum is None:
                             l2_pixel_err_sum = l2_pixel_err.copy()
@@ -189,31 +214,32 @@ def main():
                             l2_pixel_err_sum += l2_pixel_err
                             l2_pixel_err_max = np.maximum(l2_pixel_err_max, l2_pixel_err)
 
+                        accepted_point_count += over_threshold
                         frame_count += 1
 
-        l2_pixel_err_mean = l2_pixel_err_sum / frame_count
-        l2_pixel_err_mean = l2_pixel_err_mean.squeeze(0)
-        l2_pixel_err_max = l2_pixel_err_max.squeeze(0)
+        l2_pixel_err_mean = l2_pixel_err_sum / accepted_point_count
+        # l2_pixel_err_mean = l2_pixel_err_mean.squeeze(0)
+        # l2_pixel_err_max = l2_pixel_err_max.squeeze(0)
 
         print('L2 Pixel Error Mean of Means:  ', l2_pixel_err_mean.mean(), l2_pixel_err_max.max())
-        print('NOSE Pixel Error:              ', l2_pixel_err_mean[NOSE_INDEX], 'Max:', l2_pixel_err_max[NOSE_INDEX])
+        print('NOSE Pixel Error:              ', l2_pixel_err_mean[NOSE_INDEX], 'Max:', l2_pixel_err_max[NOSE_INDEX], 'Passed Thresh:', accepted_point_count[NOSE_INDEX], '({})'.format(accepted_point_count[NOSE_INDEX] / frame_count))
 
-        print('LEFT_EAR Pixel Error:          ', l2_pixel_err_mean[LEFT_EAR_INDEX], 'Max:', l2_pixel_err_max[LEFT_EAR_INDEX])
-        print('RIGHT_EAR Pixel Error:         ', l2_pixel_err_mean[RIGHT_EAR_INDEX], 'Max:', l2_pixel_err_max[RIGHT_EAR_INDEX])
+        print('LEFT_EAR Pixel Error:          ', l2_pixel_err_mean[LEFT_EAR_INDEX], 'Max:', l2_pixel_err_max[LEFT_EAR_INDEX], 'Passed Thresh:', accepted_point_count[LEFT_EAR_INDEX], '({})'.format(accepted_point_count[LEFT_EAR_INDEX] / frame_count))
+        print('RIGHT_EAR Pixel Error:         ', l2_pixel_err_mean[RIGHT_EAR_INDEX], 'Max:', l2_pixel_err_max[RIGHT_EAR_INDEX], 'Passed Thresh:', accepted_point_count[RIGHT_EAR_INDEX], '({})'.format(accepted_point_count[RIGHT_EAR_INDEX] / frame_count))
 
-        print('BASE_NECK Pixel Error:         ', l2_pixel_err_mean[BASE_NECK_INDEX], 'Max:', l2_pixel_err_max[BASE_NECK_INDEX])
+        print('BASE_NECK Pixel Error:         ', l2_pixel_err_mean[BASE_NECK_INDEX], 'Max:', l2_pixel_err_max[BASE_NECK_INDEX], 'Passed Thresh:', accepted_point_count[BASE_NECK_INDEX], '({})'.format(accepted_point_count[BASE_NECK_INDEX] / frame_count))
 
-        print('LEFT_FRONT_PAW Pixel Error:    ', l2_pixel_err_mean[LEFT_FRONT_PAW_INDEX], 'Max:', l2_pixel_err_max[LEFT_FRONT_PAW_INDEX])
-        print('RIGHT_FRONT_PAW Pixel Error:   ', l2_pixel_err_mean[RIGHT_FRONT_PAW_INDEX], 'Max:', l2_pixel_err_max[RIGHT_FRONT_PAW_INDEX])
+        print('LEFT_FRONT_PAW Pixel Error:    ', l2_pixel_err_mean[LEFT_FRONT_PAW_INDEX], 'Max:', l2_pixel_err_max[LEFT_FRONT_PAW_INDEX], 'Passed Thresh:', accepted_point_count[LEFT_FRONT_PAW_INDEX], '({})'.format(accepted_point_count[LEFT_FRONT_PAW_INDEX] / frame_count))
+        print('RIGHT_FRONT_PAW Pixel Error:   ', l2_pixel_err_mean[RIGHT_FRONT_PAW_INDEX], 'Max:', l2_pixel_err_max[RIGHT_FRONT_PAW_INDEX], 'Passed Thresh:', accepted_point_count[RIGHT_FRONT_PAW_INDEX], '({})'.format(accepted_point_count[RIGHT_FRONT_PAW_INDEX] / frame_count))
 
-        print('CENTER_SPINE Pixel Error:      ', l2_pixel_err_mean[CENTER_SPINE_INDEX], 'Max:', l2_pixel_err_max[CENTER_SPINE_INDEX])
+        print('CENTER_SPINE Pixel Error:      ', l2_pixel_err_mean[CENTER_SPINE_INDEX], 'Max:', l2_pixel_err_max[CENTER_SPINE_INDEX], 'Passed Thresh:', accepted_point_count[CENTER_SPINE_INDEX], '({})'.format(accepted_point_count[CENTER_SPINE_INDEX] / frame_count))
 
-        print('LEFT_REAR_PAW Pixel Error:     ', l2_pixel_err_mean[LEFT_REAR_PAW_INDEX], 'Max:', l2_pixel_err_max[LEFT_REAR_PAW_INDEX])
-        print('RIGHT_REAR_PAW Pixel Error:    ', l2_pixel_err_mean[RIGHT_REAR_PAW_INDEX], 'Max:', l2_pixel_err_max[RIGHT_REAR_PAW_INDEX])
+        print('LEFT_REAR_PAW Pixel Error:     ', l2_pixel_err_mean[LEFT_REAR_PAW_INDEX], 'Max:', l2_pixel_err_max[LEFT_REAR_PAW_INDEX], 'Passed Thresh:', accepted_point_count[LEFT_REAR_PAW_INDEX], '({})'.format(accepted_point_count[NOSE_INDEX] / frame_count))
+        print('RIGHT_REAR_PAW Pixel Error:    ', l2_pixel_err_mean[RIGHT_REAR_PAW_INDEX], 'Max:', l2_pixel_err_max[RIGHT_REAR_PAW_INDEX], 'Passed Thresh:', accepted_point_count[RIGHT_REAR_PAW_INDEX], '({})'.format(accepted_point_count[RIGHT_REAR_PAW_INDEX] / frame_count))
 
-        print('BASE_TAIL Pixel Error:         ', l2_pixel_err_mean[BASE_TAIL_INDEX], 'Max:', l2_pixel_err_max[BASE_TAIL_INDEX])
-        print('MID_TAIL Pixel Error:          ', l2_pixel_err_mean[MID_TAIL_INDEX], 'Max:', l2_pixel_err_max[MID_TAIL_INDEX])
-        print('TIP_TAIL Pixel Error:          ', l2_pixel_err_mean[TIP_TAIL_INDEX], 'Max:', l2_pixel_err_max[TIP_TAIL_INDEX])
+        print('BASE_TAIL Pixel Error:         ', l2_pixel_err_mean[BASE_TAIL_INDEX], 'Max:', l2_pixel_err_max[BASE_TAIL_INDEX], 'Passed Thresh:', accepted_point_count[BASE_TAIL_INDEX], '({})'.format(accepted_point_count[BASE_TAIL_INDEX] / frame_count))
+        print('MID_TAIL Pixel Error:          ', l2_pixel_err_mean[MID_TAIL_INDEX], 'Max:', l2_pixel_err_max[MID_TAIL_INDEX], 'Passed Thresh:', accepted_point_count[MID_TAIL_INDEX], '({})'.format(accepted_point_count[MID_TAIL_INDEX] / frame_count))
+        print('TIP_TAIL Pixel Error:          ', l2_pixel_err_mean[TIP_TAIL_INDEX], 'Max:', l2_pixel_err_max[TIP_TAIL_INDEX], 'Passed Thresh:', accepted_point_count[TIP_TAIL_INDEX], '({})'.format(accepted_point_count[TIP_TAIL_INDEX] / frame_count))
 
 
 if __name__ == "__main__":
