@@ -17,8 +17,6 @@ import torchvision.transforms as transforms
 import _init_paths
 from config import cfg
 from config import update_config
-from core.inference import get_final_preds
-from core.inference import get_max_preds
 
 import models
 
@@ -111,11 +109,6 @@ def main():
                 maxvals, preds = argmax_2d(inf_out)
                 maxvals = maxvals.cpu().numpy()
                 preds = preds.cpu().numpy().astype(np.uint16)
-
-                # inf_out = inf_out.cpu().numpy()
-                # preds, maxvals = get_max_preds(inf_out)
-                # preds = preds[:, :, [1, 0]].astype(np.uint16)
-                # maxvals = maxvals.squeeze(2)
 
                 all_preds.append(preds)
                 all_maxvals.append(maxvals)
