@@ -96,10 +96,29 @@ def main():
         all_preds = []
         all_maxvals = []
         batch = []
+
+        cuda_preds = None
+        cuda_maxval = None
+
+        def sync_cuda_preds():
+            nonlocal cuda_preds
+            nonlocal cuda_maxval
+
+            if cuda_preds is not None:
+                all_maxvals.append(cuda_maxval.cpu().numpy())
+                all_preds.append(cuda_preds.cpu().numpy().astype(np.uint16))
+                cuda_maxval = None
+                cuda_preds = None
+
         def perform_inference():
+            nonlocal cuda_preds
+            nonlocal cuda_maxval
+
             if batch:
                 batch_tensor = torch.stack([xform(img) for img in batch]).cuda()
                 batch.clear()
+
+                sync_cuda_preds()
 
                 inf_out = model(batch_tensor)
                 in_out_ratio = batch_tensor.size(-1) // inf_out.size(-1)
@@ -107,11 +126,8 @@ def main():
                     inf_out = torchfunc.upsample(inf_out, scale_factor=4, mode='bicubic', align_corners=False)
 
                 maxvals, preds = argmax_2d(inf_out)
-                maxvals = maxvals.cpu().numpy()
-                preds = preds.cpu().numpy().astype(np.uint16)
-
-                all_preds.append(preds)
-                all_maxvals.append(maxvals)
+                cuda_maxval = maxvals
+                cuda_preds = preds
 
         for frame_index, image in enumerate(reader):
 
@@ -128,6 +144,7 @@ def main():
                 perform_inference()
 
         perform_inference()
+        sync_cuda_preds()
 
         all_preds = np.concatenate(all_preds)
         all_maxvals = np.concatenate(all_maxvals)
