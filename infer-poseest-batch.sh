@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-#SBATCH --job-name=deep-hres-hyperparams-arr
+#SBATCH --job-name=infer-poseest-arr
 #
 #SBATCH --time=24:00:00
 #SBATCH --ntasks=1
@@ -31,15 +31,18 @@ then
             cd "$(dirname "${BATCH_FILE}")"
             if [[ -f "${VIDEO_FILE}" ]]
             then
+                echo "DUMP OF CURRENT ENVIRONMENT:"
+                env
                 echo "BEGIN PROCESSING: ${VIDEO_FILE}"
-                module load singularity
                 H5_OUT_FILE="${VIDEO_FILE%.*}_pose_est_v2.h5"
-                singularity exec --nv ~/deep-hres-net-2019-05-27.simg \
-                    python3 -u /pipeline-environment/deep-hres-net/tools/infermousepose.py \
-                    --model-file ~/projects/deep-hres-hyperparams-2019-05-24/output-full-mouse-pose/hdf5mousepose/pose_hrnet/mouse-pose-6/model_best.pth \
-                    ~/projects/deep-hres-hyperparams-2019-05-24/experiments/hdf5mouse/2019-05-23-param-search/mouse-pose-6.yaml \
-                    "${VIDEO_FILE}" \
-                    "${H5_OUT_FILE}"
+                # singularity exec --nv "${ROOT_DIR}/deep-hres-net-2019-06-24.simg" \
+                #     python3 -u /pipeline-environment/deep-hres-net/tools/infermousepose.py \
+                #     --model-file "${ROOT_DIR}/model-archive/hrnet-hyperparams-2019-06-18/output/hdf5mousepose/pose_hrnet/mp-conf11/model_best.pth" \
+                #     "${ROOT_DIR}/model-archive/hrnet-hyperparams-2019-06-18/experiments/hdf5mouse/2019-06-18-param-search/mp-conf11.yaml" \
+                #     "${VIDEO_FILE}" \
+                #     "${H5_OUT_FILE}"
+                module load singularity
+                singularity run --nv "${ROOT_DIR}/deep-hres-net-2019-06-27.simg" "${VIDEO_FILE}" "${H5_OUT_FILE}"
                 echo "FINISHED PROCESSING: ${VIDEO_FILE}"
             else
                 echo "ERROR: could not find configuration file: ${VIDEO_FILE}" >&2
@@ -60,9 +63,9 @@ else
         echo "Submitting an array job for ${test_count} videos"
 
         # Here we perform a self-submit
-        sbatch --export=BATCH_FILE="${1}" --array="1-${test_count}" "${0}"
+        sbatch --export=ROOT_DIR="$(dirname "${0}")",BATCH_FILE="${1}" --array="1-${test_count}" "${0}"
     else
-        echo "ERROR: you need to provide a batch file to process. Eg: ./test-hyper-params.sh batchfile.txt" >&2
+        echo "ERROR: you need to provide a batch file to process. Eg: ./infer-poseest-batch-v3.sh batchfile.txt" >&2
         exit 1
     fi
 fi
