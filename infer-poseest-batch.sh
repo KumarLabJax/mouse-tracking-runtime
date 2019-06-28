@@ -42,7 +42,7 @@ then
                 #     "${VIDEO_FILE}" \
                 #     "${H5_OUT_FILE}"
                 module load singularity
-                singularity run --nv "${ROOT_DIR}/deep-hres-net-2019-06-27.simg" "${VIDEO_FILE}" "${H5_OUT_FILE}"
+                singularity run --nv "${ROOT_DIR}/deep-hres-net-2019-06-28.simg" "${VIDEO_FILE}" "${H5_OUT_FILE}"
                 echo "FINISHED PROCESSING: ${VIDEO_FILE}"
             else
                 echo "ERROR: could not find configuration file: ${VIDEO_FILE}" >&2
