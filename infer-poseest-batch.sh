@@ -35,14 +35,8 @@ then
                 env
                 echo "BEGIN PROCESSING: ${VIDEO_FILE}"
                 H5_OUT_FILE="${VIDEO_FILE%.*}_pose_est_v2.h5"
-                # singularity exec --nv "${ROOT_DIR}/deep-hres-net-2019-06-24.simg" \
-                #     python3 -u /pipeline-environment/deep-hres-net/tools/infermousepose.py \
-                #     --model-file "${ROOT_DIR}/model-archive/hrnet-hyperparams-2019-06-18/output/hdf5mousepose/pose_hrnet/mp-conf11/model_best.pth" \
-                #     "${ROOT_DIR}/model-archive/hrnet-hyperparams-2019-06-18/experiments/hdf5mouse/2019-06-18-param-search/mp-conf11.yaml" \
-                #     "${VIDEO_FILE}" \
-                #     "${H5_OUT_FILE}"
                 module load singularity
-                singularity run --nv "${ROOT_DIR}/deep-hres-net-2019-06-28.simg" "${VIDEO_FILE}" "${H5_OUT_FILE}"
+                singularity run --nv "${ROOT_DIR}/deep-hres-net-2019-07-02.simg" "${VIDEO_FILE}" "${H5_OUT_FILE}"
                 echo "FINISHED PROCESSING: ${VIDEO_FILE}"
             else
                 echo "ERROR: could not find configuration file: ${VIDEO_FILE}" >&2

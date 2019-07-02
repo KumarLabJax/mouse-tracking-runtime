@@ -85,10 +85,11 @@ def main():
 
     xform = transforms.Compose([
         transforms.ToTensor(),
-        transforms.Normalize(
-            mean=[0.45, 0.45, 0.45],
-            std=[0.225, 0.225, 0.225],
-        ),
+        # transforms.Normalize(
+        #     mean=[0.45, 0.45, 0.45],
+        #     std=[0.225, 0.225, 0.225],
+        # ),
+        lambda x: (x.cuda() - 0.45) / 0.225,
     ])
 
     with torch.no_grad(), imageio.get_reader(args.video) as reader:
@@ -115,7 +116,8 @@ def main():
             nonlocal cuda_maxval
 
             if batch:
-                batch_tensor = torch.stack([xform(img) for img in batch]).cuda()
+                # batch_tensor = torch.stack([xform(img) for img in batch]).cuda()
+                batch_tensor = torch.stack([xform(img) for img in batch])
                 batch.clear()
 
                 sync_cuda_preds()
