@@ -56,6 +56,7 @@ _C.LOSS.USE_FOCAL_LOSS = False
 # DATASET related params
 _C.DATASET = CN()
 _C.DATASET.ROOT = ''
+_C.DATASET.CVAT_XML = ''
 _C.DATASET.DATASET = 'mpii'
 _C.DATASET.TRAIN_SET = 'train'
 _C.DATASET.TEST_SET = 'valid'
