@@ -35,17 +35,6 @@ def parse_obj_labels(cvat_xml_path):
             )
             xy_points = np.transpose(xy_points)
 
-            # print('xy_points')
-            # print(xy_points)
-            # print('min:', xy_points.min(0))
-            # print('max:', xy_points.max(0))
-            # print('center:', (xy_points.min(0) + xy_points.max(0)) / 2.0)
-
-            # xy_points_xform = np.ones([3, xy_points.shape[0]], dtype=np.float32)
-            # xy_points_xform[0:2, :] = np.transpose(xy_points)
-            # print('xy_points_xform')
-            # print(xy_points_xform)
-
             object_polygon_points.append(xy_points)
 
         yield {
@@ -166,5 +155,8 @@ class OpenFieldObjDataset(Dataset):
             cc = cc[rc_mask]
 
             seg_target[rr, cc] = 1.0
+
+        # add channel dimension
+        seg_target = seg_target.unsqueeze(0)
 
         return img, seg_target
