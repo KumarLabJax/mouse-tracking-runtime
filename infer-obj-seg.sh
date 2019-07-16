@@ -36,7 +36,7 @@ then
                 echo "BEGIN PROCESSING: ${VIDEO_FILE}"
                 H5_OUT_FILE="${VIDEO_FILE%.*}_obj_seg.h5"
                 module load singularity
-                singularity run --nv "${ROOT_DIR}/obj-seg-2019-07-15.simg" "${VIDEO_FILE}" "${H5_OUT_FILE}"
+                singularity run --nv "${ROOT_DIR}/obj-seg-2019-07-16.simg" "${VIDEO_FILE}" "${H5_OUT_FILE}"
                 echo "FINISHED PROCESSING: ${VIDEO_FILE}"
             else
                 echo "ERROR: could not find configuration file: ${VIDEO_FILE}" >&2
