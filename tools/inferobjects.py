@@ -243,7 +243,11 @@ def main():
 
     with h5py.File(args.segout, 'w') as segout_h5:
         seg_group_index = 0
-        for accum_mask, start_frame, end_frame in merge_accum_masks(gen_accum_masks()):
+        accum_masks = gen_accum_masks()
+        if max_merge_frames > 0:
+            accum_masks = merge_accum_masks(accum_masks)
+
+        for accum_mask, start_frame, end_frame in accum_masks:
             print('start frame:', start_frame, 'end frame:', end_frame)
             avg_mask = accum_mask / (end_frame - start_frame) >= 0.5
 
