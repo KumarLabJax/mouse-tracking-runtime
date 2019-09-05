@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-#SBATCH --job-name=infer-poseest-arr
+#SBATCH --job-name=infer-obj-seg-arr
 #
 #SBATCH --time=24:00:00
 #SBATCH --ntasks=1
