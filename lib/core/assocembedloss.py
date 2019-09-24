@@ -1,0 +1,206 @@
+import torch
+import torch.nn as nn
+
+"""
+An implementation of the associative embedding loss function described in
+"Associative Embedding: End-to-End Learning for Joint Detection and Grouping"
+(Newell et al.)
+"""
+
+def _get_assoc_embed_values(assoc_embed_maps, pose_xy):
+    """
+    Extract the embedding values from the maps at the given
+    XY pose coordinates.
+    """
+
+    pose_xy = pose_xy.round().long()
+
+    instance_count, keypoint_count, xy_size = pose_xy.shape
+    _, height, width = assoc_embed_maps.shape
+
+    assert keypoint_count == 12
+    assert xy_size == 2
+
+    # we need to mask out points that are out of bounds
+    keypoint_vis = (
+        (pose_xy[..., 0] >= 0) & (pose_xy[..., 0] < width) &
+        (pose_xy[..., 1] >= 0) & (pose_xy[..., 1] < height)
+    )
+
+    def gen_embed_vals():
+
+        # TODO: there is probably a more efficient tensor indexing approach
+        # to extract these values, but this should work
+
+        for instance_i in range(instance_count):
+            for keypoint_i in range(keypoint_count):
+                if keypoint_vis[instance_i, keypoint_i].item():
+                    curr_x, curr_y = pose_xy[instance_i, keypoint_i, :]
+                    curr_embed = assoc_embed_maps[keypoint_i, curr_y, curr_x]
+                    yield curr_embed
+                else:
+                    # since this point is out of bounds we just return zero,
+                    # but respect the device and dtype of the map
+                    yield torch.tensor(
+                        0,
+                        device=assoc_embed_maps.device,
+                        dtype=assoc_embed_maps.dtype)
+
+    embed_vals = torch.stack(list(gen_embed_vals()))
+    embed_vals = embed_vals.reshape(instance_count, keypoint_count)
+
+    return embed_vals, keypoint_vis
+
+
+def _instance_grouping_term(embed_vals, keypoint_vis, reference_embeds):
+    """
+    This function implements the first sub-expression from the grouping loss
+    in the associative embedding paper. This sub-expression incentivizes
+    grouping within instances
+    """
+    instance_count = reference_embeds.size(0)
+
+    if instance_count == 0:
+        # there needs to be at least one instance for this term
+        # to contribute to the loss
+        return torch.tensor(
+            0,
+            device=reference_embeds.device,
+            dtype=reference_embeds.dtype)
+
+    else:
+        squared_diffs = (reference_embeds.view(-1, 1) - embed_vals) ** 2
+        squared_diffs[~keypoint_vis] = 0
+
+        return torch.sum(squared_diffs) / instance_count
+
+
+def _ref_embedding_separation_term(reference_embeds, sigma=1):
+
+    """
+    This function implements the second sub-expression from the grouping loss
+    in the associative embedding paper. This sub-expression incentivizes
+    separation between reference embedding values
+    """
+
+    instance_count = reference_embeds.size(0)
+
+    if instance_count <= 1:
+        # there needs to be at least two instances for this term
+        # to contribute to the loss since it is based upon a difference
+        # of reference embeddings.
+        return torch.tensor(
+            0,
+            device=reference_embeds.device,
+            dtype=reference_embeds.dtype)
+
+    else:
+
+        # calculate the squared difference between all combinations of the reference embedding
+        ref_embed_combos = torch.combinations(reference_embeds, 2)
+        num_combos = ref_embed_combos.size(0)
+        ref_embed_combos[:, 1].mul_(-1)
+        squared_diffs = ref_embed_combos.sum(1) ** 2
+
+        # now we have squared diffs and we can calculate the sum of exponents
+        # part of the subexpression
+        sum_of_exps = torch.sum(torch.exp(-0.5 * sigma ** 2 * squared_diffs))
+
+        # In the paper the denominator is N^2 because they calculate for all permutations.
+        # Since we use all combinations rather than permutations we use a different
+        # denominator to achieve the same result
+        return sum_of_exps / (num_combos + instance_count / 2)
+
+
+def pose_assoc_embed_loss(batch_assoc_embed_maps, batch_target_poses_xy, batch_instance_counts):
+
+    batch_size = batch_target_poses_xy.size(0)
+    batch_losses = torch.zeros(
+        batch_size,
+        device=batch_assoc_embed_maps.device,
+        dtype=batch_assoc_embed_maps.dtype)
+
+    for sample_i in range(batch_size):
+
+        # pull out the values corresponding to the current sample in the mini batch
+        instance_count = batch_instance_counts[sample_i]
+        assoc_embed_maps = batch_assoc_embed_maps[sample_i, ...]
+        target_poses_xy = batch_target_poses_xy[sample_i, :instance_count, ...]
+
+        # extract the embedding values at the "truth" XY coordinates for each
+        # instance and calculate the reference embedding
+        embed_vals, keypoint_vis = _get_assoc_embed_values(assoc_embed_maps, target_poses_xy)
+
+        # remove instances with no visible keypoints
+        keypoint_vis_counts = keypoint_vis.sum(1)
+        visible_instances = keypoint_vis_counts > 0
+
+        keypoint_vis_counts = keypoint_vis_counts[visible_instances]
+        embed_vals = embed_vals[visible_instances, :]
+        keypoint_vis = keypoint_vis[visible_instances, :]
+
+        # print('embed_vals:')
+        # for i in range(embed_vals.size(0)):
+        #     print(embed_vals[i, keypoint_vis[i, :]])
+
+        reference_embeds = embed_vals.sum(1) / keypoint_vis.sum(1).to(embed_vals)
+
+        # we take the loss expression defined in the associative embedding paper
+        # and break it down into two sub-expressions: an instance grouping part
+        # and a reference embedding separation part
+        inst_grp_term = _instance_grouping_term(embed_vals, keypoint_vis, reference_embeds)
+        sep_term = _ref_embedding_separation_term(reference_embeds, sigma=1)
+        curr_loss = inst_grp_term + sep_term
+
+        # print('inst_grp_term:', inst_grp_term)
+        # print('sep_term:     ', sep_term)
+
+        batch_losses[sample_i] = curr_loss
+
+    # print('batch_losses:', batch_losses.mean(), batch_losses)
+
+    return batch_losses.mean()
+
+
+class PoseEstAssocEmbedLoss(nn.Module):
+
+    """
+    Combines an MSE (L2) loss for the pose heatmaps with an associative embedding loss
+    """
+
+    def __init__(self, pose_heatmap_weight = 1.0, assoc_embedding_weight = 1.0):
+
+        super(PoseEstAssocEmbedLoss, self).__init__()
+
+        self.pose_heatmap_weight = pose_heatmap_weight
+        self.assoc_embedding_weight = assoc_embedding_weight
+
+    def forward(self, inference_tensor, truth_labels):
+
+        # we need to combine the embedding loss and the keypoint L2 loss
+        est_device = inference_tensor.device
+
+        # put all truth labels on the same device as the inference
+        lbl_joint_heatmaps = truth_labels['joint_heatmaps'].to(
+            device=est_device,
+            non_blocking=True)
+        lbl_pose_instances = truth_labels['pose_instances'].to(
+            device=est_device,
+            non_blocking=True)
+        lbl_instance_count = truth_labels['instance_count'].to(
+            device=est_device,
+            non_blocking=True)
+        pose_keypoint_count = lbl_joint_heatmaps.size(1)
+
+        inf_joint_heatmaps = inference_tensor[:, :pose_keypoint_count, ...]
+        inf_assoc_embed_map = inference_tensor[:, pose_keypoint_count:, ...]
+
+        pose_loss = nn.functional.mse_loss(
+            lbl_joint_heatmaps,
+            inf_joint_heatmaps)
+        embed_loss = pose_assoc_embed_loss(
+            inf_assoc_embed_map,
+            lbl_pose_instances,
+            lbl_instance_count)
+
+        return pose_loss * self.pose_heatmap_weight + embed_loss * self.assoc_embedding_weight

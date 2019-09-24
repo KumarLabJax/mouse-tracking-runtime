@@ -291,7 +291,7 @@ class PoseHighResolutionNet(nn.Module):
         self.relu = nn.ReLU(inplace=True)
         self.layer1 = self._make_layer(Bottleneck, 64, 4)
 
-        self.stage2_cfg = cfg['MODEL']['EXTRA']['STAGE2']
+        self.stage2_cfg = extra['STAGE2']
         num_channels = self.stage2_cfg['NUM_CHANNELS']
         block = blocks_dict[self.stage2_cfg['BLOCK']]
         num_channels = [
@@ -301,7 +301,7 @@ class PoseHighResolutionNet(nn.Module):
         self.stage2, pre_stage_channels = self._make_stage(
             self.stage2_cfg, num_channels)
 
-        self.stage3_cfg = cfg['MODEL']['EXTRA']['STAGE3']
+        self.stage3_cfg = extra['STAGE3']
         num_channels = self.stage3_cfg['NUM_CHANNELS']
         block = blocks_dict[self.stage3_cfg['BLOCK']]
         num_channels = [
@@ -312,7 +312,7 @@ class PoseHighResolutionNet(nn.Module):
         self.stage3, pre_stage_channels = self._make_stage(
             self.stage3_cfg, num_channels)
 
-        self.stage4_cfg = cfg['MODEL']['EXTRA']['STAGE4']
+        self.stage4_cfg = extra['STAGE4']
         num_channels = self.stage4_cfg['NUM_CHANNELS']
         block = blocks_dict[self.stage4_cfg['BLOCK']]
         num_channels = [
@@ -324,21 +324,25 @@ class PoseHighResolutionNet(nn.Module):
             self.stage4_cfg, num_channels, multi_scale_output=False)
 
         self.head_arch = 'SIMPLE_CONV'
-        if 'HEAD_ARCH' in cfg['MODEL']['EXTRA']:
-            self.head_arch = cfg['MODEL']['EXTRA']['HEAD_ARCH']
+        if 'HEAD_ARCH' in extra:
+            self.head_arch = extra['HEAD_ARCH']
+
+        out_channels = cfg.MODEL.NUM_JOINTS
+        if 'OUTPUT_CHANNELS_PER_JOINT' in extra:
+            out_channels *= extra['OUTPUT_CHANNELS_PER_JOINT']
 
         # if self.in_out_ratio == 4:
         if self.head_arch == 'SIMPLE_CONV':
             self.final_layer = nn.Conv2d(
                 in_channels=pre_stage_channels[0],
-                out_channels=cfg.MODEL.NUM_JOINTS,
+                out_channels=out_channels,
                 kernel_size=extra.FINAL_CONV_KERNEL,
                 stride=1,
                 padding=1 if extra.FINAL_CONV_KERNEL == 3 else 0
             )
         # elif self.in_out_ratio == 1:
         elif self.head_arch == 'CONV_TRANS_UPSCALE_5x5':
-            half_chan_diff = (pre_stage_channels[0] - cfg.MODEL.NUM_JOINTS) // 2
+            half_chan_diff = (pre_stage_channels[0] - out_channels) // 2
             convtrans1_chans = pre_stage_channels[0] - half_chan_diff
             self.convtrans1 = nn.ConvTranspose2d(
                 in_channels=pre_stage_channels[0],
@@ -351,14 +355,14 @@ class PoseHighResolutionNet(nn.Module):
             self.bn3 = nn.BatchNorm2d(convtrans1_chans, momentum=BN_MOMENTUM)
             self.convtrans2 = nn.ConvTranspose2d(
                 in_channels=convtrans1_chans,
-                out_channels=cfg.MODEL.NUM_JOINTS,
+                out_channels=out_channels,
                 kernel_size=5,
                 stride=2,
                 padding=2,
                 output_padding=1,
             )
         elif self.head_arch == 'CONV_TRANS_UPSCALE_3x3':
-            half_chan_diff = (pre_stage_channels[0] - cfg.MODEL.NUM_JOINTS) // 2
+            half_chan_diff = (pre_stage_channels[0] - out_channels) // 2
             convtrans1_chans = pre_stage_channels[0] - half_chan_diff
             self.convtrans1 = nn.ConvTranspose2d(
                 in_channels=pre_stage_channels[0],
@@ -371,7 +375,7 @@ class PoseHighResolutionNet(nn.Module):
             self.bn3 = nn.BatchNorm2d(convtrans1_chans, momentum=BN_MOMENTUM)
             self.convtrans2 = nn.ConvTranspose2d(
                 in_channels=convtrans1_chans,
-                out_channels=cfg.MODEL.NUM_JOINTS,
+                out_channels=out_channels,
                 kernel_size=3,
                 stride=2,
                 padding=1,
@@ -380,9 +384,9 @@ class PoseHighResolutionNet(nn.Module):
         else:
             raise Exception('unexpected HEAD_ARCH of {}'.format(self.head_arch))
 
-        self.pretrained_layers = cfg['MODEL']['EXTRA']['PRETRAINED_LAYERS']
-        if 'FROZEN_LAYERS' in cfg['MODEL']['EXTRA']:
-            self.frozen_layers = cfg['MODEL']['EXTRA']['FROZEN_LAYERS']
+        self.pretrained_layers = extra['PRETRAINED_LAYERS']
+        if 'FROZEN_LAYERS' in extra:
+            self.frozen_layers = extra['FROZEN_LAYERS']
         else:
             self.frozen_layers = []
 

@@ -68,7 +68,7 @@ def main():
 
         plt.imshow(img[0, ...].numpy(), cmap='gray')
         plt.show()
-        plt.imshow(target.numpy())
+        plt.imshow(target.squeeze(0).numpy())
         plt.show()
 
 

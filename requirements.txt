@@ -11,3 +11,5 @@ yacs>=0.1.5
 tensorboardX>=1.6
 imageio-ffmpeg
 h5py
+tensorboard
+future
