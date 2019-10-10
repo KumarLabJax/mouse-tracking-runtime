@@ -17,16 +17,20 @@ import torch
 
 from core.function import AverageMeter
 
-# from core.evaluate import accuracy
-# from core.inference import get_final_preds
-# from utils.transforms import flip_back
-# from utils.vis import save_debug_images
-
 
 logger = logging.getLogger(__name__)
 
 
-def train(config, train_loader, model, criterion, optimizer, dict_writer, epoch, device=None):
+def train(
+        config,
+        train_loader,
+        model,
+        criterion,
+        optimizer,
+        dict_writer,
+        summary_writer,
+        epoch,
+        device=None):
 
     if device is None:
         device = next(model.parameters()).device
@@ -39,6 +43,7 @@ def train(config, train_loader, model, criterion, optimizer, dict_writer, epoch,
     model.train()
 
     end = time.time()
+    batch_count = len(train_loader)
     for i, label_batch in enumerate(train_loader):
 
         batch_size = label_batch['image'].size(0)
@@ -51,8 +56,11 @@ def train(config, train_loader, model, criterion, optimizer, dict_writer, epoch,
         img_batch = torch.cat([img_batch] * 3, dim=1)
         output = model(img_batch)
 
-        # target = target.cuda(non_blocking=True)
         loss = criterion(output, label_batch)
+        summary_writer.add_scalars(
+            'Loss/train',
+            criterion.loss_components.copy(),
+            epoch * batch_count + i)
 
         # compute gradient and do update step
         optimizer.zero_grad()
@@ -86,7 +94,15 @@ def train(config, train_loader, model, criterion, optimizer, dict_writer, epoch,
         })
 
 
-def validate(config, val_loader, model, criterion, dict_writer, epoch, device=None):
+def validate(
+        config,
+        val_loader,
+        model,
+        criterion,
+        dict_writer,
+        summary_writer,
+        epoch,
+        device=None):
 
     if device is None:
         device = next(model.parameters()).device

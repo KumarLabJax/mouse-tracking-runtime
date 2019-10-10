@@ -145,7 +145,6 @@ def main():
         len(obj_labels), len(train_labels), len(train_ofods), len(val_labels), len(val_ofods)))
 
     best_perf = None
-    best_model = False
     last_epoch = -1
     optimizer = get_optimizer(cfg, model)
     begin_epoch = cfg.TRAIN.BEGIN_EPOCH

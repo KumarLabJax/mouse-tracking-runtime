@@ -74,8 +74,8 @@ class HDF5MousePose(JointsDataset):
                                 max_x, max_y = np.amax(grp_frame_pts, axis=0)
                                 min_x, min_y = np.amin(grp_frame_pts, axis=0)
 
-                                width = max_x - min_x
-                                height = max_y - min_y
+                                # width = max_x - min_x
+                                # height = max_y - min_y
 
                                 center_x = (max_x + min_x) / 2
                                 center_y = (max_y + min_y) / 2

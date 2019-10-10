@@ -1,7 +1,6 @@
 import argparse
 import h5py
 import numpy as np
-import time
 
 import matplotlib.pyplot as plt
 
@@ -17,7 +16,6 @@ import torchvision.transforms as transforms
 
 import _init_paths
 from config import cfg
-from config import update_config
 from core.inference import get_final_preds
 from core.inference import get_max_preds
 
@@ -107,6 +105,9 @@ def main():
     )
 
     args = parser.parse_args()
+
+    print('=> loading configuration from {}'.format(args.cfg))
+
     cfg.defrost()
     cfg.merge_from_file(args.cfg)
     if args.model_file:
@@ -114,10 +115,6 @@ def main():
     if args.dataset_root:
         cfg.DATASET.ROOT = args.dataset_root
     cfg.freeze()
-
-    print('=> loading configuration from {}'.format(args.cfg))
-
-    start_time = time.time()
 
     # cudnn related setting
     cudnn.benchmark = cfg.CUDNN.BENCHMARK

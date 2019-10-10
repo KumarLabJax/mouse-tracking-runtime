@@ -101,3 +101,4 @@ plot/
 *.avi
 *.simg
 *.h5
+runs/

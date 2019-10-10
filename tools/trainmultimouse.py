@@ -8,6 +8,7 @@ import shutil
 
 import torch
 import torch.backends.cudnn as cudnn
+from torch.utils.tensorboard import SummaryWriter
 import torchvision.transforms as transforms
 
 import _init_paths
@@ -77,6 +78,8 @@ def main():
     logger.info(pprint.pformat(args))
     logger.info(cfg)
 
+    swriter = SummaryWriter()
+
     # cudnn related setting
     cudnn.benchmark = cfg.CUDNN.BENCHMARK
     torch.backends.cudnn.deterministic = cfg.CUDNN.DETERMINISTIC
@@ -90,7 +93,11 @@ def main():
         os.path.join(this_dir, '../lib/models', cfg.MODEL.NAME + '.py'),
         final_output_dir)
 
-    criterion = PoseEstAssocEmbedLoss(pose_heatmap_weight = 1.0, assoc_embedding_weight = 1.0)
+    criterion = PoseEstAssocEmbedLoss(
+        pose_heatmap_weight = 1 / 2,
+        assoc_embedding_weight = 1 / 1000,
+        separation_term_weight = 5,
+        sigma = 5)
 
     # Data loading code
     pose_labels = list(itertools.chain.from_iterable(parse_poses(f) for f in args.cvat_files))
@@ -181,10 +188,25 @@ def main():
             lr_scheduler.step()
 
             # train for one epoch
-            train(cfg, train_loader, model, criterion, optimizer, train_table_writer, epoch)
+            train(
+                cfg,
+                train_loader,
+                model,
+                criterion,
+                optimizer,
+                train_table_writer,
+                swriter,
+                epoch)
 
             # evaluate on validation set
-            perf_indicator = validate(cfg, valid_loader, model, criterion, val_table_writer, epoch)
+            perf_indicator = validate(
+                cfg,
+                valid_loader,
+                model,
+                criterion,
+                val_table_writer,
+                swriter,
+                epoch)
 
             if best_perf is None or perf_indicator >= best_perf:
                 best_perf = perf_indicator
