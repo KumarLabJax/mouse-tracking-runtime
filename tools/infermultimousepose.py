@@ -243,8 +243,8 @@ def main():
             for pose_index, pose_instance in enumerate(frame_pose_instances):
                 instance_track_id[frame_index, pose_index] = pose_instance.instance_track_id
                 for keypoint in pose_instance.keypoints.values():
-                    points[frame_index, pose_index, keypoint['joint_index'], 0] = keypoint['x_pos']
-                    points[frame_index, pose_index, keypoint['joint_index'], 1] = keypoint['y_pos']
+                    points[frame_index, pose_index, keypoint['joint_index'], 0] = keypoint['y_pos']
+                    points[frame_index, pose_index, keypoint['joint_index'], 1] = keypoint['x_pos']
                     confidence[frame_index, pose_index, keypoint['joint_index']] = keypoint['conf']
                     embed[frame_index, pose_index, keypoint['joint_index']] = keypoint['embed']
 
