@@ -1,3 +1,4 @@
+import math
 import torch
 
 
@@ -106,3 +107,187 @@ def flatten_indices(indices_2d, shape):
         index_mult_vec[ : i + 1] *= shape[i + 1]
 
     return torch.sum(indices_2d * index_mult_vec, dim=1)
+
+
+def xy_dist(pt1, pt2):
+    x_diff = pt2['x_pos'] - pt1['x_pos']
+    y_diff = pt2['y_pos'] - pt1['y_pos']
+
+    return math.sqrt(x_diff ** 2 + y_diff ** 2)
+
+
+class PoseInstance(object):
+
+    def __init__(self):
+        self.keypoints = dict()
+        self.instance_track_id = 0
+        self._sum_inst_embed = 0
+
+    @property
+    def mean_inst_embed(self):
+        return self._sum_inst_embed / len(self.keypoints)
+
+    def add_keypoint(self, keypoint):
+
+        assert keypoint['joint_index'] not in self.keypoints
+        self.keypoints[keypoint['joint_index']] = keypoint
+
+        self._sum_inst_embed += keypoint['embed']
+
+    def nearest_dist(self, keypoint):
+        min_dist = None
+        for pose_keypoint in self.keypoints.values():
+            curr_dist = xy_dist(keypoint, pose_keypoint)
+
+            if min_dist is None or curr_dist < min_dist:
+                min_dist = curr_dist
+
+        return min_dist
+
+
+def calc_pose_instances(
+        pose_heatmaps,
+        pose_localmax,
+        pose_embed_maps,
+        min_embed_sep,
+        max_inst_dist):
+
+    """
+    Given the input parameters for a single image/frame, return a list
+    of PoseInstance objects
+
+    Parameters:
+        pose_heatmaps (tensor): contains 2D heatmaps representing confidence
+        that a pose keypoint is detected at the respective 2D pixel locations.
+        The shape of this tensor should be (joint_count, pixel_rows, pixel_columns)
+
+        pose_localmax (tensor): this is a boolean tensor with the same shape as
+        pose_heatmaps. Each true value locates a local maxima in pose_heatmaps
+
+        pose_embed_maps (tensor): the same shape as pose_heatmaps. This tensor
+        contains instance embedding values as described in "Associative Embedding:
+        End-to-End Learning for Joint Detection and Grouping" (Newell et al.)
+
+        min_embed_sep (number): minimum separation in the embedding space required
+        for instances that are in close proximity
+
+        max_inst_dist (number): the maximum distance is pixel units for neighboring
+        keypoints of an instance
+
+    Returns:
+        A list of PoseInstace objects
+    """
+
+    joint_count = pose_heatmaps.size(0)
+
+    pose_instances = []
+    for joint_index in range(joint_count):
+        joint_localmax = pose_localmax[joint_index, ...]
+
+        joint_xy = joint_localmax.nonzero().cpu()
+        joint_xy[...] = joint_xy[..., [1, 0]].clone()
+
+        joint_embed = pose_embed_maps[joint_index, ...]
+        joint_embed = joint_embed[joint_localmax].cpu()
+
+        pose_heatmap = pose_heatmaps[joint_index, ...]
+        pose_conf = pose_heatmap[joint_localmax].cpu()
+
+        joint_insts = []
+        for inst_index in range(joint_xy.size(0)):
+            joint_insts.append({
+                'joint_index': joint_index,
+                'x_pos': joint_xy[inst_index, 0].item(),
+                'y_pos': joint_xy[inst_index, 1].item(),
+                'conf': pose_conf[inst_index].item(),
+                'embed': joint_embed[inst_index].item(),
+            })
+
+        # Here we remove any keypoints that are both spatially too close and too
+        # close in the embedding space. In these cases the joint with higher confidence
+        # is kept and the other is discarded
+        joint_insts.sort(key=lambda j: j['conf'])
+        joint_insts_filtered = []
+        for inst_index1, joint_inst1 in enumerate(joint_insts):
+            min_embed_sep_violated = False
+            for joint_inst2 in joint_insts[inst_index1 + 1:]:
+                if (abs(joint_inst1['embed'] - joint_inst2['embed']) < min_embed_sep
+                        and xy_dist(joint_inst1, joint_inst2) <= max_inst_dist):
+                    min_embed_sep_violated = True
+                    break
+
+            if not min_embed_sep_violated:
+                joint_insts_filtered.append(joint_inst1)
+        joint_insts_filtered.reverse()
+        joint_insts = joint_insts_filtered
+
+        # TODO pick one of these two if/else blocks and delete the other
+        if True:
+            for joint_inst in joint_insts:
+                best_pose_match = None
+                best_embed_diff = None
+
+                # find nearest instance in embedding space
+                for pose_instance in pose_instances:
+                    if joint_index not in pose_instance.keypoints:
+                        embed_diff = abs(joint_inst['embed'] - pose_instance.mean_inst_embed)
+                        if best_embed_diff is None or embed_diff < best_embed_diff:
+                            spatial_dist = pose_instance.nearest_dist(joint_inst)
+                            if spatial_dist <= max_inst_dist:
+                                best_pose_match = pose_instance
+                                best_embed_diff = embed_diff
+
+                if best_pose_match is None:
+                    # since there's no existing pose match create a new one
+                    best_pose_match = PoseInstance()
+                    pose_instances.append(best_pose_match)
+
+                best_pose_match.add_keypoint(joint_inst)
+        else:
+            for pose_instance in pose_instances:
+                best_keypoint_index = None
+                best_embed_diff = None
+
+                for keypoint_index, joint_inst in enumerate(joint_insts):
+                    embed_diff = abs(joint_inst['embed'] - pose_instance.mean_inst_embed)
+                    if best_embed_diff is None or embed_diff < best_embed_diff:
+                        spatial_dist = pose_instance.nearest_dist(joint_inst)
+                        if spatial_dist <= max_inst_dist:
+                            best_keypoint_index = keypoint_index
+                            best_embed_diff = embed_diff
+
+                if best_keypoint_index is not None:
+                    best_keypoint = joint_insts[best_keypoint_index]
+                    del joint_insts[best_keypoint_index]
+                    pose_instance.add_keypoint(best_keypoint)
+
+            for joint_inst in joint_insts:
+                pose_instance = PoseInstance()
+                pose_instance.add_keypoint(joint_inst)
+                pose_instances.append(pose_instance)
+
+    return pose_instances
+
+
+def pose_distance(pose1, pose2):
+
+    """
+    Calculate an averaged pixel distance between two poses that can be used for pose tracking.
+    """
+
+    # TODO if this isn't good enough we should correct distance using keypoint speed
+    # to estimate position
+
+    total_distance = 0
+    point_count = 0
+
+    for joint_index, pose1_keypoint in pose1.keypoints.items():
+        if joint_index in pose2.keypoints:
+            pose2_keypoint = pose2.keypoints[joint_index]
+            total_distance += xy_dist(pose1_keypoint, pose2_keypoint)
+            point_count += 1
+
+    if point_count >= 1:
+        return total_distance / point_count
+    else:
+        return math.inf
