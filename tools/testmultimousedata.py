@@ -16,6 +16,15 @@ from dataset.multimousepose import MultiPoseDataset, parse_poses
 import models
 
 
+# Example:
+#
+#  python -u tools/testmultimousedata.py \
+#       --cfg /home/sheppk/projects/deep-high-resolution-net.pytorch/experiments/multimouse/multimouse-1.yaml
+#       --cvat-files \
+#           /run/user/1002/gvfs/smb-share:server=bht2stor.jax.org,share=vkumar/kumarlab-new/Brian/NeuralNets/MultiMousePose/Annotations/*.xml \
+#           /run/user/1002/gvfs/smb-share:server=bht2stor.jax.org,share=vkumar/kumarlab-new/Brian/NeuralNets/MultiMousePose/Annotations_NoMarkings/*.xml \
+#       --image-dir '/run/user/1002/gvfs/smb-share:server=bht2stor.jax.org,share=vkumar/kumarlab-new/Brian/NeuralNets/MultiMousePose/Dataset'
+
 def random_colors(N, bright=True):
     """
     Generate random colors.

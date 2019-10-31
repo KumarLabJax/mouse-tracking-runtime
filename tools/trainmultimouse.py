@@ -23,6 +23,14 @@ from utils.utils import create_logger
 
 import models
 
+# Example(s):
+#
+#   python tools/trainmultimouse.py \
+#       --cfg /home/sheppk/projects/deep-high-resolution-net.pytorch/experiments/multimouse/multimouse-1.yaml \
+#       --cvat-files \
+#           /run/user/1002/gvfs/smb-share:server=bht2stor.jax.org,share=vkumar/kumarlab-new/Brian/NeuralNets/MultiMousePose/Annotations/*.xml \
+#           /run/user/1002/gvfs/smb-share:server=bht2stor.jax.org,share=vkumar/kumarlab-new/Brian/NeuralNets/MultiMousePose/Annotations_NoMarkings/*.xml \
+#       --image-dir '/run/user/1002/gvfs/smb-share:server=bht2stor.jax.org,share=vkumar/kumarlab-new/Brian/NeuralNets/MultiMousePose/Dataset'
 
 def parse_args():
     parser = argparse.ArgumentParser(description='train multi-mouse pose network')

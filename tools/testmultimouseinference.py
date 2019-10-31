@@ -108,6 +108,7 @@ def main():
 
     # shorten some args
     min_embed_sep = args.min_embed_sep_between_instances
+    max_embed_sep = args.max_embed_sep_within_instances
     max_inst_dist = args.max_inst_dist_px
 
     if args.image_out_dir is not None:
@@ -179,6 +180,7 @@ def main():
                 pose_localmax[batch_index, ...],
                 inst_embed_data[batch_index, ...],
                 min_embed_sep,
+                max_embed_sep,
                 max_inst_dist)
 
             image_rgb = np.zeros([image_data_numpy.shape[0], image_data_numpy.shape[1], 3], dtype=np.float32)

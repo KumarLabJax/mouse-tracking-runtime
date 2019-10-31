@@ -72,6 +72,7 @@ def main():
     args = parser.parse_args()
 
     # shorten some args
+    max_embed_sep = args.max_embed_sep_within_instances
     min_embed_sep = args.min_embed_sep_between_instances
     max_inst_dist = args.max_inst_dist_px
 
@@ -131,6 +132,7 @@ def main():
                         cuda_pose_localmax[batch_frame_index, ...],
                         cuda_pose_embed_map[batch_frame_index, ...],
                         min_embed_sep,
+                        max_embed_sep,
                         max_inst_dist)
                     pose_instances.append(frame_pose_instances)
 

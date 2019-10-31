@@ -98,8 +98,9 @@ class MultiPoseDataset(Dataset):
         self.image_size = np.array(cfg.MODEL.IMAGE_SIZE)
         self.heatmap_size = np.array(cfg.MODEL.HEATMAP_SIZE)
         self.sigma = cfg.MODEL.SIGMA
-
         self.num_joints = cfg.MODEL.NUM_JOINTS
+        self.target_type = cfg.MODEL.TARGET_TYPE
+        self.model_extra = cfg.MODEL.EXTRA
 
         # TODO this really should be in the config since it's specific to mice
         self.flip_pairs = [
@@ -118,40 +119,98 @@ class MultiPoseDataset(Dataset):
             (self.num_joints, self.heatmap_size[1], self.heatmap_size[0]),
             dtype=np.float32)
 
-        tmp_size = self.sigma * 3
+        # build target heatmap where each point is the center of a 2D gaussian
+        if self.target_type == 'gaussian':
+            tmp_size = self.sigma * 3
 
-        # TODO can we add sub-pixel precision here?
-        for joint_id in range(self.num_joints):
-            for pose_inst in pose_instances:
-                feat_stride = self.image_size / self.heatmap_size
-                mu_x = int(pose_inst[joint_id][0] / feat_stride[0] + 0.5)
-                mu_y = int(pose_inst[joint_id][1] / feat_stride[1] + 0.5)
-                # Check that any part of the gaussian is in-bounds
-                ul = [int(mu_x - tmp_size), int(mu_y - tmp_size)]
-                br = [int(mu_x + tmp_size + 1), int(mu_y + tmp_size + 1)]
-                if ul[0] >= self.heatmap_size[0] or ul[1] >= self.heatmap_size[1] \
-                        or br[0] < 0 or br[1] < 0:
-                    # If not, just return the image as is
-                    continue
+            # TODO can we add sub-pixel precision here?
+            for joint_id in range(self.num_joints):
+                for pose_inst in pose_instances:
+                    feat_stride = self.image_size / self.heatmap_size
+                    mu_x = int(pose_inst[joint_id][0] / feat_stride[0] + 0.5)
+                    mu_y = int(pose_inst[joint_id][1] / feat_stride[1] + 0.5)
+                    # Check that any part of the gaussian is in-bounds
+                    ul = [int(mu_x - tmp_size), int(mu_y - tmp_size)]
+                    br = [int(mu_x + tmp_size + 1), int(mu_y + tmp_size + 1)]
+                    if ul[0] >= self.heatmap_size[0] or ul[1] >= self.heatmap_size[1] \
+                            or br[0] < 0 or br[1] < 0:
+                        # If not, just return the image as is
+                        continue
 
-                # # Generate gaussian
-                size = 2 * tmp_size + 1
-                x = np.arange(0, size, 1, np.float32)
-                y = x[:, np.newaxis]
-                x0 = y0 = size // 2
-                # The gaussian is not normalized, we want the center value to equal 1
-                g = np.exp(- ((x - x0) ** 2 + (y - y0) ** 2) / (2 * self.sigma ** 2))
+                    # # Generate gaussian
+                    size = 2 * tmp_size + 1
+                    x = np.arange(0, size, 1, np.float32)
+                    y = x[:, np.newaxis]
+                    x0 = y0 = size // 2
+                    # The gaussian is not normalized, we want the center value to equal 1
+                    g = np.exp(- ((x - x0) ** 2 + (y - y0) ** 2) / (2 * self.sigma ** 2))
 
-                # Usable gaussian range
-                g_x = max(0, -ul[0]), min(br[0], self.heatmap_size[0]) - ul[0]
-                g_y = max(0, -ul[1]), min(br[1], self.heatmap_size[1]) - ul[1]
-                # Image range
-                img_x = max(0, ul[0]), min(br[0], self.heatmap_size[0])
-                img_y = max(0, ul[1]), min(br[1], self.heatmap_size[1])
+                    # Usable gaussian range
+                    g_x = max(0, -ul[0]), min(br[0], self.heatmap_size[0]) - ul[0]
+                    g_y = max(0, -ul[1]), min(br[1], self.heatmap_size[1]) - ul[1]
+                    # Image range
+                    img_x = max(0, ul[0]), min(br[0], self.heatmap_size[0])
+                    img_y = max(0, ul[1]), min(br[1], self.heatmap_size[1])
 
-                target[joint_id][img_y[0]:img_y[1], img_x[0]:img_x[1]] = np.maximum(
-                    g[g_y[0]:g_y[1], g_x[0]:g_x[1]],
-                    target[joint_id][img_y[0]:img_y[1], img_x[0]:img_x[1]])
+                    target[joint_id][img_y[0]:img_y[1], img_x[0]:img_x[1]] = np.maximum(
+                        g[g_y[0]:g_y[1], g_x[0]:g_x[1]],
+                        target[joint_id][img_y[0]:img_y[1], img_x[0]:img_x[1]])
+
+        # build target heatmap where each point is the center of a 2D exponential
+        # decay function
+        elif self.target_type == 'exp_decay':
+
+            # for now we require image_size and heatmap_size to be the
+            # same, but we can change code to allow different sizes
+            # later if needed
+            assert np.all(self.image_size == self.heatmap_size)
+            
+            img_width, img_height = self.image_size
+
+            # Each heat patch will just be a small square to save on
+            # compute but large enough to allow almost all decay. For
+            # a lambda of 1 a distance of 3 should be sufficient: (e^-3 = ~0.05).
+            # We just need to scale this by 1/exp_decay_lambda to
+            # make it work for any lambda
+            EXP_DECAY_PATCH_SIZE_FACTOR = 4
+            exp_decay_lambda = self.model_extra['EXP_DECAY_LAMBDA']
+            heat_patch_size = EXP_DECAY_PATCH_SIZE_FACTOR / exp_decay_lambda
+
+            # for each joint within a pose instance we calculate a pose
+            # heatmap patch which will be a 2D exponential decay and then
+            # apply that patch to the target heatmap
+            for joint_id in range(self.num_joints):
+                for pose_inst in pose_instances:
+
+                    mu_x = pose_inst[joint_id][0]
+                    mu_y = pose_inst[joint_id][1]
+
+                    start_x = int(max(np.floor(mu_x - heat_patch_size), 0))
+                    start_y = int(max(np.floor(mu_y - heat_patch_size), 0))
+
+                    stop_x = int(min(np.ceil(mu_x + heat_patch_size + 1), img_width))
+                    stop_y = int(min(np.ceil(mu_y + heat_patch_size + 1), img_height))
+
+                    if start_x < stop_x and start_y < stop_y:
+                        patch_width = stop_x - start_x
+                        patch_height = stop_y - start_y
+
+                        x = np.arange(start_x, stop_x) - mu_x
+                        y = np.arange(start_y, stop_y) - mu_y
+
+                        x_mat = np.tile(x, patch_height).reshape(patch_height, patch_width)
+                        y_mat = np.tile(y, patch_width).reshape(patch_width, patch_height).T
+
+                        xy_mat = np.stack([x_mat, y_mat], axis=2)
+                        dist_mat = np.linalg.norm(xy_mat, axis=2)
+                        decay_mat = np.exp(-exp_decay_lambda * dist_mat)
+
+                        # we apply our 2D exponential decay patch to the target heatmap
+                        # but we do it using maximum so that we get the desired result
+                        # for overlapping patches
+                        target[joint_id][start_y:stop_y, start_x:stop_x] = np.maximum(
+                            decay_mat,
+                            target[joint_id][start_y:stop_y, start_x:stop_x])
 
         return torch.tensor(target, dtype=torch.float32)
 
