@@ -80,13 +80,13 @@ def main():
     args = parse_args()
     update_config(cfg, args)
 
-    logger, final_output_dir, tb_log_dir = create_logger(
+    logger, final_output_dir, _ = create_logger(
         cfg, args.cfg, 'train')
 
     logger.info(pprint.pformat(args))
     logger.info(cfg)
 
-    swriter = SummaryWriter()
+    swriter = SummaryWriter(os.path.join(final_output_dir, 'tb'))
 
     # cudnn related setting
     cudnn.benchmark = cfg.CUDNN.BENCHMARK
@@ -145,6 +145,7 @@ def main():
         shuffle=cfg.TRAIN.SHUFFLE,
         num_workers=cfg.WORKERS,
         pin_memory=cfg.PIN_MEMORY,
+        drop_last=True,
     )
 
     val_labels = [lbl for lbl in pose_labels if lbl['image_name'] in val_img_names]
@@ -193,7 +194,6 @@ def main():
 
         logger.info('entering epoch loop from: {} to {}'.format(begin_epoch, cfg.TRAIN.END_EPOCH))
         for epoch in range(begin_epoch, cfg.TRAIN.END_EPOCH):
-            lr_scheduler.step()
 
             # train for one epoch
             train(
@@ -222,6 +222,8 @@ def main():
                 best_model_state_file = os.path.join(final_output_dir, 'best_state.pth')
                 logger.info('=> saving best model state to {}'.format(best_model_state_file))
                 torch.save(model.state_dict(), best_model_state_file)
+
+            lr_scheduler.step()
 
         final_model_state_file = os.path.join(final_output_dir, 'final_state.pth')
         logger.info('=> saving final model state to {}'.format(final_model_state_file))

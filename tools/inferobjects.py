@@ -2,7 +2,7 @@ import argparse
 import h5py
 import imageio
 import numpy as np
-import skimage
+import skimage.measure
 import time
 
 import torch

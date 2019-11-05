@@ -102,3 +102,7 @@ plot/
 *.simg
 *.h5
 runs/
+
+image-out/
+sampled_frames/
+image-out-bck/

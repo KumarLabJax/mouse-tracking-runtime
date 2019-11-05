@@ -6,7 +6,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 import os
 import random
-import skimage
+import skimage.draw
+import skimage.io
 import torch
 import torch.backends.cudnn as cudnn
 

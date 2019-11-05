@@ -145,5 +145,9 @@ def validate(
             'Loss': losses.avg,
             'Performance Indicator': perf_indicator,
         })
+        summary_writer.add_scalar(
+            'Loss/validation',
+            losses.avg,
+            epoch)
 
     return perf_indicator
