@@ -100,9 +100,9 @@ plot/
 
 *.avi
 *.simg
+*.sif
 *.h5
 runs/
 
-image-out/
-sampled_frames/
-image-out-bck/
+image-out*/
+sampled_frames*/

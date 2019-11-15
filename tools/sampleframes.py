@@ -12,7 +12,16 @@ import os
 #   python tools/sampleframes.py \
 #       --videos "${share_root}"/NV1-B2B/2019-10-2[23]/*.avi \
 #       --root-dir "${share_root}" \
-#       --outdir sampled_frames
+#       --outdir sampled_frames \
+#       --include-neighbor-frames
+#
+#   share_root='/run/user/1002/gvfs/smb-share:server=bht2stor.jax.org,share=vkumar'
+#   python tools/sampleframes.py \
+#       --videos "${share_root}"/NV1-B2B/2019-10-2[23]/*.avi \
+#       --root-dir "${share_root}" \
+#       --outdir sampled_frames \
+#       --include-neighbor-frames
+
 
 
 def main():
@@ -39,6 +48,11 @@ def main():
         required=True,
         help='the output directory',
     )
+    parser.add_argument(
+        '--include-neighbor-frames',
+        action='store_true',
+        help='extract neighboring frames too (ie for frame n we also save frame n-1 and n+1)'
+    )
 
     args = parser.parse_args()
 
@@ -59,9 +73,13 @@ def main():
         assert video_len >= 30 * 60, vid_fname + ' is less than a minute long'
 
         frames_to_sample = np.random.choice(video_len, args.frames_per_vid, replace=False)
-        frames_to_sample = sorted(set(itertools.chain.from_iterable(
-            (max(f - 1, 0), f, min(f + 1, video_len - 1))
-            for f in frames_to_sample)))
+
+        if args.include_neighbor_frames:
+            frames_to_sample = sorted(set(itertools.chain.from_iterable(
+                (max(f - 1, 0), f, min(f + 1, video_len - 1))
+                for f in frames_to_sample)))
+        else:
+            frames_to_sample = sorted(frames_to_sample)
 
         os.makedirs(args.outdir, exist_ok=True)
         with imageio.get_reader(vid_fname) as reader:
