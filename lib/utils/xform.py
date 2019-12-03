@@ -28,7 +28,14 @@ def centered_transform_mat(center_xy, rot_deg, scale, out_wh):
 
 
 def random_occlusion(img, max_occlusion_size, opacity):
-    img_height, img_width = img.shape
+
+    assert img.ndim == 2 or img.ndim == 3
+
+    nchan = 0
+    if img.ndim == 2:
+        img_height, img_width = img.shape
+    elif img.ndim == 3:
+        nchan, img_height, img_width = img.shape
 
     occ_center_x = np.random.rand() * img_width
     occ_center_y = np.random.rand() * img_height
@@ -54,6 +61,9 @@ def random_occlusion(img, max_occlusion_size, opacity):
             np.random.randint(0, 359),
             0, 360, 255, -1)
     mask = mask.astype(np.bool)
+    if img.ndim == 3:
+        mask = np.stack([mask] * nchan)
 
+    rand_shade = np.random.randint(0, 255)
     img_float = img.astype(np.float32)
-    img[mask] = img_float[mask] * (1 - opacity) + np.random.randint(0, 255) * opacity
+    img[mask] = img_float[mask] * (1 - opacity) + rand_shade * opacity

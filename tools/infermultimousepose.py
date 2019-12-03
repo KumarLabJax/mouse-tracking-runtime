@@ -104,6 +104,11 @@ def main():
         ),
     ])
 
+    model_extra = cfg.MODEL.EXTRA
+    use_neighboring_frames = False
+    if 'USE_NEIGHBORING_FRAMES' in model_extra:
+        use_neighboring_frames = model_extra['USE_NEIGHBORING_FRAMES']
+
     with torch.no_grad(), imageio.get_reader(args.video) as reader:
 
         # Build up a list of lists containing PoseInstance objects. The elements
@@ -146,8 +151,9 @@ def main():
             nonlocal cuda_pose_embed_map
 
             if batch:
-                batch_tensor = torch.stack([xform(img) for img in batch]).cuda(non_blocking=True)
-                batch.clear()
+                batch_tensor = torch.stack(batch[:cfg.TEST.BATCH_SIZE_PER_GPU])
+                del batch[:cfg.TEST.BATCH_SIZE_PER_GPU]
+                batch_tensor = batch_tensor.cuda(non_blocking=True)
 
                 sync_cuda_preds()
 
@@ -156,7 +162,6 @@ def main():
                 joint_count = model_out.size(1) // 2
                 cuda_pose_heatmap = model_out[:, :joint_count, ...]
                 cuda_pose_localmax = aeutil.localmax2D(cuda_pose_heatmap, 0.4, 3)
-                # cuda_pose_localmax = aeutil.localmax2D(cuda_pose_heatmap, 0.4, 1)
                 cuda_pose_embed_map = model_out[:, joint_count:, ...]
 
         for frame_index, image in enumerate(reader):
@@ -169,9 +174,17 @@ def main():
                     cum_time_elapsed / 60,
                 ))
 
-            batch.append(image)
-            if len(batch) == cfg.TEST.BATCH_SIZE_PER_GPU:
-                perform_inference()
+            image = xform(image)
+            if use_neighboring_frames:
+                if len(batch) >= 1:
+                    image[0, ...] = batch[-1][1, ...]
+                    batch[-1][2, ...] = image[1, ...]
+                if len(batch) == cfg.TEST.BATCH_SIZE_PER_GPU + 1:
+                    perform_inference()
+            else:
+                batch.append(image)
+                if len(batch) == cfg.TEST.BATCH_SIZE_PER_GPU:
+                    perform_inference()
 
         perform_inference()
         sync_cuda_preds()
@@ -215,12 +228,12 @@ def main():
             if len(curr_pose_instances) > max_instance_count:
                 max_instance_count = len(curr_pose_instances)
 
-            print(
-                'pose_count:', len(curr_pose_instances),
-                'track_ids:', ' '.join([
-                    str(p.instance_track_id)
-                    for p
-                    in sorted(curr_pose_instances, key=lambda pose: pose.instance_track_id)]))
+            # print(
+            #     'pose_count:', len(curr_pose_instances),
+            #     'track_ids:', ' '.join([
+            #         str(p.instance_track_id)
+            #         for p
+            #         in sorted(curr_pose_instances, key=lambda pose: pose.instance_track_id)]))
 
         # save data to an HDF5 file
         frame_count = len(pose_instances)

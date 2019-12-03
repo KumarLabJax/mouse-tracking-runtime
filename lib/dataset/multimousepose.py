@@ -82,6 +82,20 @@ def transform_points(xy_points, xform):
     return xy_points_xform[:2, :]
 
 
+def _read_image(image_path):
+    data_numpy = skimage.io.imread(image_path, as_gray=True) * 255
+
+    data_numpy = data_numpy.round().astype(np.uint8)
+    data_numpy = data_numpy[..., np.newaxis]
+
+    return data_numpy
+
+
+def _decompose_name(frame_filename):
+    m = re.match(r'(.+)_([0-9]+).png', frame_filename)
+    return m.group(1), int(m.group(2))
+
+
 class MultiPoseDataset(Dataset):
 
     def __init__(self, cfg, image_dir, pose_labels, is_train, transform=None):
@@ -101,6 +115,10 @@ class MultiPoseDataset(Dataset):
         self.num_joints = cfg.MODEL.NUM_JOINTS
         self.target_type = cfg.MODEL.TARGET_TYPE
         self.model_extra = cfg.MODEL.EXTRA
+
+        self.use_neighboring_frames = False
+        if 'USE_NEIGHBORING_FRAMES' in self.model_extra:
+            self.use_neighboring_frames = self.model_extra['USE_NEIGHBORING_FRAMES']
 
         # TODO this really should be in the config since it's specific to mice
         self.flip_pairs = [
@@ -224,10 +242,20 @@ class MultiPoseDataset(Dataset):
         image_size = np.array(self.cfg.MODEL.IMAGE_SIZE, dtype=np.uint32)
 
         image_path = os.path.join(self.image_dir, image_name)
-        data_numpy = skimage.io.imread(image_path, as_gray=True) * 255
+        data_numpy = _read_image(image_path)
 
-        data_numpy = data_numpy.round().astype(np.uint8)
-        data_numpy = data_numpy[..., np.newaxis]
+        if self.use_neighboring_frames:
+            vid_fragment, frame_index = _decompose_name(image_path)
+
+            prev_frame_path = '{}_{}.png'.format(vid_fragment, frame_index - 1)
+            prev_data_numpy = _read_image(prev_frame_path)
+
+            next_frame_path = '{}_{}.png'.format(vid_fragment, frame_index + 1)
+            next_data_numpy = _read_image(next_frame_path)
+
+            data_numpy = np.concatenate(
+                [prev_data_numpy, data_numpy, next_data_numpy],
+                axis=-1)
 
         # keep randomly adding pose instances (without replacement) until the
         # bounding box is larger than our cropped IMAGE_SIZE. This is done so
@@ -250,8 +278,7 @@ class MultiPoseDataset(Dataset):
                 max_xy = curr_max_xy
 
         center_xy = (min_xy + max_xy) / 2.0
-        # # TODO FIXME 480 should be in config
-        # scale = 480 / data_numpy.shape[0]
+
         scale = 1
         rot_deg = 0
 
@@ -271,14 +298,14 @@ class MultiPoseDataset(Dataset):
 
             if self.cfg.DATASET.FLIP and np.random.random() <= 0.5:
                 # reflect the pixels along the X axis
-                data_numpy = data_numpy[:, ::-1, :]
+                data_numpy = data_numpy[:, ::-1, ...]
 
                 # center X needs to be adjusted
-                center_xy[0] = (data_numpy.shape[0] - 1) - center_xy[0]
+                center_xy[0] = (data_numpy.shape[1] - 1) - center_xy[0]
 
                 for pose_instance in pose_instances:
                     # reflect the X coords of pose
-                    pose_instance[:, 0] = (data_numpy.shape[0] - 1) - pose_instance[:, 0]
+                    pose_instance[:, 0] = (data_numpy.shape[1] - 1) - pose_instance[:, 0]
 
                     for i1, i2 in self.flip_pairs:
                         # left point is now right and right is now left so these
@@ -293,15 +320,14 @@ class MultiPoseDataset(Dataset):
             flags=cv2.INTER_LINEAR)
 
         # for training data we throw in some image augmentation:
-        # brightness, contrast, saturation and occlusion
+        # brightness, contrast and occlusion
         if self.is_train:
             jitter_brightness = self.cfg.DATASET.JITTER_BRIGHTNESS
             jitter_contrast = self.cfg.DATASET.JITTER_CONTRAST
-            jitter_saturation = self.cfg.DATASET.JITTER_SATURATION
-            if jitter_brightness > 0 or jitter_contrast > 0 or jitter_saturation > 0:
+            if jitter_brightness > 0 or jitter_contrast > 0:
                 img = to_pil_image(img)
-                img = ColorJitter(jitter_brightness, jitter_contrast, jitter_saturation)(img)
-                img = to_tensor(img).squeeze(0).numpy()
+                img = ColorJitter(jitter_brightness, jitter_contrast)(img)
+                img = to_tensor(img).numpy()
                 img = (img * 255).astype(np.uint8)
 
             prob_randomized_occlusion = self.cfg.DATASET.PROB_RANDOMIZED_OCCLUSION
@@ -309,6 +335,10 @@ class MultiPoseDataset(Dataset):
             occlusion_opacities = self.cfg.DATASET.OCCLUSION_OPACITIES
             if prob_randomized_occlusion > 0 and np.random.random() <= prob_randomized_occlusion:
                 random_occlusion(img, max_occlusion_size, np.random.choice(occlusion_opacities))
+
+        img = torch.from_numpy(img).to(torch.float32) / 255
+        if img.dim() == 2:
+            img = img.unsqueeze(0)
 
         # if we were provided an image augmentation in the constructor we use it here
         if self.transform:

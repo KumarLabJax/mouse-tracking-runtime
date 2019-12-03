@@ -53,7 +53,8 @@ def train(
 
         # compute output
         img_batch = label_batch['image'].to(device=device, non_blocking=True)
-        img_batch = torch.cat([img_batch] * 3, dim=1)
+        if img_batch.size(1) == 1:
+            img_batch = torch.cat([img_batch] * 3, dim=1)
         output = model(img_batch)
 
         loss = criterion(output, label_batch)
@@ -119,7 +120,8 @@ def validate(
 
             batch_size = label_batch['image'].size(0)
             img_batch = label_batch['image'].to(device=device, non_blocking=True)
-            img_batch = torch.cat([img_batch] * 3, dim=1)
+            if img_batch.size(1) == 1:
+                img_batch = torch.cat([img_batch] * 3, dim=1)
             output = model(img_batch)
 
             loss = criterion(output, label_batch)

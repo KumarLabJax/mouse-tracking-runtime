@@ -90,10 +90,7 @@ def main():
         args.image_dir,
         all_poses,
         True,
-        transforms.Compose([
-            transforms.ToTensor(),
-            normalize,
-        ]),
+        normalize,
     )
 
     colors = random_colors(10)
@@ -103,26 +100,35 @@ def main():
         print('doing', i)
         item = mpose_ds[i]
 
-        image = item['image'][0, ...].numpy()
+        print("item['image'].shape:", item['image'].shape)
 
-        plt.imshow(image, cmap='gray')
-        plt.show()
+        image = item['image'].numpy()
 
+        chan_count = image.shape[0]
+        plt_rows = 1 if chan_count == 1 else 2
+        plt_cols = 3
+        fig = plt.figure(figsize=(8, 8))
+
+        for chan_index in range(chan_count):
+            fig.add_subplot(plt_rows, plt_cols, chan_index + 1)
+            plt.imshow(image[chan_index, ...], cmap='gray')
+
+        fig.add_subplot(plt_rows, plt_cols, chan_count + 1)
         plt.imshow(item['joint_heatmaps'].numpy().max(0))
-        plt.show()
 
         pose_instances = item['pose_instances'][:item['instance_count'], ...]
-        inst_image = np.zeros([image.shape[0], image.shape[1], 3], dtype=np.float32)
-        inst_image_counts = np.zeros([image.shape[0], image.shape[1]], dtype=np.uint8)
+        inst_image = np.zeros([image.shape[1], image.shape[2], 3], dtype=np.float32)
+        inst_image_counts = np.zeros([image.shape[1], image.shape[2]], dtype=np.uint8)
         for instance_index, pose_instance in enumerate(pose_instances):
             for xy_point in pose_instance:
-                temp_inst_image = np.zeros([image.shape[0], image.shape[1], 3], dtype=np.float32)
+                temp_inst_image = np.zeros([image.shape[1], image.shape[2], 3], dtype=np.float32)
                 rr, cc = skidraw.circle(xy_point[1], xy_point[0], 10, inst_image.shape)
                 skidraw.set_color(temp_inst_image, (rr, cc), colors[instance_index])
                 inst_image_counts[rr, cc] += 1
                 inst_image += temp_inst_image
         inst_image /= np.expand_dims(inst_image_counts, 2)
 
+        fig.add_subplot(plt_rows, plt_cols, chan_count + 2)
         plt.imshow(inst_image * np.expand_dims(item['joint_heatmaps'].numpy().max(0), 2))
         plt.show()
 

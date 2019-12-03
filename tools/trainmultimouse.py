@@ -26,7 +26,7 @@ import models
 # Example(s):
 #
 #   python tools/trainmultimouse.py \
-#       --cfg /home/sheppk/projects/deep-high-resolution-net.pytorch/experiments/multimouse/multimouse-1.yaml \
+#       --cfg experiments/multimouse/multimouse-1.yaml \
 #       --cvat-files \
 #           /run/user/1002/gvfs/smb-share:server=bht2stor.jax.org,share=vkumar/kumarlab-new/Brian/NeuralNets/MultiMousePose/Annotations/*.xml \
 #           /run/user/1002/gvfs/smb-share:server=bht2stor.jax.org,share=vkumar/kumarlab-new/Brian/NeuralNets/MultiMousePose/Annotations_NoMarkings/*.xml \
@@ -128,16 +128,23 @@ def main():
                 val_file.write(img_name)
                 val_file.write('\n')
 
+    model_extra = cfg.MODEL.EXTRA
+    use_neighboring_frames = False
+    if 'USE_NEIGHBORING_FRAMES' in model_extra:
+        use_neighboring_frames = model_extra['USE_NEIGHBORING_FRAMES']
+ 
+    if use_neighboring_frames:
+        transform = transforms.Normalize(mean=[0.485] * 3, std=[0.229] * 3)
+    else:
+        transform = transforms.Normalize(mean=[0.485], std=[0.229])
+
     train_labels = [lbl for lbl in pose_labels if lbl['image_name'] not in val_img_names]
     train_ds = MultiPoseDataset(
         cfg,
         args.image_dir,
         train_labels,
         True,
-        transforms.Compose([
-            transforms.ToTensor(),
-            transforms.Normalize(mean=[0.485], std=[0.229]),
-        ]),
+        transform,
     )
     train_loader = torch.utils.data.DataLoader(
         train_ds,
@@ -154,10 +161,7 @@ def main():
         args.image_dir,
         val_labels,
         False,
-        transforms.Compose([
-            transforms.ToTensor(),
-            transforms.Normalize(mean=[0.485], std=[0.229]),
-        ]),
+        transform,
     )
     valid_loader = torch.utils.data.DataLoader(
         val_ds,
