@@ -19,6 +19,21 @@ import models
 
 FRAMES_PER_MINUTE = 30 * 60
 
+# Examples:
+#
+#   python -u tools/infermultimousepose.py \
+#       --max-instance-count 3 \
+#       ./output-multi-mouse/multimousepose/pose_hrnet/multimouse_2019-11-19_1/best_state.pth \
+#       ./experiments/multimouse/multimouse_2019-11-19_1.yaml
+#       one-min-clip-800x800.avi
+#       one-min-clip-800x800_2019-11-19_2.h5
+#
+#   python -u tools/infermultimousepose.py \
+#       --max-instance-count 4 \
+#       ./output-multi-mouse/multimousepose/pose_hrnet/multimouse_2019-11-19_1/best_state.pth
+#       ./experiments/multimouse/multimouse_2019-11-19_1.yaml \
+#       one-min-clip-5.avi \
+#       one-min-clip-5-2.h5
 
 def main():
     parser = argparse.ArgumentParser()
@@ -67,6 +82,18 @@ def main():
         '--max-pose-dist-px',
         type=float,
         default=40,
+    )
+    parser.add_argument(
+        '--min-joint-count',
+        help='if a pose instance has fewer than this number of points it is discarded',
+        type=int,
+        default=6,
+    )
+    parser.add_argument(
+        '--max-instance-count',
+        help='a frame should not contain more than this number of poses. If it does, extra poses '
+             'will be discarded in order of least confidence until we meet this threshold.',
+        type=int,
     )
 
     args = parser.parse_args()
@@ -139,6 +166,20 @@ def main():
                         min_embed_sep,
                         max_embed_sep,
                         max_inst_dist)
+
+                    # remove poses that have too few joints
+                    if args.min_joint_count is not None:
+                        frame_pose_instances = [
+                            pi for pi in frame_pose_instances
+                            if len(pi.keypoints) >= args.min_joint_count
+                        ]
+
+                    # if we have too many poses remove in order of lowest confidence
+                    if (args.max_instance_count is not None
+                            and len(frame_pose_instances) > args.max_instance_count):
+                        frame_pose_instances.sort(key=lambda pi: pi.mean_inst_conf)
+                        del frame_pose_instances[args.max_instance_count:]
+
                     pose_instances.append(frame_pose_instances)
 
                 cuda_pose_heatmap = None

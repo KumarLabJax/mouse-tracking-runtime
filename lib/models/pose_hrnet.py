@@ -361,6 +361,40 @@ class PoseHighResolutionNet(nn.Module):
                 padding=2,
                 output_padding=1,
             )
+        elif self.head_arch == 'CONV_TRANS_UPSCALE_5x5_EXTRA_CONVS':
+            half_chan_diff = (pre_stage_channels[0] - out_channels) // 2
+            convtrans1_chans = pre_stage_channels[0] - half_chan_diff
+            self.convtrans1 = nn.ConvTranspose2d(
+                in_channels=pre_stage_channels[0],
+                out_channels=convtrans1_chans,
+                kernel_size=5,
+                stride=2,
+                padding=2,
+                output_padding=1,
+            )
+            self.bn3 = nn.BatchNorm2d(convtrans1_chans, momentum=BN_MOMENTUM)
+            self.conv3 = nn.Conv2d(
+                in_channels=convtrans1_chans,
+                out_channels=convtrans1_chans,
+                kernel_size=5,
+                padding=2,
+            )
+            self.bn4 = nn.BatchNorm2d(convtrans1_chans, momentum=BN_MOMENTUM)
+            self.convtrans2 = nn.ConvTranspose2d(
+                in_channels=convtrans1_chans,
+                out_channels=out_channels,
+                kernel_size=5,
+                stride=2,
+                padding=2,
+                output_padding=1,
+            )
+            self.bn5 = nn.BatchNorm2d(out_channels, momentum=BN_MOMENTUM)
+            self.conv4 = nn.Conv2d(
+                in_channels=out_channels,
+                out_channels=out_channels,
+                kernel_size=5,
+                padding=2,
+            )
         elif self.head_arch == 'CONV_TRANS_UPSCALE_3x3':
             half_chan_diff = (pre_stage_channels[0] - out_channels) // 2
             convtrans1_chans = pre_stage_channels[0] - half_chan_diff
@@ -518,11 +552,28 @@ class PoseHighResolutionNet(nn.Module):
         # if self.in_out_ratio == 4:
         if self.head_arch == 'SIMPLE_CONV':
             x = self.final_layer(y_list[0])
-        else:
+        elif self.head_arch in ('CONV_TRANS_UPSCALE_5x5', 'CONV_TRANS_UPSCALE_3x3'):
             x = self.convtrans1(y_list[0])
             x = self.bn3(x)
             x = self.relu(x)
+
             x = self.convtrans2(x)
+        elif self.head_arch == 'CONV_TRANS_UPSCALE_5x5_EXTRA_CONVS':
+            x = self.convtrans1(y_list[0])
+            x = self.bn3(x)
+            x = self.relu(x)
+
+            x = self.conv3(x)
+            x = self.bn4(x)
+            x = self.relu(x)
+
+            x = self.convtrans2(x)
+            x = self.bn5(x)
+            x = self.relu(x)
+
+            x = self.conv4(x)
+        else:
+            raise Exception('unexpected HEAD_ARCH of {}'.format(self.head_arch))
 
         return x
 

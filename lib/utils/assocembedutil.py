@@ -1,4 +1,5 @@
 import math
+import statistics
 import torch
 
 
@@ -12,7 +13,7 @@ def localmax2D(data, min_thresh, min_dist):
         have at least two dimensions (d1, d2, d3, ..., dn, rows, cols). Each 2D
         (rows, cols) slice will be searched for local maxima. If neighboring pixels
         have the same value we follow a simple tie breaking algorithm. The tie will
-        be broken by considering the pixel with the larger row greater, or if the
+        be broken by considering the pixel with the larger row index greater, or if the
         rows are also equal, the pixel with the larger column index is considered
         greater.
 
@@ -122,10 +123,15 @@ class PoseInstance(object):
         self.keypoints = dict()
         self.instance_track_id = 0
         self._sum_inst_embed = 0
+        self._sum_inst_conf = 0
 
     @property
     def mean_inst_embed(self):
         return self._sum_inst_embed / len(self.keypoints)
+
+    @property
+    def mean_inst_conf(self):
+        return self._sum_inst_conf / len(self.keypoints)
 
     def add_keypoint(self, keypoint):
 
@@ -133,6 +139,7 @@ class PoseInstance(object):
         self.keypoints[keypoint['joint_index']] = keypoint
 
         self._sum_inst_embed += keypoint['embed']
+        self._sum_inst_conf += keypoint['conf']
 
     def nearest_dist(self, keypoint):
         min_dist = None
@@ -143,6 +150,16 @@ class PoseInstance(object):
                 min_dist = curr_dist
 
         return min_dist
+
+    @staticmethod
+    def from_xy_tensor(xy_tensor):
+        pi = PoseInstance()
+        pi.keypoints = {
+            i: {'x_pos': x_pos, 'y_pos': y_pos}
+            for i, (x_pos, y_pos) in enumerate(xy_tensor)
+        }
+
+        return pi
 
 
 def calc_pose_instances(
@@ -313,16 +330,28 @@ def pose_distance(pose1, pose2):
     # TODO if this isn't good enough we should correct distance using keypoint speed
     # to estimate position
 
-    total_distance = 0
-    point_count = 0
+    # total_distance = 0
+    # point_count = 0
+
+    # for joint_index, pose1_keypoint in pose1.keypoints.items():
+    #     if joint_index in pose2.keypoints:
+    #         pose2_keypoint = pose2.keypoints[joint_index]
+    #         total_distance += xy_dist(pose1_keypoint, pose2_keypoint)
+    #         point_count += 1
+
+    # if point_count >= 1:
+    #     return total_distance / point_count
+    # else:
+    #     return math.inf
+
+    point_dists = []
 
     for joint_index, pose1_keypoint in pose1.keypoints.items():
         if joint_index in pose2.keypoints:
             pose2_keypoint = pose2.keypoints[joint_index]
-            total_distance += xy_dist(pose1_keypoint, pose2_keypoint)
-            point_count += 1
+            point_dists.append(xy_dist(pose1_keypoint, pose2_keypoint))
 
-    if point_count >= 1:
-        return total_distance / point_count
+    if point_dists:
+        return statistics.median(point_dists)
     else:
         return math.inf

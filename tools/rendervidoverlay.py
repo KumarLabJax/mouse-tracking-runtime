@@ -30,8 +30,32 @@ CONNECTED_SEGMENTS = [
         ],
 ]
 
+# from: http://colorbrewer2.org/?type=qualitative&scheme=Set3&n=8
+# COLOR_PALETTE = [
+#     (141,211,199),
+#     (255,255,179),
+#     (190,186,218),
+#     (251,128,114),
+#     (128,177,211),
+#     (253,180,98),
+#     (179,222,105),
+#     (252,205,229),
+# ]
 
-def render_pose_overlay(image, frame_points, exclude_points):
+COLOR_PALETTE = [
+    (166,206,227),
+    (31,120,180),
+    (178,223,138),
+    (51,160,44),
+    (251,154,153),
+    (227,26,28),
+    (253,191,111),
+    (255,127,0),
+    (202,178,214),
+    (106,61,154),
+    (255,255,153)]
+
+def render_pose_overlay(image, frame_points, exclude_points, color=(255 ,255, 255)):
 
     # we need to fragment lines if exclude_points breaks up
     # (or removes completely) line segments
@@ -69,7 +93,7 @@ def render_pose_overlay(image, frame_points, exclude_points):
         line_pts = np.array(
             [(pt_x, pt_y) for pt_y, pt_x in frame_points[curr_line_indexes]],
             np.int32)
-        cv2.polylines(image, [line_pts], False, (255 ,255, 255), 1, cv2.LINE_AA)
+        cv2.polylines(image, [line_pts], False, color, 1, cv2.LINE_AA)
 
     for point_index in range(12):
         if point_index in exclude_points:
@@ -77,16 +101,34 @@ def render_pose_overlay(image, frame_points, exclude_points):
 
         point_y, point_x = frame_points[point_index, :]
 
-        cv2.circle(image, (point_x, point_y), 2, (255, 255, 255), -1, cv2.LINE_AA)
+        cv2.circle(image, (point_x, point_y), 2, color, -1, cv2.LINE_AA)
 
 
 def render_pose_v3_overlay(
         image,
         frame_points,
         frame_confidence,
+        frame_track_ids,
         exclude_points):
 
     instance_count = frame_points.shape[0]
+
+    id_color_dict = dict()
+    avail_color_idxs = set(range(len(COLOR_PALETTE)))
+    sorted_ids = sorted(frame_track_ids)
+
+    if len(frame_track_ids) <= len(COLOR_PALETTE):
+        for curr_id in sorted_ids:
+            curr_color_idx = curr_id % len(COLOR_PALETTE)
+            offset = 0
+            while curr_color_idx not in avail_color_idxs:
+                offset += 1
+                curr_color_idx = (curr_id + offset) % len(COLOR_PALETTE)
+
+            id_color_dict[curr_id] = COLOR_PALETTE[curr_color_idx]
+            avail_color_idxs.remove(curr_color_idx)
+    else:
+        id_color_dict = {i: (255, 255, 255) for i in sorted_ids}
 
     for instance_index in range(instance_count):
 
@@ -99,7 +141,8 @@ def render_pose_v3_overlay(
         render_pose_overlay(
             image,
             frame_points[instance_index, ...],
-            inst_exclude_points)
+            inst_exclude_points,
+            id_color_dict[frame_track_ids[instance_index]])
 
 
 def process_video(in_video_path, pose_h5_path, out_video_path, exclude_points):
@@ -135,7 +178,7 @@ def process_video(in_video_path, pose_h5_path, out_video_path, exclude_points):
             all_points = vid_grp['points'][:]
             all_confidence = vid_grp['confidence'][:]
             all_instance_count = vid_grp['instance_count'][:]
-            # all_track_id = vid_grp['instance_track_id'][:]
+            all_track_id = vid_grp['instance_track_id'][:]
             for frame_index, image in enumerate(video_reader):
 
                 frame_instance_count = all_instance_count[frame_index]
@@ -144,6 +187,7 @@ def process_video(in_video_path, pose_h5_path, out_video_path, exclude_points):
                         image,
                         all_points[frame_index, :frame_instance_count, ...],
                         all_confidence[frame_index, :frame_instance_count, ...],
+                        all_track_id[frame_index, :frame_instance_count],
                         exclude_points)
 
                 video_writer.append_data(image)

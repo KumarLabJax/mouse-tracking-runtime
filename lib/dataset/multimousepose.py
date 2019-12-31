@@ -1,6 +1,7 @@
 import cv2
 import numpy as np
 import os
+import re
 import skimage.io
 import torch
 from torch.utils.data import Dataset
@@ -91,7 +92,7 @@ def _read_image(image_path):
     return data_numpy
 
 
-def _decompose_name(frame_filename):
+def decompose_frame_name(frame_filename):
     m = re.match(r'(.+)_([0-9]+).png', frame_filename)
     return m.group(1), int(m.group(2))
 
@@ -245,7 +246,7 @@ class MultiPoseDataset(Dataset):
         data_numpy = _read_image(image_path)
 
         if self.use_neighboring_frames:
-            vid_fragment, frame_index = _decompose_name(image_path)
+            vid_fragment, frame_index = decompose_frame_name(image_path)
 
             prev_frame_path = '{}_{}.png'.format(vid_fragment, frame_index - 1)
             prev_data_numpy = _read_image(prev_frame_path)
@@ -335,6 +336,9 @@ class MultiPoseDataset(Dataset):
             occlusion_opacities = self.cfg.DATASET.OCCLUSION_OPACITIES
             if prob_randomized_occlusion > 0 and np.random.random() <= prob_randomized_occlusion:
                 random_occlusion(img, max_occlusion_size, np.random.choice(occlusion_opacities))
+        else:
+            if img.ndim == 3:
+                img = np.stack([img[:, :, i] for i in range(img.shape[2])])
 
         img = torch.from_numpy(img).to(torch.float32) / 255
         if img.dim() == 2:

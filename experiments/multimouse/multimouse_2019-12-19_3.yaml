@@ -1,3 +1,5 @@
+# This is the same as multimouse-2019-12-19_1.yaml
+# except that we use a larger image size
 AUTO_RESUME: false
 CUDNN:
   BENCHMARK: true
@@ -33,24 +35,24 @@ MODEL:
   NAME: pose_hrnet
   NUM_JOINTS: 12
   PRETRAINED: 'models/pytorch/imagenet/hrnet_w32-36af842e.pth'
-  # TARGET_TYPE: gaussian
-  TARGET_TYPE: exp_decay
-  # IMAGE_SIZE:
-  # - 384
-  # - 384
-  # HEATMAP_SIZE:
-  # - 384
-  # - 384
+  TARGET_TYPE: gaussian
+  # TARGET_TYPE: exp_decay
   IMAGE_SIZE:
-  - 256
-  - 256
+  - 384
+  - 384
   HEATMAP_SIZE:
-  - 256
-  - 256
+  - 384
+  - 384
+  # IMAGE_SIZE:
+  # - 256
+  # - 256
+  # HEATMAP_SIZE:
+  # - 256
+  # - 256
   SIGMA: 6
   EXTRA:
     EXP_DECAY_LAMBDA: 0.1
-    USE_NEIGHBORING_FRAMES: true
+    USE_NEIGHBORING_FRAMES: false
     OUTPUT_CHANNELS_PER_JOINT: 2
     HEAD_ARCH: 'CONV_TRANS_UPSCALE_5x5'
     PRETRAINED_LAYERS:

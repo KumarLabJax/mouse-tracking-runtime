@@ -13,7 +13,14 @@ def _decompose_name(frame_filename):
     m = re.match(r'(.+)_([0-9]+).png', frame_filename)
     return m.group(1), int(m.group(2))
 
-
+# Example call:
+#
+# python -u tools/gathercvatframes.py \
+#   --cvat-xml data/multi-mouse/Annotations/*.xml data/multi-mouse/Annotations_NoMarkings/*.xml \
+#   --outdir data/multi-mouse/Dataset \
+#   --root-dir '/run/user/1002/gvfs/smb-share:server=bht2stor.jax.org,share=vkumar' \
+#   --include-neighbor-frames \
+#   --vid-path-str-replace NV6-B2B NV6-CBAX2
 def main():
     parser = argparse.ArgumentParser()
 
@@ -38,11 +45,19 @@ def main():
         required=True,
         help='the output directory',
     )
+    parser.add_argument(
+        '--vid-path-str-replace',
+        nargs='+',
+        default=[],
+        help='find and replace string pairs (so this should have an even number of strings)',
+    )
 
     args = parser.parse_args()
 
     all_pose_labels = itertools.chain.from_iterable(parse_poses(xml) for xml in args.cvat_xml)
     all_filenames = {lbl['image_name'] for lbl in all_pose_labels}
+
+    assert len(args.vid_path_str_replace) % 2 == 0
 
     if args.include_neighbor_frames:
         for fname in set(all_filenames):
@@ -65,6 +80,11 @@ def main():
 
         if missing_fnames:
             network_filename = vid_frag.replace('+', '/')
+            for i in range(len(args.vid_path_str_replace) // 2):
+                find_str = args.vid_path_str_replace[i * 2]
+                replace_str = args.vid_path_str_replace[i * 2 + 1]
+                network_filename = network_filename.replace(find_str, replace_str)
+
             vid_fname = os.path.join(args.root_dir, network_filename)
 
             print("OPENING")

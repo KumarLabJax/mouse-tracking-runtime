@@ -10,3 +10,9 @@ https://github.com/opencv/cvat. The Users
 * Name: MultiPoseEstAndID
 * Labels: mouse @checkbox=MarkingUncertain:false @checkbox=LeftShoulderMarked:false @checkbox=RightShoulderMarked:false @checkbox=RearMarked:false
 * Image Quality: 95
+
+
+## Pose Similarity Metrics
+
+* http://cocodataset.org/#keypoints-eval
+* https://nanonets.com/blog/human-pose-estimation-2d-guide/

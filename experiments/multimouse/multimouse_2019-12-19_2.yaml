@@ -1,3 +1,4 @@
+# same as multimouse-2019-12-19_1.yaml except that here we use neighboring frames
 AUTO_RESUME: false
 CUDNN:
   BENCHMARK: true
@@ -33,8 +34,8 @@ MODEL:
   NAME: pose_hrnet
   NUM_JOINTS: 12
   PRETRAINED: 'models/pytorch/imagenet/hrnet_w32-36af842e.pth'
-  # TARGET_TYPE: gaussian
-  TARGET_TYPE: exp_decay
+  TARGET_TYPE: gaussian
+  # TARGET_TYPE: exp_decay
   # IMAGE_SIZE:
   # - 384
   # - 384
