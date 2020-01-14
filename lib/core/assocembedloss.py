@@ -112,6 +112,37 @@ def _ref_embedding_separation_term(reference_embeds, sigma=1):
         return sum_of_exps / (num_combos + instance_count / 2)
 
 
+def balanced_bcelogit_loss(inf_maps, lbl_maps):
+
+    total_len = 0
+    for i, dim_len in enumerate(lbl_maps.size()):
+        if i == 0:
+            total_len = dim_len
+        else:
+            total_len *= dim_len
+
+    raw_loss = torch.nn.functional.binary_cross_entropy_with_logits(
+        inf_maps,
+        lbl_maps,
+        reduction='none')
+
+    # split the losses between true labels and false labels
+    true_lbl_losses = raw_loss[lbl_maps == 1]
+    true_lbl_count = len(true_lbl_losses)
+    false_lbl_losses = raw_loss[lbl_maps == 0]
+    false_lbl_count = len(false_lbl_losses)
+
+    assert total_len == true_lbl_count + false_lbl_count
+
+    if true_lbl_count == 0 or false_lbl_count == 0:
+        # we're missing one of the true/false classes so we can't balance
+        # loss here
+        return raw_loss.mean()
+    else:
+        # return a balanced loss (where true and false cases contribute equally)
+        return (true_lbl_losses.mean() + false_lbl_losses.mean()) / 2
+
+
 class PoseEstAssocEmbedLoss(nn.Module):
 
     """
@@ -124,7 +155,8 @@ class PoseEstAssocEmbedLoss(nn.Module):
             assoc_embedding_weight=1.0,
             separation_term_weight=1.0,
             grouping_term_weight=1.0,
-            sigma=1.0):
+            sigma=1.0,
+            pose_loss_func=None):
 
         super(PoseEstAssocEmbedLoss, self).__init__()
 
@@ -133,6 +165,8 @@ class PoseEstAssocEmbedLoss(nn.Module):
         self.separation_term_weight = separation_term_weight
         self.grouping_term_weight = grouping_term_weight
         self.sigma = sigma
+        self.pose_loss_func = pose_loss_func
+
         self.loss_components = dict()
 
     def forward(self, inference_tensor, truth_labels):
@@ -155,9 +189,14 @@ class PoseEstAssocEmbedLoss(nn.Module):
         inf_joint_heatmaps = inference_tensor[:, :pose_keypoint_count, ...]
         inf_assoc_embed_map = inference_tensor[:, pose_keypoint_count:, ...]
 
-        pose_loss = nn.functional.mse_loss(
-            lbl_joint_heatmaps,
-            inf_joint_heatmaps)
+        if self.pose_loss_func is not None:
+            pose_loss = self.pose_loss_func(
+                inf_joint_heatmaps,
+                lbl_joint_heatmaps)
+        else:
+            pose_loss = nn.functional.mse_loss(
+                inf_joint_heatmaps,
+                lbl_joint_heatmaps)
         embed_loss = self.pose_assoc_embed_loss(
             inf_assoc_embed_map,
             lbl_pose_instances,

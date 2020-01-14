@@ -231,6 +231,33 @@ class MultiPoseDataset(Dataset):
                             decay_mat,
                             target[joint_id][start_y:stop_y, start_x:stop_x])
 
+        # build target heatmap where each point is a single pixel set to 1.0
+        elif self.target_type == 'point':
+
+            # for now we require image_size and heatmap_size to be the
+            # same, but we can change code to allow different sizes
+            # later if needed
+            assert np.all(self.image_size == self.heatmap_size)
+            
+            img_width, img_height = self.image_size
+
+            # for each joint within a pose instance we set the joint x,y to 1.0
+            for joint_id in range(self.num_joints):
+                for pose_inst in pose_instances:
+
+                    mu_x = int(round(pose_inst[joint_id][0]))
+                    mu_y = int(round(pose_inst[joint_id][1]))
+
+                    # print(type(joint_id), type(mu_y), type(mu_x))
+                    # print(joint_id, mu_y, mu_x)
+                    if 0 <= mu_x < img_width and 0 <= mu_y < img_height:
+                        target[joint_id, mu_y, mu_x] = 1.0
+
+        # if we reach this else we've been given a target type that we don't
+        # know how to deal with
+        else:
+            raise Exception('unexpected target type: {}'.format(self.target_type))
+
         return torch.tensor(target, dtype=torch.float32)
 
     def __getitem__(self, idx):

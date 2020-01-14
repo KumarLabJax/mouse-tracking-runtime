@@ -15,7 +15,7 @@ import _init_paths
 from config import cfg
 from config import update_config
 from core.assocembedfunc import train, validate
-from core.assocembedloss import PoseEstAssocEmbedLoss
+from core.assocembedloss import PoseEstAssocEmbedLoss, balanced_bcelogit_loss
 from dataset.multimousepose import MultiPoseDataset, parse_poses
 from utils.utils import get_optimizer
 from utils.utils import save_checkpoint
@@ -31,6 +31,13 @@ import models
 #           /run/user/1002/gvfs/smb-share:server=bht2stor.jax.org,share=vkumar/kumarlab-new/Brian/NeuralNets/MultiMousePose/Annotations/*.xml \
 #           /run/user/1002/gvfs/smb-share:server=bht2stor.jax.org,share=vkumar/kumarlab-new/Brian/NeuralNets/MultiMousePose/Annotations_NoMarkings/*.xml \
 #       --image-dir '/run/user/1002/gvfs/smb-share:server=bht2stor.jax.org,share=vkumar/kumarlab-new/Brian/NeuralNets/MultiMousePose/Dataset'
+#
+#   singularity exec --nv vm/multi-mouse-pose-2019-11-04.sif python3 tools/trainmultimouse.py \
+#       --cfg experiments/multimouse/multimouse_2019-12-31_1.yaml \
+#       --cvat-files \
+#           data/multi-mouse/Annotations/*xml \
+#           data/multi-mouse/Annotations_NoMarkings/*.xml \
+#       --image-dir data/multi-mouse/Dataset
 
 def parse_args():
     parser = argparse.ArgumentParser(description='train multi-mouse pose network')
@@ -101,11 +108,19 @@ def main():
         os.path.join(this_dir, '../lib/models', cfg.MODEL.NAME + '.py'),
         final_output_dir)
 
-    criterion = PoseEstAssocEmbedLoss(
-        pose_heatmap_weight = 1 / 2,
-        assoc_embedding_weight = 1 / 1000,
-        separation_term_weight = 5,
-        sigma = 5)
+    if cfg.LOSS.USE_BALANCED_BCE:
+        criterion = PoseEstAssocEmbedLoss(
+            pose_heatmap_weight = 1 / 500,
+            assoc_embedding_weight = 1 / 1000,
+            separation_term_weight = 5,
+            sigma = 5,
+            pose_loss_func = balanced_bcelogit_loss)
+    else:
+        criterion = PoseEstAssocEmbedLoss(
+            pose_heatmap_weight = 1 / 2,
+            assoc_embedding_weight = 1 / 1000,
+            separation_term_weight = 5,
+            sigma = 5)
 
     # Data loading code
     pose_labels = list(itertools.chain.from_iterable(parse_poses(f) for f in args.cvat_files))
