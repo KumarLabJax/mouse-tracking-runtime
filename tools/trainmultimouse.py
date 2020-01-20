@@ -1,5 +1,6 @@
 import argparse
 import csv
+import functools
 import itertools
 import os
 import pprint
@@ -15,7 +16,7 @@ import _init_paths
 from config import cfg
 from config import update_config
 from core.assocembedfunc import train, validate
-from core.assocembedloss import PoseEstAssocEmbedLoss, balanced_bcelogit_loss
+from core.assocembedloss import PoseEstAssocEmbedLoss, balanced_bcelogit_loss, weighted_bcelogit_loss
 from dataset.multimousepose import MultiPoseDataset, parse_poses
 from utils.utils import get_optimizer
 from utils.utils import save_checkpoint
@@ -108,19 +109,32 @@ def main():
         os.path.join(this_dir, '../lib/models', cfg.MODEL.NAME + '.py'),
         final_output_dir)
 
-    if cfg.LOSS.USE_BALANCED_BCE:
+    if cfg.LOSS.POSE_LOSS_FUNC == 'MSE':
         criterion = PoseEstAssocEmbedLoss(
-            pose_heatmap_weight = 1 / 500,
-            assoc_embedding_weight = 1 / 1000,
-            separation_term_weight = 5,
-            sigma = 5,
-            pose_loss_func = balanced_bcelogit_loss)
-    else:
-        criterion = PoseEstAssocEmbedLoss(
-            pose_heatmap_weight = 1 / 2,
-            assoc_embedding_weight = 1 / 1000,
+            pose_heatmap_weight = cfg.LOSS.POSE_HEATMAP_WEIGHT,
+            assoc_embedding_weight = cfg.LOSS.ASSOC_EMBEDDING_WEIGHT,
             separation_term_weight = 5,
             sigma = 5)
+    elif cfg.LOSS.POSE_LOSS_FUNC == 'BALANCED_BCE':
+        criterion = PoseEstAssocEmbedLoss(
+            pose_heatmap_weight = cfg.LOSS.POSE_HEATMAP_WEIGHT,
+            assoc_embedding_weight = cfg.LOSS.ASSOC_EMBEDDING_WEIGHT,
+            separation_term_weight = 5,
+            sigma = 5,
+            pose_loss_func = functools.partial(
+                balanced_bcelogit_loss,
+                fairness_quotient = cfg.LOSS.BALANCED_BCE_FAIRNESS_QUOTIENT))
+    elif cfg.LOSS.POSE_LOSS_FUNC == 'WEIGHTED_BCE':
+        criterion = PoseEstAssocEmbedLoss(
+            pose_heatmap_weight = cfg.LOSS.POSE_HEATMAP_WEIGHT,
+            assoc_embedding_weight = cfg.LOSS.ASSOC_EMBEDDING_WEIGHT,
+            separation_term_weight = 5,
+            sigma = 5,
+            pose_loss_func = functools.partial(
+                weighted_bcelogit_loss,
+                pos_weight = cfg.LOSS.POSITIVE_LABEL_WEIGHT))
+    else:
+        raise Exception('Unknown pose loss function: {}'.format(cfg.LOSS.POSE_LOSS_FUNC))
 
     # Data loading code
     pose_labels = list(itertools.chain.from_iterable(parse_poses(f) for f in args.cvat_files))

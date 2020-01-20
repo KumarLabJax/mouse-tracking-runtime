@@ -112,7 +112,50 @@ def _ref_embedding_separation_term(reference_embeds, sigma=1):
         return sum_of_exps / (num_combos + instance_count / 2)
 
 
-def balanced_bcelogit_loss(inf_maps, lbl_maps):
+def balanced_bcelogit_loss(inf_maps, lbl_maps, fairness_quotient):
+
+    assert 0.0 <= fairness_quotient <= 1.0
+
+    total_len = 0
+    for i, dim_len in enumerate(lbl_maps.size()):
+        if i == 0:
+            total_len = dim_len
+        else:
+            total_len *= dim_len
+
+    raw_loss = torch.nn.functional.binary_cross_entropy_with_logits(
+        inf_maps,
+        lbl_maps,
+        reduction='none')
+
+    # split the losses between true labels and false labels
+    true_lbl_losses = raw_loss[lbl_maps == 1]
+    true_lbl_count = len(true_lbl_losses)
+    false_lbl_losses = raw_loss[lbl_maps == 0]
+    false_lbl_count = len(false_lbl_losses)
+
+    assert total_len == true_lbl_count + false_lbl_count
+
+    if fairness_quotient == 0 or true_lbl_count == 0 or false_lbl_count == 0:
+        # We've either been asked to apply zero fairness or
+        # we're missing one of the true/false classes so we can't balance
+        # the loss here
+        return raw_loss.mean()
+    elif fairness_quotient == 1:
+        # return a balanced loss (where true and false cases contribute equally)
+        return (true_lbl_losses.mean() + false_lbl_losses.mean()) / 2
+    else:
+        # we mix balanced and imbalanced losses according to the fairness quotient
+        # TODO: there is a more efficient way to do this. We don't need to sum over
+        #       the raw losses twice.
+        balanced_loss = (true_lbl_losses.mean() + false_lbl_losses.mean()) / 2
+        imbalanced_loss = raw_loss.mean()
+
+        return balanced_loss * fairness_quotient + imbalanced_loss * (1.0 - fairness_quotient)
+
+
+
+def weighted_bcelogit_loss(inf_maps, lbl_maps, pos_weight):
 
     total_len = 0
     for i, dim_len in enumerate(lbl_maps.size()):
@@ -135,12 +178,14 @@ def balanced_bcelogit_loss(inf_maps, lbl_maps):
     assert total_len == true_lbl_count + false_lbl_count
 
     if true_lbl_count == 0 or false_lbl_count == 0:
-        # we're missing one of the true/false classes so we can't balance
-        # loss here
+        # we're missing one of the true/false classes so we can't weight
         return raw_loss.mean()
     else:
-        # return a balanced loss (where true and false cases contribute equally)
-        return (true_lbl_losses.mean() + false_lbl_losses.mean()) / 2
+        # return a weighted loss
+        numerator = true_lbl_losses.sum() * pos_weight + false_lbl_losses.sum()
+        denominator = true_lbl_count * pos_weight + false_lbl_count
+
+        return numerator / denominator
 
 
 class PoseEstAssocEmbedLoss(nn.Module):
