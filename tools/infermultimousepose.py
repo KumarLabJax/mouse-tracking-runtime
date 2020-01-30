@@ -35,6 +35,179 @@ FRAMES_PER_MINUTE = 30 * 60
 #       one-min-clip-5.avi \
 #       one-min-clip-5-2.h5
 
+
+def infer_pose_instances(
+        model, frames,
+        use_neighboring_frames,
+        min_embed_sep, max_embed_sep, max_inst_dist,
+        min_joint_count, max_instance_count, max_pose_dist_px,
+        min_pose_heatmap_val):
+
+    def infer_pose_instances_no_track_id():
+
+        xform = transforms.Compose([
+            transforms.ToTensor(),
+            transforms.Normalize(
+                mean=[0.45, 0.45, 0.45],
+                std=[0.225, 0.225, 0.225],
+            ),
+        ])
+
+        with torch.no_grad():
+
+            start_time = time.time()
+
+            # Build up a list of lists containing PoseInstance objects. The elements
+            # in pose_instances correspond to video frames and the indices of the
+            # nested lists correspond to instances detected within the respective frame.
+            # pose_instances = []
+
+            batch = []
+            cuda_pose_heatmap = None
+            cuda_pose_localmax = None
+            cuda_pose_embed_map = None
+
+            def sync_cuda_preds():
+                nonlocal cuda_pose_heatmap
+                nonlocal cuda_pose_localmax
+                nonlocal cuda_pose_embed_map
+
+                batch_pose_instances = []
+
+                if cuda_pose_heatmap is not None:
+                    # calculate pose instances and add them to pose_instances list
+                    curr_batch_size = cuda_pose_heatmap.size(0)
+                    for batch_frame_index in range(curr_batch_size):
+
+                        # pylint: disable=unsubscriptable-object
+                        frame_pose_instances = aeutil.calc_pose_instances(
+                            cuda_pose_heatmap[batch_frame_index, ...],
+                            cuda_pose_localmax[batch_frame_index, ...],
+                            cuda_pose_embed_map[batch_frame_index, ...],
+                            min_embed_sep,
+                            max_embed_sep,
+                            max_inst_dist)
+
+                        # remove poses that have too few joints
+                        if min_joint_count is not None:
+                            frame_pose_instances = [
+                                pi for pi in frame_pose_instances
+                                if len(pi.keypoints) >= min_joint_count
+                            ]
+
+                        # if we have too many poses remove in order of lowest confidence
+                        if (max_instance_count is not None
+                                and len(frame_pose_instances) > max_instance_count):
+                            frame_pose_instances.sort(key=lambda pi: pi.mean_inst_conf)
+                            del frame_pose_instances[max_instance_count:]
+
+                        batch_pose_instances.append(frame_pose_instances)
+
+                    cuda_pose_heatmap = None
+                    cuda_pose_localmax = None
+                    cuda_pose_embed_map = None
+
+                return batch_pose_instances
+
+            def perform_inference():
+                nonlocal cuda_pose_heatmap
+                nonlocal cuda_pose_localmax
+                nonlocal cuda_pose_embed_map
+
+                prev_batch_pose_instances = None
+
+                if batch:
+                    batch_tensor = torch.stack(batch[:cfg.TEST.BATCH_SIZE_PER_GPU])
+                    del batch[:cfg.TEST.BATCH_SIZE_PER_GPU]
+                    batch_tensor = batch_tensor.cuda(non_blocking=True)
+
+                    prev_batch_pose_instances = sync_cuda_preds()
+
+                    model_out = model(batch_tensor)
+
+                    joint_count = model_out.size(1) // 2
+                    cuda_pose_heatmap = model_out[:, :joint_count, ...]
+                    cuda_pose_localmax = aeutil.localmax2D(cuda_pose_heatmap, min_pose_heatmap_val, 3)
+                    cuda_pose_embed_map = model_out[:, joint_count:, ...]
+                else:
+                    prev_batch_pose_instances = sync_cuda_preds()
+
+                return prev_batch_pose_instances
+
+            for frame_index, image in enumerate(frames):
+
+                if frame_index != 0 and frame_index % (FRAMES_PER_MINUTE // 4) == 0:
+                    curr_time = time.time()
+                    cum_time_elapsed = curr_time - start_time
+                    print('processed {:.2f} min of video in {:.2f} min'.format(
+                        frame_index / FRAMES_PER_MINUTE,
+                        cum_time_elapsed / 60,
+                    ))
+
+                image = xform(image)
+
+                prev_batch_pose_instances = []
+                if use_neighboring_frames:
+                    if len(batch) >= 1:
+                        image[0, ...] = batch[-1][1, ...]
+                        batch[-1][2, ...] = image[1, ...]
+                    if len(batch) == cfg.TEST.BATCH_SIZE_PER_GPU + 1:
+                        prev_batch_pose_instances = perform_inference()
+                else:
+                    batch.append(image)
+                    if len(batch) == cfg.TEST.BATCH_SIZE_PER_GPU:
+                        prev_batch_pose_instances = perform_inference()
+
+                for frame_pose_instances in prev_batch_pose_instances:
+                    yield frame_pose_instances
+
+            # In this while loop we drain any remaining batchs. It should iterate
+            # at most two times.
+            prev_batch_pose_instances = perform_inference()
+            while prev_batch_pose_instances:
+                for frame_pose_instances in prev_batch_pose_instances:
+                    yield frame_pose_instances
+                prev_batch_pose_instances = perform_inference()
+
+    def apply_track_id_to_poses(pose_instances):
+        # we now have a collection of pose instances for every frame. We can try
+        # to join them together into tracks based on pose distance.
+        track_id_counter = 0
+        prev_pose_instances = []
+        for curr_pose_instances in pose_instances:
+            pose_combos = []
+            for prev_pose_i, prev_pose in enumerate(prev_pose_instances):
+                for curr_pose_i, curr_pose in enumerate(curr_pose_instances):
+                    curr_dist = aeutil.pose_distance(curr_pose, prev_pose)
+                    if curr_dist <= max_pose_dist_px:
+                        pose_combos.append((prev_pose_i, curr_pose_i, curr_dist))
+
+            # sort pose combinations by distance
+            pose_combos.sort(key=lambda pcombo: pcombo[2])
+
+            unmatched_prev_poses = set(range(len(prev_pose_instances)))
+            unmatched_curr_poses = set(range(len(curr_pose_instances)))
+            for prev_pose_i, curr_pose_i, curr_dist in pose_combos:
+                if prev_pose_i in unmatched_prev_poses and curr_pose_i in unmatched_curr_poses:
+                    prev_pose = prev_pose_instances[prev_pose_i]
+                    curr_pose = curr_pose_instances[curr_pose_i]
+                    curr_pose.instance_track_id = prev_pose.instance_track_id
+
+                    unmatched_prev_poses.remove(prev_pose_i)
+                    unmatched_curr_poses.remove(curr_pose_i)
+
+            for unmatched_pose_i in unmatched_curr_poses:
+                curr_pose = curr_pose_instances[unmatched_pose_i]
+                curr_pose.instance_track_id = track_id_counter
+                track_id_counter += 1
+
+            prev_pose_instances = curr_pose_instances
+
+            yield curr_pose_instances
+
+    return apply_track_id_to_poses(infer_pose_instances_no_track_id())
+
+
 def main():
     parser = argparse.ArgumentParser()
 
@@ -79,6 +252,11 @@ def main():
         default=0.1,
     )
     parser.add_argument(
+        '--min-pose-heatmap-val',
+        type=float,
+        default=0.4,
+    )
+    parser.add_argument(
         '--max-pose-dist-px',
         type=float,
         default=40,
@@ -108,7 +286,7 @@ def main():
     cfg.TEST.MODEL_FILE = args.model_file
     cfg.freeze()
 
-    start_time = time.time()
+    # start_time = time.time()
 
     # cudnn related setting
     cudnn.benchmark = cfg.CUDNN.BENCHMARK
@@ -123,145 +301,26 @@ def main():
     model.eval()
     model = model.cuda()
 
-    xform = transforms.Compose([
-        transforms.ToTensor(),
-        transforms.Normalize(
-            mean=[0.45, 0.45, 0.45],
-            std=[0.225, 0.225, 0.225],
-        ),
-    ])
+    # xform = transforms.Compose([
+    #     transforms.ToTensor(),
+    #     transforms.Normalize(
+    #         mean=[0.45, 0.45, 0.45],
+    #         std=[0.225, 0.225, 0.225],
+    #     ),
+    # ])
 
     model_extra = cfg.MODEL.EXTRA
     use_neighboring_frames = False
     if 'USE_NEIGHBORING_FRAMES' in model_extra:
         use_neighboring_frames = model_extra['USE_NEIGHBORING_FRAMES']
 
-    with torch.no_grad(), imageio.get_reader(args.video) as reader:
-
-        # Build up a list of lists containing PoseInstance objects. The elements
-        # in pose_instances correspond to video frames and the indices of the
-        # nested lists correspond to instances detected within the respective frame.
-        pose_instances = []
-
-        batch = []
-        cuda_pose_heatmap = None
-        cuda_pose_localmax = None
-        cuda_pose_embed_map = None
-
-        def sync_cuda_preds():
-            nonlocal cuda_pose_heatmap
-            nonlocal cuda_pose_localmax
-            nonlocal cuda_pose_embed_map
-
-            if cuda_pose_heatmap is not None:
-                # calculate pose instances and add them to pose_instances list
-                curr_batch_size = cuda_pose_heatmap.size(0)
-                for batch_frame_index in range(curr_batch_size):
-
-                    # pylint: disable=unsubscriptable-object
-                    frame_pose_instances = aeutil.calc_pose_instances(
-                        cuda_pose_heatmap[batch_frame_index, ...],
-                        cuda_pose_localmax[batch_frame_index, ...],
-                        cuda_pose_embed_map[batch_frame_index, ...],
-                        min_embed_sep,
-                        max_embed_sep,
-                        max_inst_dist)
-
-                    # remove poses that have too few joints
-                    if args.min_joint_count is not None:
-                        frame_pose_instances = [
-                            pi for pi in frame_pose_instances
-                            if len(pi.keypoints) >= args.min_joint_count
-                        ]
-
-                    # if we have too many poses remove in order of lowest confidence
-                    if (args.max_instance_count is not None
-                            and len(frame_pose_instances) > args.max_instance_count):
-                        frame_pose_instances.sort(key=lambda pi: pi.mean_inst_conf)
-                        del frame_pose_instances[args.max_instance_count:]
-
-                    pose_instances.append(frame_pose_instances)
-
-                cuda_pose_heatmap = None
-                cuda_pose_localmax = None
-                cuda_pose_embed_map = None
-
-        def perform_inference():
-            nonlocal cuda_pose_heatmap
-            nonlocal cuda_pose_localmax
-            nonlocal cuda_pose_embed_map
-
-            if batch:
-                batch_tensor = torch.stack(batch[:cfg.TEST.BATCH_SIZE_PER_GPU])
-                del batch[:cfg.TEST.BATCH_SIZE_PER_GPU]
-                batch_tensor = batch_tensor.cuda(non_blocking=True)
-
-                sync_cuda_preds()
-
-                model_out = model(batch_tensor)
-
-                joint_count = model_out.size(1) // 2
-                cuda_pose_heatmap = model_out[:, :joint_count, ...]
-                cuda_pose_localmax = aeutil.localmax2D(cuda_pose_heatmap, 0.4, 3)
-                cuda_pose_embed_map = model_out[:, joint_count:, ...]
-
-        for frame_index, image in enumerate(reader):
-
-            if frame_index != 0 and frame_index % (FRAMES_PER_MINUTE // 4) == 0:
-                curr_time = time.time()
-                cum_time_elapsed = curr_time - start_time
-                print('processed {:.2f} min of video in {:.2f} min'.format(
-                    frame_index / FRAMES_PER_MINUTE,
-                    cum_time_elapsed / 60,
-                ))
-
-            image = xform(image)
-            if use_neighboring_frames:
-                if len(batch) >= 1:
-                    image[0, ...] = batch[-1][1, ...]
-                    batch[-1][2, ...] = image[1, ...]
-                if len(batch) == cfg.TEST.BATCH_SIZE_PER_GPU + 1:
-                    perform_inference()
-            else:
-                batch.append(image)
-                if len(batch) == cfg.TEST.BATCH_SIZE_PER_GPU:
-                    perform_inference()
-
-        perform_inference()
-        sync_cuda_preds()
-
-        # we now have a collection of pose instances for every frame. We can try
-        # to join them together into tracks based on pose distance.
-        track_id_counter = 0
-        prev_pose_instances = []
-        for curr_pose_instances in pose_instances:
-            pose_combos = []
-            for prev_pose_i, prev_pose in enumerate(prev_pose_instances):
-                for curr_pose_i, curr_pose in enumerate(curr_pose_instances):
-                    curr_dist = aeutil.pose_distance(curr_pose, prev_pose)
-                    if curr_dist <= args.max_pose_dist_px:
-                        pose_combos.append((prev_pose_i, curr_pose_i, curr_dist))
-
-            # sort pose combinations by distance
-            pose_combos.sort(key=lambda pcombo: pcombo[2])
-
-            unmatched_prev_poses = set(range(len(prev_pose_instances)))
-            unmatched_curr_poses = set(range(len(curr_pose_instances)))
-            for prev_pose_i, curr_pose_i, curr_dist in pose_combos:
-                if prev_pose_i in unmatched_prev_poses and curr_pose_i in unmatched_curr_poses:
-                    prev_pose = prev_pose_instances[prev_pose_i]
-                    curr_pose = curr_pose_instances[curr_pose_i]
-                    curr_pose.instance_track_id = prev_pose.instance_track_id
-
-                    unmatched_prev_poses.remove(prev_pose_i)
-                    unmatched_curr_poses.remove(curr_pose_i)
-
-            for unmatched_pose_i in unmatched_curr_poses:
-                curr_pose = curr_pose_instances[unmatched_pose_i]
-                curr_pose.instance_track_id = track_id_counter
-                track_id_counter += 1
-
-            prev_pose_instances = curr_pose_instances
+    with imageio.get_reader(args.video) as frame_reader:
+        pose_instances = list(infer_pose_instances(
+                model, frame_reader,
+                use_neighboring_frames,
+                min_embed_sep, max_embed_sep, max_inst_dist,
+                args.min_joint_count, args.max_instance_count, args.max_pose_dist_px,
+                args.min_pose_heatmap_val))
 
         max_instance_count = 0
         for curr_pose_instances in pose_instances:

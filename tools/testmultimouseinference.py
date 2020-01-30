@@ -141,6 +141,11 @@ def main():
         default=0.1,
     )
     parser.add_argument(
+        '--min-pose-heatmap-val',
+        type=float,
+        default=0.4,
+    )
+    parser.add_argument(
         '--image-out-dir',
         help='the directory we plot to',
     )
@@ -272,7 +277,7 @@ def main():
             pose_heatmaps = inst_pose_data[:, :joint_count, ...]
             inst_embed_data = inst_pose_data[:, joint_count:, ...]
 
-            pose_localmax = aeutil.localmax2D(pose_heatmaps, 0.4, 3)
+            pose_localmax = aeutil.localmax2D(pose_heatmaps, args.min_pose_heatmap_val, 3)
 
             batch_index = 0
             inferred_pose_instances = aeutil.calc_pose_instances(

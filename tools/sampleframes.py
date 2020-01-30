@@ -35,7 +35,7 @@ def main():
     parser.add_argument(
         '--root-dir',
         required=True,
-        help='when determining video network ID this prefix root is stripped from the video name'
+        help='when determining video network ID this prefix root is stripped from the video name',
     )
     parser.add_argument(
         '--frames-per-vid',
