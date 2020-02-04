@@ -125,7 +125,8 @@ TRAIN:
   LR_STEP:
   - 1000
   - 1750
-  WD: 0.0001
+  # WD: 0.0001
+  WD: 0.0
   GAMMA1: 0.99
   GAMMA2: 0.0
   MOMENTUM: 0.9
