@@ -307,7 +307,7 @@ class MultiPoseDataset(Dataset):
 
         center_xy = (min_xy + max_xy) / 2.0
 
-        scale = 1
+        scale = self.cfg.DATASET.SCALE
         rot_deg = 0
 
         if self.is_train:

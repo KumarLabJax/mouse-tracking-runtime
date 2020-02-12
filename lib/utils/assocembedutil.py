@@ -151,6 +151,24 @@ class PoseInstance(object):
 
         return min_dist
 
+    def weighted_embed_dist(self, keypoint):
+
+        sum_of_weights = 0
+        sum_of_weighted_embed_dists = 0
+
+        for pose_keypoint in self.keypoints.values():
+            curr_xy_dist = xy_dist(keypoint, pose_keypoint)
+            curr_embed_dist = abs(keypoint['embed'] - pose_keypoint['embed'])
+            if curr_xy_dist == 0:
+                return curr_embed_dist
+
+            sum_of_weighted_embed_dists += curr_embed_dist / curr_xy_dist
+            sum_of_weights += 1.0 / curr_xy_dist
+
+        assert sum_of_weights > 0
+
+        return sum_of_weighted_embed_dists / sum_of_weights
+
     @staticmethod
     def from_xy_tensor(xy_tensor):
         pi = PoseInstance()
@@ -254,7 +272,8 @@ def calc_pose_instances(
                         max_inst_dist_violated = False
                         break
 
-                embedding_dist = abs(curr_pose_instance.mean_inst_embed - curr_joint['embed'])
+                #embedding_dist = abs(curr_pose_instance.mean_inst_embed - curr_joint['embed'])
+                embedding_dist = curr_pose_instance.weighted_embed_dist(curr_joint)
                 if not max_inst_dist_violated and embedding_dist < max_embed_sep_within:
                     candidate_keypoint_assignments.append(
                         (pose_index, keypoint_index, embedding_dist))

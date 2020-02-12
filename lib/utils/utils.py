@@ -65,12 +65,13 @@ def get_optimizer(cfg, model):
             lr=cfg.TRAIN.LR,
             momentum=cfg.TRAIN.MOMENTUM,
             weight_decay=cfg.TRAIN.WD,
-            nesterov=cfg.TRAIN.NESTEROV
+            nesterov=cfg.TRAIN.NESTEROV,
         )
     elif cfg.TRAIN.OPTIMIZER == 'adam':
         optimizer = optim.Adam(
             model.parameters(),
-            lr=cfg.TRAIN.LR
+            lr=cfg.TRAIN.LR,
+            weight_decay=cfg.TRAIN.WD,
         )
 
     return optimizer

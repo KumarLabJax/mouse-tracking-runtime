@@ -2,6 +2,7 @@ import argparse
 import h5py
 import imageio
 import numpy as np
+import skimage.transform
 import time
 
 import torch
@@ -24,17 +25,26 @@ FRAMES_PER_MINUTE = 30 * 60
 #   python -u tools/infermultimousepose.py \
 #       --max-instance-count 3 \
 #       ./output-multi-mouse/multimousepose/pose_hrnet/multimouse_2019-11-19_1/best_state.pth \
-#       ./experiments/multimouse/multimouse_2019-11-19_1.yaml
-#       one-min-clip-800x800.avi
+#       ./experiments/multimouse/multimouse_2019-11-19_1.yaml \
+#       one-min-clip-800x800.avi \
 #       one-min-clip-800x800_2019-11-19_2.h5
 #
 #   python -u tools/infermultimousepose.py \
 #       --max-instance-count 4 \
-#       ./output-multi-mouse/multimousepose/pose_hrnet/multimouse_2019-11-19_1/best_state.pth
+#       ./output-multi-mouse/multimousepose/pose_hrnet/multimouse_2019-11-19_1/best_state.pth \
 #       ./experiments/multimouse/multimouse_2019-11-19_1.yaml \
 #       one-min-clip-5.avi \
 #       one-min-clip-5-2.h5
-
+#
+#   python -u tools/infermultimousepose.py \
+#       --max-instance-count 4 \
+#       --max-embed-sep-within-instances 0.3 \
+#       --min-embed-sep-between-instances 0.2 \
+#       --min-pose-heatmap-val 1.5 \
+#       ./output-multi-mouse/multimousepose/pose_hrnet/multimouse_2020-02-03_06/best_state.pth \
+#       ./experiments/multimouse/multimouse_2020-02-03_06.yaml \
+#       one-min-clip-4.avi \
+#       one-min-clip-4-2020-02-03_06-WEIGHTED_EMBED-HIGHER_PROB.h5
 
 def infer_pose_instances(
         model, frames,
@@ -208,6 +218,17 @@ def infer_pose_instances(
     return apply_track_id_to_poses(infer_pose_instances_no_track_id())
 
 
+# def resize_frames(frames, height, width):
+#     for frame in frames:
+#         print('BEFORE dtype, shape, min, max:', frame.dtype, frame.shape, frame.min(), frame.max())
+#         frame = skimage.transform.resize(frame, (height, width))
+#         frame = np.round(frame * 255).astype(np.uint8)
+#
+#         print('AFTER  dtype, shape, min, max:', frame.dtype, frame.shape, frame.min(), frame.max())
+#
+#         yield frame
+
+
 def main():
     parser = argparse.ArgumentParser()
 
@@ -301,20 +322,17 @@ def main():
     model.eval()
     model = model.cuda()
 
-    # xform = transforms.Compose([
-    #     transforms.ToTensor(),
-    #     transforms.Normalize(
-    #         mean=[0.45, 0.45, 0.45],
-    #         std=[0.225, 0.225, 0.225],
-    #     ),
-    # ])
-
     model_extra = cfg.MODEL.EXTRA
     use_neighboring_frames = False
     if 'USE_NEIGHBORING_FRAMES' in model_extra:
         use_neighboring_frames = model_extra['USE_NEIGHBORING_FRAMES']
 
     with imageio.get_reader(args.video) as frame_reader:
+
+        # if args.resize_frames:
+        #     resize_height, resize_width = args.resize_frames
+        #     frame_reader = resize_frames(frame_reader, resize_height, resize_width)
+
         pose_instances = list(infer_pose_instances(
                 model, frame_reader,
                 use_neighboring_frames,

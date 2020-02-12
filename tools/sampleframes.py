@@ -21,6 +21,16 @@ import os
 #       --root-dir "${share_root}" \
 #       --outdir sampled_frames \
 #       --include-neighbor-frames
+#
+#   share_root='/run/user/1002/gvfs/smb-share:server=bht2stor.jax.org,share=vkumar'
+#   python tools/sampleframes.py \
+#       --videos \
+#           "${share_root}"/NV16-UCSD/2019-10-09/3879434_2019-10-09_20-00-00.avi \
+#           "${share_root}"/NV16-UCSD/2019-10-11/3879436_2019-10-12_13-00-00.avi \
+#           "${share_root}"/NV16-UCSD/2019-10-14/3879439_2019-10-15_03-00-00.avi \
+#       --root-dir "${share_root}" \
+#       --outdir sampled_frames_UCSD \
+#       --include-neighbor-frames
 
 
 

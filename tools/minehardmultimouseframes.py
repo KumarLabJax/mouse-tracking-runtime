@@ -25,6 +25,28 @@ import models
 #       --min-embed-sep-between-instances 0.3 \
 #       ./output-multi-mouse/multimousepose/pose_hrnet/multimouse_2020-01-17_11/best_state.pth \
 #       ./experiments/multimouse/multimouse_2020-01-17_11.yaml
+#
+#   share_root='/run/user/1002/gvfs/smb-share:server=bht2stor.jax.org,share=vkumar'
+#   python -u tools/minehardmultimouseframes.py \
+#       --videos \
+#           "${share_root}"/NV5-CBAX2/2019-11-22/MDX0089_2019-11-2*_19-00-00.avi \
+#           "${share_root}"/NV5-CBAX2/2019-11-22/MDX0089_2019-11-2*_00-00-00.avi \
+#           "${share_root}"/NV12-B2B/2019-10-31/*.avi \
+#           "${share_root}"/NV16-UCSD/2019-10-14/3879439_2019-10-14_19-21-39.avi \
+#           "${share_root}"/NV16-UCSD/2019-10-14/3879439_2019-10-15_10-00-00.avi \
+#           "${share_root}"/NV16-UCSD/2019-10-14/3879439_2019-10-15_04-00-00.avi \
+#           "${share_root}"/NV7-CBAX2/2019-11-22/MDX0090_2019-11-*_19-00-00.avi \
+#           "${share_root}"/NV7-CBAX2/2019-11-22/MDX0090_2019-11-*_00-00-00.avi \
+#           "${share_root}"/NV13-B2B/2019-10-24/*.avi \
+#           "${share_root}"/NV5-CBAX2/2019-11-14/MDX0077_2019-11-1*_19-00-00.avi \
+#           "${share_root}"/NV5-CBAX2/2019-11-14/MDX0077_2019-11-1*_00-00-00.avi \
+#       --root-dir "${share_root}" \
+#       --outdir hard_frames \
+#       --max-embed-sep-within-instances 0.3 \
+#       --min-embed-sep-between-instances 0.2 \
+#       --min-pose-heatmap-val 1.5 \
+#       ./output-multi-mouse/multimousepose/pose_hrnet/multimouse_2020-02-03_06/best_state.pth \
+#       ./experiments/multimouse/multimouse_2020-02-03_06.yaml
 
 def main():
     parser = argparse.ArgumentParser()
