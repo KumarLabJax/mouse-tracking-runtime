@@ -179,43 +179,44 @@ def infer_pose_instances(
                     yield frame_pose_instances
                 prev_batch_pose_instances = perform_inference()
 
-    def apply_track_id_to_poses(pose_instances):
-        # we now have a collection of pose instances for every frame. We can try
-        # to join them together into tracks based on pose distance.
-        track_id_counter = 0
-        prev_pose_instances = []
-        for curr_pose_instances in pose_instances:
-            pose_combos = []
-            for prev_pose_i, prev_pose in enumerate(prev_pose_instances):
-                for curr_pose_i, curr_pose in enumerate(curr_pose_instances):
-                    curr_dist = aeutil.pose_distance(curr_pose, prev_pose)
-                    if curr_dist <= max_pose_dist_px:
-                        pose_combos.append((prev_pose_i, curr_pose_i, curr_dist))
+    return apply_track_id_to_poses(max_pose_dist_px, infer_pose_instances_no_track_id())
 
-            # sort pose combinations by distance
-            pose_combos.sort(key=lambda pcombo: pcombo[2])
 
-            unmatched_prev_poses = set(range(len(prev_pose_instances)))
-            unmatched_curr_poses = set(range(len(curr_pose_instances)))
-            for prev_pose_i, curr_pose_i, curr_dist in pose_combos:
-                if prev_pose_i in unmatched_prev_poses and curr_pose_i in unmatched_curr_poses:
-                    prev_pose = prev_pose_instances[prev_pose_i]
-                    curr_pose = curr_pose_instances[curr_pose_i]
-                    curr_pose.instance_track_id = prev_pose.instance_track_id
+def apply_track_id_to_poses(max_pose_dist_px, pose_instances):
+    # we now have a collection of pose instances for every frame. We can try
+    # to join them together into tracks based on pose distance.
+    track_id_counter = 0
+    prev_pose_instances = []
+    for curr_pose_instances in pose_instances:
+        pose_combos = []
+        for prev_pose_i, prev_pose in enumerate(prev_pose_instances):
+            for curr_pose_i, curr_pose in enumerate(curr_pose_instances):
+                curr_dist = aeutil.pose_distance(curr_pose, prev_pose)
+                if curr_dist <= max_pose_dist_px:
+                    pose_combos.append((prev_pose_i, curr_pose_i, curr_dist))
 
-                    unmatched_prev_poses.remove(prev_pose_i)
-                    unmatched_curr_poses.remove(curr_pose_i)
+        # sort pose combinations by distance
+        pose_combos.sort(key=lambda pcombo: pcombo[2])
 
-            for unmatched_pose_i in unmatched_curr_poses:
-                curr_pose = curr_pose_instances[unmatched_pose_i]
-                curr_pose.instance_track_id = track_id_counter
-                track_id_counter += 1
+        unmatched_prev_poses = set(range(len(prev_pose_instances)))
+        unmatched_curr_poses = set(range(len(curr_pose_instances)))
+        for prev_pose_i, curr_pose_i, curr_dist in pose_combos:
+            if prev_pose_i in unmatched_prev_poses and curr_pose_i in unmatched_curr_poses:
+                prev_pose = prev_pose_instances[prev_pose_i]
+                curr_pose = curr_pose_instances[curr_pose_i]
+                curr_pose.instance_track_id = prev_pose.instance_track_id
 
-            prev_pose_instances = curr_pose_instances
+                unmatched_prev_poses.remove(prev_pose_i)
+                unmatched_curr_poses.remove(curr_pose_i)
 
-            yield curr_pose_instances
+        for unmatched_pose_i in unmatched_curr_poses:
+            curr_pose = curr_pose_instances[unmatched_pose_i]
+            curr_pose.instance_track_id = track_id_counter
+            track_id_counter += 1
 
-    return apply_track_id_to_poses(infer_pose_instances_no_track_id())
+        prev_pose_instances = curr_pose_instances
+
+        yield curr_pose_instances
 
 
 # def resize_frames(frames, height, width):
@@ -227,6 +228,54 @@ def infer_pose_instances(
 #         print('AFTER  dtype, shape, min, max:', frame.dtype, frame.shape, frame.min(), frame.max())
 #
 #         yield frame
+
+
+def find_same_track_pose(pose, pose_list):
+    for curr_pose in pose_list:
+        if curr_pose.instance_track_id == pose.instance_track_id:
+            return curr_pose
+
+    return None
+
+
+def smooth_poses(pose_instances):
+    frame_count = len(pose_instances)
+    for frame_index, curr_frame_pose_instances in enumerate(pose_instances):
+
+        prev_frame_pose_instances = []
+        if frame_index > 0:
+            prev_frame_pose_instances = pose_instances[frame_index - 1]
+
+        next_frame_pose_instances = []
+        if frame_index < frame_count - 1:
+            next_frame_pose_instances = pose_instances[frame_index + 1]
+
+        for curr_pose_track_instance in curr_frame_pose_instances:
+            prev_pose_track_instance = find_same_track_pose(
+                curr_pose_track_instance,
+                prev_frame_pose_instances)
+            next_pose_track_instance = find_same_track_pose(
+                curr_pose_track_instance,
+                next_frame_pose_instances)
+
+            # we only try to smooth if we have both prev and next pose
+            if prev_pose_track_instance is not None and next_pose_track_instance is not None:
+                curr_joint_indexes = curr_pose_track_instance.keypoints.keys()
+                prev_joint_indexes = prev_pose_track_instance.keypoints.keys()
+                next_joint_indexes = next_pose_track_instance.keypoints.keys()
+
+                # we only try to smooth if we have curr, prev and next keypoints
+                joints_to_smooth = curr_joint_indexes & prev_joint_indexes & next_joint_indexes
+
+                for joint_index in joints_to_smooth:
+                    prev_keypoint = prev_pose_track_instance.keypoints[joint_index]
+                    next_keypoint = next_pose_track_instance.keypoints[joint_index]
+
+                    curr_keypoint = curr_pose_track_instance.keypoints[joint_index]
+                    curr_keypoint['x_pos'] = round(
+                        (curr_keypoint['x_pos'] + prev_keypoint['x_pos'] + next_keypoint['x_pos']) / 3.0)
+                    curr_keypoint['y_pos'] = round(
+                        (curr_keypoint['y_pos'] + prev_keypoint['y_pos'] + next_keypoint['y_pos']) / 3.0)
 
 
 def main():
@@ -294,6 +343,11 @@ def main():
              'will be discarded in order of least confidence until we meet this threshold.',
         type=int,
     )
+    parser.add_argument(
+        '--pose-smoothing',
+        help='apply a smoothing to the pose by averaging position over three frames',
+        action='store_true',
+    )
 
     args = parser.parse_args()
 
@@ -339,6 +393,86 @@ def main():
                 min_embed_sep, max_embed_sep, max_inst_dist,
                 args.min_joint_count, args.max_instance_count, args.max_pose_dist_px,
                 args.min_pose_heatmap_val))
+        frame_count = len(pose_instances)
+
+        # remove points that jump too much since they are likely to be errors. A point is only
+        # considered a "jump" if it's distance is too great for the previous and next frame
+        # position of the corresponding point.
+        for frame_index in range(frame_count):
+            curr_frame_pose_instances = pose_instances[frame_index]
+
+            prev_frame_pose_instances = []
+            if frame_index > 0:
+                prev_frame_pose_instances = pose_instances[frame_index - 1]
+
+            next_frame_pose_instances = []
+            if frame_index < frame_count - 1:
+                next_frame_pose_instances = pose_instances[frame_index + 1]
+
+            for curr_pose_track_instance in curr_frame_pose_instances:
+                prev_pose_track_instance = find_same_track_pose(
+                    curr_pose_track_instance,
+                    prev_frame_pose_instances)
+                next_pose_track_instance = find_same_track_pose(
+                    curr_pose_track_instance,
+                    next_frame_pose_instances)
+
+                if prev_pose_track_instance is not None or next_pose_track_instance is not None:
+                    for keypoint in list(curr_pose_track_instance.keypoints.values()):
+                        prev_next_dists = []
+
+                        try:
+                            prev_keypoint = prev_pose_track_instance.keypoints[keypoint['joint_index']]
+                            prev_next_dists.append(aeutil.xy_dist(prev_keypoint, keypoint))
+                        except:
+                            pass
+
+                        try:
+                            next_keypoint = next_pose_track_instance.keypoints[keypoint['joint_index']]
+                            prev_next_dists.append(aeutil.xy_dist(next_keypoint, keypoint))
+                        except:
+                            pass
+
+                        # here is where we remove the point if it's too far from it's neighbors
+                        if prev_next_dists:
+                            if all(dist > args.max_pose_dist_px for dist in prev_next_dists):
+                                del curr_pose_track_instance.keypoints[keypoint['joint_index']]
+
+        # get rid of poses that don't meet our point count threshold
+        for frame_index in range(frame_count):
+            curr_frame_pose_instances = pose_instances[frame_index]
+            pose_instances[frame_index] = [
+                p for p in curr_frame_pose_instances
+                if len(p.keypoints) >= args.min_joint_count
+            ]
+
+        # get rid of "isolated" poses (where there is no previous or next pose
+        # with the same track ID)
+        for frame_index in range(frame_count):
+            curr_frame_pose_instances = pose_instances[frame_index]
+
+            prev_frame_pose_instances = []
+            if frame_index > 0:
+                prev_frame_pose_instances = pose_instances[frame_index - 1]
+
+            next_frame_pose_instances = []
+            if frame_index < frame_count - 1:
+                next_frame_pose_instances = pose_instances[frame_index + 1]
+
+            pose_instances[frame_index] = [
+                p for p in curr_frame_pose_instances
+
+                # if not isolated
+                if
+                    find_same_track_pose(p, prev_frame_pose_instances) is not None or
+                    find_same_track_pose(p, next_frame_pose_instances) is not None
+            ]
+
+        # now that we've made all of these changes we should update the track ids
+        pose_instances = list(apply_track_id_to_poses(args.max_pose_dist_px, pose_instances))
+
+        if args.pose_smoothing:
+            smooth_poses(pose_instances)
 
         max_instance_count = 0
         for curr_pose_instances in pose_instances:
@@ -354,7 +488,6 @@ def main():
             #         in sorted(curr_pose_instances, key=lambda pose: pose.instance_track_id)]))
 
         # save data to an HDF5 file
-        frame_count = len(pose_instances)
         points = np.zeros(
             (frame_count, max_instance_count, 12, 2),
             dtype=np.uint16)

@@ -2,34 +2,30 @@
 #   singularity build --fakeroot multi-mouse-pose-2020-02-12.sif multi-mouse-pose-2020-02-12.def
 
 Bootstrap: docker
-From: nvcr.io/nvidia/cuda:10.0-base-ubuntu18.04
+From: nvcr.io/nvidia/cuda:10.2-base-ubuntu18.04
 
 %files
     /home/sheppk/projects/pose-est-env /
-
-%files
     ../requirements.txt /
 
 %runscript
 
-    python3 -u /pose-est-env/deep-hres-net/tools/infermousepose.py \
-        --model-file "/pose-est-env/pose-est-model.pth" \
-        "/pose-est-env/pose-est-conf.yaml" \
-        "${1}" "${2}"
-
     # /pose-est-env/multimousepose-conf.yaml is experiments/multimouse/multimouse_2020-02-03_06.yaml
     # and /pose-est-env/multimousepose.pth is
     # output-multi-mouse/multimousepose/pose_hrnet/multimouse_2020-02-03_06/best_state.pth
-    python3 -u /pose-est-env/deep-hres-net/tools/infermultimousepose.py
-        --max-embed-sep-within-instances 0.3
-        --min-embed-sep-between-instances 0.2
-        --min-pose-heatmap-val 1.5
-        /pose-est-env/multimousepose.pth
-        /pose-est-env/multimousepose-conf.yaml
+    python3 -u /pose-est-env/deep-hres-net/tools/infermultimousepose.py \
+        --max-embed-sep-within-instances 0.3 \
+        --min-embed-sep-between-instances 0.2 \
+        --min-pose-heatmap-val 1.0 \
+        --max-inst-dist-px 75 \
+        --pose-smoothing \
+        /pose-est-env/multimousepose.pth \
+        /pose-est-env/multimousepose-conf.yaml \
         "${1}" "${2}"
 
 %post
     apt-get -y update
+    apt-get -y install libglvnd0-nvidia     # maybe this will help with our singularity crashes?
     apt-get -y install less
     apt-get -y install vim
     apt-get -y install ffmpeg
