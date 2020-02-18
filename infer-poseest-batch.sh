@@ -2,10 +2,11 @@
 #
 #SBATCH --job-name=infer-poseest-arr
 #
-#SBATCH --time=24:00:00
+#SBATCH --time=8:00:00
 #SBATCH --ntasks=1
-#SBATCH --cpus-per-task=4
-#SBATCH --gres gpu:1
+#SBATCH --cpus-per-task=10
+#SBATCH --gres=gpu:1
+#SBATCH --partition=gpu
 #SBATCH --mem=16G
 #SBATCH --nice
 
@@ -31,12 +32,30 @@ then
             cd "$(dirname "${BATCH_FILE}")"
             if [[ -f "${VIDEO_FILE}" ]]
             then
+                echo "${VIDEO_FILE}"
                 echo "DUMP OF CURRENT ENVIRONMENT:"
                 env
                 echo "BEGIN PROCESSING: ${VIDEO_FILE}"
                 H5_OUT_FILE="${VIDEO_FILE%.*}_pose_est_v2.h5"
                 module load singularity
                 singularity run --nv "${ROOT_DIR}/deep-hres-net-2019-06-28.simg" "${VIDEO_FILE}" "${H5_OUT_FILE}"
+
+                # retry several times if we have to
+                MAX_RETRIES=10
+                for (( i=0; i<"${MAX_RETRIES}"; i++ ))
+                do
+                    if [[ ! -f "${H5_OUT_FILE}" ]]
+                    then
+                        echo "FAILED TO GENERATE OUTPUT FILE. RETRY ATTEMPT ${i}"
+                        singularity run --nv "${ROOT_DIR}/deep-hres-net-2019-06-28.simg" "${VIDEO_FILE}" "${H5_OUT_FILE}"
+                    fi
+                done
+
+                if [[ ! -f "${H5_OUT_FILE}" ]]
+                then
+                    echo "ERROR: FAILED TO GENERATE OUTPUT FILE WITH NO MORE RETRIES"
+                fi
+
                 echo "FINISHED PROCESSING: ${VIDEO_FILE}"
             else
                 echo "ERROR: could not find configuration file: ${VIDEO_FILE}" >&2
