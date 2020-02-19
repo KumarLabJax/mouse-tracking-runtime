@@ -2,7 +2,7 @@
 #
 #SBATCH --job-name=infer-multi-poseest-arr
 #
-#SBATCH --time=4:00:00
+#SBATCH --time=12:00:00
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=10
 #SBATCH --gres=gpu:1
