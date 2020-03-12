@@ -84,7 +84,7 @@ else
         echo "Submitting an array job for ${test_count} videos"
 
         # Here we perform a self-submit
-        sbatch --export=ROOT_DIR="$(dirname "${0}")",BATCH_FILE="${1}" --array="1-${test_count}" "${0}"
+        sbatch --export=ROOT_DIR="$(dirname "${0}")",BATCH_FILE="${1}" --array="1-${test_count}%24" "${0}"
     else
         echo "ERROR: you need to provide a batch file to process. Eg: ./infer-poseest-batch.sh batchfile.txt" >&2
         exit 1
