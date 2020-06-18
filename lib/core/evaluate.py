@@ -49,6 +49,10 @@ def accuracy(output, target, hm_type='gaussian', thr=0.5):
     norm = 1.0
     if hm_type == 'gaussian':
         pred, _ = get_max_preds(output)
+        # KSS is this line was added to the version for corner detection. I'm not
+        #     sure that it's needed and don't have time to investigate now so
+        #     I'm commenting it out for now.
+        # target = np.expand_dims(target, 1)
         target, _ = get_max_preds(target)
         h = output.shape[2]
         w = output.shape[3]

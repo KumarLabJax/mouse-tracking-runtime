@@ -23,6 +23,10 @@ class JointsMSELoss(nn.Module):
         num_joints = output.size(1)
         heatmaps_pred = output.reshape((batch_size, num_joints, -1)).split(1, 1)
         heatmaps_gt = target.reshape((batch_size, num_joints, -1)).split(1, 1)
+        # KSS is this line was added to the version for corner detection. I'm not
+        #     sure that it's needed and don't have time to investigate now so
+        #     I'm commenting it out for now.
+        #target_weight = target_weight.reshape((batch_size, num_joints, -1))
         loss = 0
 
         for idx in range(num_joints):
