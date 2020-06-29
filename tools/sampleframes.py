@@ -31,6 +31,37 @@ import os
 #       --root-dir "${share_root}" \
 #       --outdir sampled_frames_UCSD \
 #       --include-neighbor-frames
+#
+#   python tools/sampleframes.py \
+#       --videos \
+#             ../gaitanalysis/spot-check/LL1-1_002105-M-AX12-5.28571428571429-42640-1-S331.avi \
+#             ../gaitanalysis/spot-check/LL1-3_000690-M-MP13-8-42416-3-S080.avi \
+#             ../gaitanalysis/spot-check/LL1-3_001800-M-MP16-10-42409-3-S099.avi \
+#             ../gaitanalysis/spot-check/LL1-4_002105-F-AX12-5.28571428571429-42640-4-S329.avi \
+#             ../gaitanalysis/spot-check/LL2-2_002019-M-AX30-10.2857142857143-42864-3-S420.avi \
+#             ../gaitanalysis/spot-check/LL2-3_000674-F-AX18-5-42726-1-S393.avi \
+#             ../gaitanalysis/spot-check/LL2-4_002105-M-AX12-5.28571428571429-42640-8-S332.avi \
+#             ../gaitanalysis/spot-check/LL2-4_LP.avi \
+#             ../gaitanalysis/spot-check/LL3-1_000687-M-AX11-7.71428571428571-42630-1-S320.avi \
+#             ../gaitanalysis/spot-check/LL3-2_000674-F-AX18-10-42691-4-S393.avi \
+#             ../gaitanalysis/spot-check/LL3-2_000687-M-AX11-6.42857142857143-42639-2-S337.avi \
+#             ../gaitanalysis/spot-check/LL3-2_002019-F-AX30-8.28571428571429-42878-2-S421.avi \
+#             ../gaitanalysis/spot-check/LL4-1_005314-F-AX5-9-42423-3-S137.avi \
+#             ../gaitanalysis/spot-check/LL4-3_000674-M-AX18-4.71428571428571-42728-1-S395.avi \
+#             ../gaitanalysis/spot-check/LL4-3_000690-F-MP13-8-42402-5-S018.avi \
+#             ../gaitanalysis/spot-check/LL4-4_000676-M-AX29-10.2857142857143-42864-3-S422.avi \
+#             ../gaitanalysis/spot-check/LL5-3_000928-M-AX1-8-42423-5-S123.avi \
+#             ../gaitanalysis/spot-check/LL5-4_001800-F-MP16-8-42409-1-S026.avi \
+#             ../gaitanalysis/spot-check/LL5-4_CAST_F.avi \
+#             ../gaitanalysis/spot-check/LL6-1_000674-M-AX18-5-42726-7-S396.avi \
+#             ../gaitanalysis/spot-check/LL6-1_000687-F-AX11-6.42857142857143-42639-4-S323.avi \
+#             ../gaitanalysis/spot-check/LL6-2_TALLYHOJngJ.avi \
+#             ../gaitanalysis/spot-check/LL6-3_000676-M-AX29-8-42409-7-S091.avi \
+#             ../gaitanalysis/spot-check/LL6-3_FVB_F.avi \
+#             ../gaitanalysis/spot-check/LL6-4_000687-F-AX11-7.71428571428571-42630-1-S323.avi \
+#       --root-dir "../gaitanalysis/spot-check" \
+#       --outdir fecal-boli-image-batch4 \
+#       --frames-per-vid 1
 
 
 

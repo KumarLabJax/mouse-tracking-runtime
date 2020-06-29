@@ -19,21 +19,21 @@ BN_MOMENTUM = 0.1
 logger = logging.getLogger(__name__)
 
 
-def conv3x3(in_planes, out_planes, stride=1):
+def conv3x3(in_planes, out_planes, stride=1, padding_mode='zeros'):
     """3x3 convolution with padding"""
     return nn.Conv2d(in_planes, out_planes, kernel_size=3, stride=stride,
-                     padding=1, bias=False)
+                     padding=1, bias=False, padding_mode=padding_mode)
 
 
 class BasicBlock(nn.Module):
     expansion = 1
 
-    def __init__(self, inplanes, planes, stride=1, downsample=None):
+    def __init__(self, inplanes, planes, stride=1, downsample=None, padding_mode='zeros'):
         super(BasicBlock, self).__init__()
-        self.conv1 = conv3x3(inplanes, planes, stride)
+        self.conv1 = conv3x3(inplanes, planes, stride, padding_mode=padding_mode)
         self.bn1 = nn.BatchNorm2d(planes, momentum=BN_MOMENTUM)
         self.relu = nn.ReLU(inplace=True)
-        self.conv2 = conv3x3(planes, planes)
+        self.conv2 = conv3x3(planes, planes, padding_mode=padding_mode)
         self.bn2 = nn.BatchNorm2d(planes, momentum=BN_MOMENTUM)
         self.downsample = downsample
         self.stride = stride
@@ -60,12 +60,12 @@ class BasicBlock(nn.Module):
 class Bottleneck(nn.Module):
     expansion = 4
 
-    def __init__(self, inplanes, planes, stride=1, downsample=None):
+    def __init__(self, inplanes, planes, stride=1, downsample=None, padding_mode='zeros'):
         super(Bottleneck, self).__init__()
         self.conv1 = nn.Conv2d(inplanes, planes, kernel_size=1, bias=False)
         self.bn1 = nn.BatchNorm2d(planes, momentum=BN_MOMENTUM)
         self.conv2 = nn.Conv2d(planes, planes, kernel_size=3, stride=stride,
-                               padding=1, bias=False)
+                               padding=1, padding_mode=padding_mode, bias=False)
         self.bn2 = nn.BatchNorm2d(planes, momentum=BN_MOMENTUM)
         self.conv3 = nn.Conv2d(planes, planes * self.expansion, kernel_size=1,
                                bias=False)
@@ -100,10 +100,12 @@ class Bottleneck(nn.Module):
 
 class HighResolutionModule(nn.Module):
     def __init__(self, num_branches, blocks, num_blocks, num_inchannels,
-                 num_channels, fuse_method, multi_scale_output=True):
+                 num_channels, fuse_method, multi_scale_output=True, padding_mode='zeros'):
         super(HighResolutionModule, self).__init__()
         self._check_branches(
             num_branches, blocks, num_blocks, num_inchannels, num_channels)
+
+        self.padding_mode = padding_mode
 
         self.num_inchannels = num_inchannels
         self.fuse_method = fuse_method
@@ -159,7 +161,8 @@ class HighResolutionModule(nn.Module):
                 self.num_inchannels[branch_index],
                 num_channels[branch_index],
                 stride,
-                downsample
+                downsample,
+                padding_mode=self.padding_mode,
             )
         )
         self.num_inchannels[branch_index] = \
@@ -168,7 +171,8 @@ class HighResolutionModule(nn.Module):
             layers.append(
                 block(
                     self.num_inchannels[branch_index],
-                    num_channels[branch_index]
+                    num_channels[branch_index],
+                    padding_mode=self.padding_mode
                 )
             )
 
@@ -218,7 +222,7 @@ class HighResolutionModule(nn.Module):
                                     nn.Conv2d(
                                         num_inchannels[j],
                                         num_outchannels_conv3x3,
-                                        3, 2, 1, bias=False
+                                        3, 2, 1, bias=False, padding_mode=self.padding_mode
                                     ),
                                     nn.BatchNorm2d(num_outchannels_conv3x3)
                                 )
@@ -230,7 +234,7 @@ class HighResolutionModule(nn.Module):
                                     nn.Conv2d(
                                         num_inchannels[j],
                                         num_outchannels_conv3x3,
-                                        3, 2, 1, bias=False
+                                        3, 2, 1, bias=False, padding_mode=self.padding_mode
                                     ),
                                     nn.BatchNorm2d(num_outchannels_conv3x3),
                                     nn.ReLU(True)
@@ -281,12 +285,16 @@ class PoseHighResolutionNet(nn.Module):
         extra = cfg.MODEL.EXTRA
         super(PoseHighResolutionNet, self).__init__()
 
+        self.padding_mode = 'zeros'
+        if 'CONV_PADDING_MODE' in extra:
+            self.padding_mode = extra['CONV_PADDING_MODE']
+
         # stem net
         self.conv1 = nn.Conv2d(3, 64, kernel_size=3, stride=2, padding=1,
                                bias=False)
         self.bn1 = nn.BatchNorm2d(64, momentum=BN_MOMENTUM)
         self.conv2 = nn.Conv2d(64, 64, kernel_size=3, stride=2, padding=1,
-                               bias=False)
+                               padding_mode=self.padding_mode, bias=False)
         self.bn2 = nn.BatchNorm2d(64, momentum=BN_MOMENTUM)
         self.relu = nn.ReLU(inplace=True)
         self.layer1 = self._make_layer(Bottleneck, 64, 4)
@@ -378,6 +386,7 @@ class PoseHighResolutionNet(nn.Module):
                 out_channels=convtrans1_chans,
                 kernel_size=5,
                 padding=2,
+                padding_mode=self.padding_mode,
             )
             self.bn4 = nn.BatchNorm2d(convtrans1_chans, momentum=BN_MOMENTUM)
             self.convtrans2 = nn.ConvTranspose2d(
@@ -394,6 +403,7 @@ class PoseHighResolutionNet(nn.Module):
                 out_channels=out_channels,
                 kernel_size=5,
                 padding=2,
+                padding_mode=self.padding_mode,
             )
         elif self.head_arch == 'CONV_TRANS_UPSCALE_3x3':
             half_chan_diff = (pre_stage_channels[0] - out_channels) // 2
@@ -438,7 +448,8 @@ class PoseHighResolutionNet(nn.Module):
                             nn.Conv2d(
                                 num_channels_pre_layer[i],
                                 num_channels_cur_layer[i],
-                                3, 1, 1, bias=False
+                                3, 1, 1, bias=False,
+                                padding_mode=self.padding_mode,
                             ),
                             nn.BatchNorm2d(num_channels_cur_layer[i]),
                             nn.ReLU(inplace=True)
@@ -455,7 +466,8 @@ class PoseHighResolutionNet(nn.Module):
                     conv3x3s.append(
                         nn.Sequential(
                             nn.Conv2d(
-                                inchannels, outchannels, 3, 2, 1, bias=False
+                                inchannels, outchannels, 3, 2, 1, bias=False,
+                                padding_mode=self.padding_mode,
                             ),
                             nn.BatchNorm2d(outchannels),
                             nn.ReLU(inplace=True)
@@ -477,10 +489,12 @@ class PoseHighResolutionNet(nn.Module):
             )
 
         layers = []
-        layers.append(block(self.inplanes, planes, stride, downsample))
+        layers.append(block(
+            self.inplanes, planes, stride, downsample,
+            padding_mode=self.padding_mode))
         self.inplanes = planes * block.expansion
         for i in range(1, blocks):
-            layers.append(block(self.inplanes, planes))
+            layers.append(block(self.inplanes, planes, padding_mode=self.padding_mode))
 
         return nn.Sequential(*layers)
 
@@ -509,7 +523,8 @@ class PoseHighResolutionNet(nn.Module):
                     num_inchannels,
                     num_channels,
                     fuse_method,
-                    reset_multi_scale_output
+                    reset_multi_scale_output,
+                    padding_mode=self.padding_mode,
                 )
             )
             num_inchannels = modules[-1].get_num_inchannels()
