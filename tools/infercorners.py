@@ -49,6 +49,12 @@ def argmax_2d(tensor):
 #       --cfg corner-detection.yaml \
 #       --root-dir ~/smb/labshare \
 #       --batch-file netfiles.csv
+#
+#   time python -u tools/infercorners.py \
+#       --model-file output-corner/simplepoint/pose_hrnet/corner_2020-06-30_01/best_state.pth \
+#       --cfg experiments/corner/corner_2020-06-30_01.yaml \
+#       --root-dir ~/smb/labshare \
+#       --batch-file /home/sheppk/projects/massimo-deep-hres-net/netfiles.csv
 
 def main():
     parser = argparse.ArgumentParser()
@@ -132,7 +138,6 @@ def main():
                         def perform_inference():
                             if batch:
                                 batch_tensor = torch.stack([xform(img) for img in batch]).cuda()
-                                # print(batch[0].shape)
                                 batch.clear()
 
                                 x = model(batch_tensor)
@@ -167,10 +172,6 @@ def main():
                                 preds4[..., 0] += img_w // 2
                                 preds4[..., 1] += img_h // 2
 
-                                # calculating circle
-                                # cv2.circle(image, maxvals1, 5, (255, 0, 0), 2)
-                                # cv2.imshow("Naive", image)
-
                                 predStack = np.stack([preds1, preds2, preds3, preds4], axis=-2)
                                 maxvalStack = np.stack([maxvals1, maxvals2, maxvals3, maxvals4], axis=-1)
 
@@ -196,14 +197,6 @@ def main():
                         all_preds = np.concatenate(all_preds)
                         all_maxvals = np.concatenate(all_maxvals)
 
-                        # with h5py.File(args.poseout, 'w') as h5file:
-                        #     h5file['poseest/points'] = all_preds
-                        #     h5file['poseest/confidence'] = all_maxvals
-                        #     # h5file.close()
-
-                        # x_txt = []
-                        # y_txt = []
-
                         xmed1 = []
                         xmed2 = []
                         xmed3 = []
@@ -225,16 +218,6 @@ def main():
                             ymed3.append(all_preds[i, 2, 1])
                             ymed4.append(all_preds[i, 3, 1])
 
-                        # x_txt.append(np.median(xmed1))
-                        # x_txt.append(np.median(xmed2))
-                        # x_txt.append(np.median(xmed3))
-                        # x_txt.append(np.median(xmed4))
-
-                        # y_txt.append(np.median(ymed1))
-                        # y_txt.append(np.median(ymed2))
-                        # y_txt.append(np.median(ymed3))
-                        # y_txt.append(np.median(ymed4))
-
                         xs = [
                             int(np.median(xmed1)),
                             int(np.median(xmed2)),
@@ -255,21 +238,12 @@ def main():
                         }
 
                         video_filename_root, _ = os.path.splitext(video_filename)
-                        video_yaml_out_filename = video_filename_root + '_corners.yaml'
-                        print('Writing to :', video_yaml_out_filename)
+                        video_yaml_out_filename = video_filename_root + '_corners_v2.yaml'
+                        print('Writing to:', video_yaml_out_filename)
                         with open(video_yaml_out_filename, 'w') as video_yaml_out_file:
                             yaml.safe_dump(out_doc, video_yaml_out_file)
 
-                        # print('x:', ', '.join(map(str, x_txt)))
-                        # print('y:', ', '.join(map(str, y_txt)))
-
-                        # f = open('%s_corners.txt' % (os.path.splitext(args.video)[0]), "x")
-                        # f.write('x: ')
-                        # f.write(', '.join(map(str, x_txt)))
-                        # f.write('\ny: ')
-                        # f.write(', '.join(map(str, y_txt)))
-
-                        video_png_out_filename = video_filename_root + '_corners.png'
+                        video_png_out_filename = video_filename_root + '_corners_v2.png'
                         for i in range(4):
                             rr, cc = skimage.draw.circle(ys[i], xs[i], 5, mockup.shape)
                             skimage.draw.set_color(mockup, (rr, cc), [255, 0, 0])
