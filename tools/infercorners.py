@@ -42,6 +42,13 @@ def argmax_2d(tensor):
 
     return max_vals, torch.stack([max_rows, max_cols], -1)
 
+# Example use:
+#
+#   time python -u tools/infercorners.py \
+#       --model-file output-full-mouse-pose/hdf5mousepose/pose_hrnet/corner-detection/model_best.pth \
+#       --cfg corner-detection.yaml \
+#       --root-dir ~/smb/labshare \
+#       --batch-file netfiles.csv
 
 def main():
     parser = argparse.ArgumentParser()
@@ -174,8 +181,8 @@ def main():
                         frame_step_size = 100
                         for frame_index, image in enumerate(reader):
 
-                            # if frame_index == 0:
-                            #     mockup = image
+                            if frame_index == 0:
+                                mockup = image
 
                             if frame_index % frame_step_size == 0:
 
@@ -228,20 +235,22 @@ def main():
                         # y_txt.append(np.median(ymed3))
                         # y_txt.append(np.median(ymed4))
 
+                        xs = [
+                            int(np.median(xmed1)),
+                            int(np.median(xmed2)),
+                            int(np.median(xmed3)),
+                            int(np.median(xmed4)),
+                        ]
+                        ys = [
+                            int(np.median(ymed1)),
+                            int(np.median(ymed2)),
+                            int(np.median(ymed3)),
+                            int(np.median(ymed4)),
+                        ]
                         out_doc = {
                             'corner_coords': {
-                                'xs': [
-                                    int(np.median(xmed1)),
-                                    int(np.median(xmed2)),
-                                    int(np.median(xmed3)),
-                                    int(np.median(xmed4)),
-                                ],
-                                'ys': [
-                                    int(np.median(ymed1)),
-                                    int(np.median(ymed2)),
-                                    int(np.median(ymed3)),
-                                    int(np.median(ymed4)),
-                                ],
+                                'xs': xs,
+                                'ys': ys,
                             }
                         }
 
@@ -260,10 +269,11 @@ def main():
                         # f.write('\ny: ')
                         # f.write(', '.join(map(str, y_txt)))
 
-                        # for i in range(4):
-                        #     rr, cc = skimage.draw.circle(y_txt[i], x_txt[i], 5, mockup.shape)
-                        #     skimage.draw.set_color(mockup, (rr, cc), [255, 0, 0])
-                        # skimage.io.imsave(('%s_corners.png' % (os.path.splitext(args.video)[0])), mockup)
+                        video_png_out_filename = video_filename_root + '_corners.png'
+                        for i in range(4):
+                            rr, cc = skimage.draw.circle(ys[i], xs[i], 5, mockup.shape)
+                            skimage.draw.set_color(mockup, (rr, cc), [255, 0, 0])
+                        skimage.io.imsave(video_png_out_filename, mockup)
 
 
 if __name__ == "__main__":
