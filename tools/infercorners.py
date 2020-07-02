@@ -29,19 +29,6 @@ import skimage
 FRAMES_PER_MINUTE = 30 * 60
 
 
-def argmax_2d(tensor):
-
-    assert tensor.dim() >= 2
-    max_col_vals, max_cols = torch.max(tensor, -1, keepdim=True)
-    max_vals, max_rows = torch.max(max_col_vals, -2, keepdim=True)
-    max_cols = torch.gather(max_cols, -2, max_rows)
-
-    max_vals = max_vals.squeeze(-1).squeeze(-1)
-    max_rows = max_rows.squeeze(-1).squeeze(-1)
-    max_cols = max_cols.squeeze(-1).squeeze(-1)
-
-    return max_vals, torch.stack([max_rows, max_cols], -1)
-
 # Example use:
 #
 #   time python -u tools/infercorners.py \
@@ -56,39 +43,45 @@ def argmax_2d(tensor):
 #       --root-dir ~/smb/labshare \
 #       --batch-file /home/sheppk/projects/massimo-deep-hres-net/netfiles.csv
 
+def argmax_2d(tensor):
+
+    assert tensor.dim() >= 2
+    max_col_vals, max_cols = torch.max(tensor, -1, keepdim=True)
+    max_vals, max_rows = torch.max(max_col_vals, -2, keepdim=True)
+    max_cols = torch.gather(max_cols, -2, max_rows)
+
+    max_vals = max_vals.squeeze(-1).squeeze(-1)
+    max_rows = max_rows.squeeze(-1).squeeze(-1)
+    max_cols = max_cols.squeeze(-1).squeeze(-1)
+
+    return max_vals, torch.stack([max_rows, max_cols], -1)
+
 def main():
     parser = argparse.ArgumentParser()
 
     parser.add_argument(
         '--cfg',
+        required=True,
         help='the configuration for the model to use for inference',
     )
 
     parser.add_argument(
         '--model-file',
+        required=True,
         help='the model file to use for inference',
-        default=None,
     )
 
     parser.add_argument(
         '--batch-file',
+        required=True,
         help='the batch file listing videos to process',
     )
 
     parser.add_argument(
         '--root-dir',
+        required=True,
         help='the root directory that batch file paths are build off of'
     )
-
-    # parser.add_argument(
-    #     'video',
-    #     help='the input video',
-    # )
-
-    # parser.add_argument(
-    #     'poseout',
-    #     help='the pose estimation output HDF5 file',
-    # )
 
     args = parser.parse_args()
     cfg.defrost()
@@ -144,39 +137,32 @@ def main():
 
                                 x.squeeze_(-3)
 
-                                img_w = 480
-                                img_h = 480
+                                img_h = batch_tensor.size(-2)
+                                img_w = batch_tensor.size(-1)
 
-                                x_ul = x[:, :(img_w // 2), :(img_h // 2)]
-                                x_ur = x[:, (img_w // 2):img_w, :(img_h // 2)]
-                                x_ll = x[:, :(img_w // 2), (img_w // 2):img_h]
-                                x_lr = x[:, (img_w // 2):img_w, (img_h // 2):img_h]
+                                x_ul = x[:, :(img_h // 2), :(img_w // 2)]
+                                x_ll = x[:, (img_h // 2):, :(img_w // 2)]
+                                x_ur = x[:, :(img_h // 2), (img_w // 2):]
+                                x_lr = x[:, (img_h // 2):, (img_w // 2):]
 
-                                maxvals1, preds1 = argmax_2d(x_ul)
-                                maxvals2, preds2 = argmax_2d(x_ur)
-                                maxvals3, preds3 = argmax_2d(x_ll)
-                                maxvals4, preds4 = argmax_2d(x_lr)
+                                maxvals_ul, preds_ul = argmax_2d(x_ul)
+                                maxvals_ll, preds_ll = argmax_2d(x_ll)
+                                maxvals_ur, preds_ur = argmax_2d(x_ur)
+                                maxvals_lr, preds_lr = argmax_2d(x_lr)
 
-                                maxvals1 = maxvals1.cpu().numpy()
-                                maxvals2 = maxvals2.cpu().numpy()
-                                maxvals3 = maxvals3.cpu().numpy()
-                                maxvals4 = maxvals4.cpu().numpy()
+                                preds_ul = preds_ul.cpu().numpy().astype(np.uint16)
+                                preds_ll = preds_ll.cpu().numpy().astype(np.uint16)
+                                preds_ur = preds_ur.cpu().numpy().astype(np.uint16)
+                                preds_lr = preds_lr.cpu().numpy().astype(np.uint16)
 
-                                preds1 = preds1.cpu().numpy().astype(np.uint16)
-                                preds2 = preds2.cpu().numpy().astype(np.uint16)
-                                preds3 = preds3.cpu().numpy().astype(np.uint16)
-                                preds4 = preds4.cpu().numpy().astype(np.uint16)
+                                preds_ll[..., 0] += img_h // 2
+                                preds_ur[..., 1] += img_w // 2
+                                preds_lr[..., 0] += img_h // 2
+                                preds_lr[..., 1] += img_w // 2
 
-                                preds2[..., 0] += img_w // 2
-                                preds3[..., 1] += img_h // 2
-                                preds4[..., 0] += img_w // 2
-                                preds4[..., 1] += img_h // 2
+                                pred_stack = np.stack([preds_ul, preds_ll, preds_ur, preds_lr], axis=-2)
 
-                                predStack = np.stack([preds1, preds2, preds3, preds4], axis=-2)
-                                maxvalStack = np.stack([maxvals1, maxvals2, maxvals3, maxvals4], axis=-1)
-
-                                all_preds.append(predStack)
-                                all_maxvals.append(maxvalStack)
+                                all_preds.append(pred_stack)
 
                         last_frame_index = 600
                         frame_step_size = 100
@@ -188,47 +174,45 @@ def main():
                             if frame_index % frame_step_size == 0:
 
                                 batch.append(image)
-                                # print("frame: %d" % frame_index)
                                 perform_inference()
 
                             if frame_index == last_frame_index:
                                 break
 
                         all_preds = np.concatenate(all_preds)
-                        all_maxvals = np.concatenate(all_maxvals)
 
-                        xmed1 = []
-                        xmed2 = []
-                        xmed3 = []
-                        xmed4 = []
+                        xmed_ul = []
+                        xmed_ll = []
+                        xmed_ur = []
+                        xmed_lr = []
 
-                        ymed1 = []
-                        ymed2 = []
-                        ymed3 = []
-                        ymed4 = []
+                        ymed_ul = []
+                        ymed_ll = []
+                        ymed_ur = []
+                        ymed_lr = []
 
                         for i in range(len(all_preds[0])):
-                            xmed1.append(all_preds[i, 0, 0])
-                            xmed2.append(all_preds[i, 1, 0])
-                            xmed3.append(all_preds[i, 2, 0])
-                            xmed4.append(all_preds[i, 3, 0])
+                            xmed_ul.append(all_preds[i, 0, 1])
+                            xmed_ll.append(all_preds[i, 1, 1])
+                            xmed_ur.append(all_preds[i, 2, 1])
+                            xmed_lr.append(all_preds[i, 3, 1])
 
-                            ymed1.append(all_preds[i, 0, 1])
-                            ymed2.append(all_preds[i, 1, 1])
-                            ymed3.append(all_preds[i, 2, 1])
-                            ymed4.append(all_preds[i, 3, 1])
+                            ymed_ul.append(all_preds[i, 0, 0])
+                            ymed_ll.append(all_preds[i, 1, 0])
+                            ymed_ur.append(all_preds[i, 2, 0])
+                            ymed_lr.append(all_preds[i, 3, 0])
 
                         xs = [
-                            int(np.median(xmed1)),
-                            int(np.median(xmed2)),
-                            int(np.median(xmed3)),
-                            int(np.median(xmed4)),
+                            int(np.median(xmed_ul)),
+                            int(np.median(xmed_ll)),
+                            int(np.median(xmed_ur)),
+                            int(np.median(xmed_lr)),
                         ]
                         ys = [
-                            int(np.median(ymed1)),
-                            int(np.median(ymed2)),
-                            int(np.median(ymed3)),
-                            int(np.median(ymed4)),
+                            int(np.median(ymed_ul)),
+                            int(np.median(ymed_ll)),
+                            int(np.median(ymed_ur)),
+                            int(np.median(ymed_lr)),
                         ]
                         out_doc = {
                             'corner_coords': {

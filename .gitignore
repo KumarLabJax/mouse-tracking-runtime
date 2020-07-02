@@ -92,12 +92,9 @@ log/*
 log-*/*
 data/*
 external/
-temp/
-temp2/
-temp3/
-temp4/
-temp5/
-temp6/
+temp*/
+testfbdata/
+fecal-boli-image-batch4/
 model-archive/
 
 draws/

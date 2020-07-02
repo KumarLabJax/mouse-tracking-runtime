@@ -55,7 +55,7 @@ COLOR_PALETTE = [
     (106,61,154),
     (255,255,153)]
 
-def render_pose_overlay(image, frame_points, exclude_points, color=(255 ,255, 255)):
+def render_pose_overlay(image, frame_points, exclude_points, color=(255, 255, 255)):
 
     # we need to fragment lines if exclude_points breaks up
     # (or removes completely) line segments

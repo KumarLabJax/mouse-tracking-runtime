@@ -23,6 +23,12 @@ import models
 #       --batch-file '/media/sheppk/TOSHIBA EXT/cached-data/BTBR_3M_stranger_4day/BTBR_3M_stranger_4day-batch-temp.txt' \
 #       output-fecal-boli/fecalboli/pose_hrnet/fecalboli_2020-06-19_02/best_state.pth \
 #       experiments/fecalboli/fecalboli_2020-06-19_02.yaml
+#
+#   python -u tools/inferfecalbolicountbatch.py \
+#       --root-dir '/home/sheppk/smb/labshare' \
+#       --batch-file 'data/fecal-boli/Tom-CBAX2B-OFA_batch.txt' \
+#       output-fecal-boli/fecalboli/pose_hrnet/fecalboli_2020-06-19_02/best_state.pth \
+#       experiments/fecalboli/fecalboli_2020-06-19_02.yaml
 
 def main():
     parser = argparse.ArgumentParser()
