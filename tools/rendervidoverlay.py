@@ -155,7 +155,7 @@ def process_video(in_video_path, pose_h5_path, out_video_path, exclude_points):
         return
 
     with imageio.get_reader(in_video_path) as video_reader, \
-        h5py.File(pose_h5_path) as pose_h5, \
+        h5py.File(pose_h5_path, 'r') as pose_h5, \
         imageio.get_writer(out_video_path, fps=30) as video_writer:
 
         vid_grp = next(iter(pose_h5.values()))
@@ -198,20 +198,34 @@ def process_video(in_video_path, pose_h5_path, out_video_path, exclude_points):
     print('finished generating video:', out_video_path, flush=True)
 
 
-def process_video_relpath(video_relpath, pose_suffix, in_dir, exclude_points):
+def process_video_relpath(video_relpath, pose_suffix, in_dir, out_dir, exclude_points):
 
     pose_suffex_noext, _ = os.path.splitext(pose_suffix)
     if len(pose_suffex_noext) == 0:
         print('ERROR: bad pose suffix: ' + pose_suffix, flush=True)
         return
 
+    # calculate full file paths from the in/out dirs and relative path
     relpath_noext, _ = os.path.splitext(video_relpath)
     in_video_path = os.path.join(in_dir, video_relpath)
     pose_h5_path = os.path.join(in_dir, relpath_noext + pose_suffix)
-    out_video_path = os.path.join(in_dir, relpath_noext + pose_suffex_noext + '.avi')
+    out_video_path = os.path.join(out_dir, relpath_noext + pose_suffex_noext + '.avi')
+
+    # we may need to create the output dir
+    if out_dir != in_dir:
+        full_out_dir = os.path.dirname(out_video_path)
+        os.makedirs(full_out_dir, exist_ok=True)
 
     process_video(in_video_path, pose_h5_path, out_video_path, exclude_points)
 
+
+# Examples:
+#   python -u tools/rendervidoverlay.py \
+#       --exclude-forepaws --exclude-ears \
+#       dir --in-dir ~/smb/labshare \
+#       --pose-suffix '_pose_est_v3.h5' --num-procs 3 \
+#       --out-dir ~/smb/labshare/kumarlab-new/Keith/BXD-pose-overlay-2020-08-14 \
+#       --batch-file data/BXD-batch-50-subset.txt
 
 def main():
 
@@ -245,6 +259,11 @@ def main():
         required=True,
     )
     dir_parser.add_argument(
+        '--out-dir',
+        help='out directory to save videos to (defaults to the same as --in-dir)',
+        required=False,
+    )
+    dir_parser.add_argument(
         '--pose-suffix',
         help='the suffix used for pose estimation files (appended to'
              ' video file after removing extension)',
@@ -256,6 +275,14 @@ def main():
         help='the number of processes to use',
         default=2,
         type=int,
+    )
+    dir_parser.add_argument(
+        '--batch-file',
+        help='a newline separated list of video files to process. Paths'
+             ' should be relative to the given --in-dir. The default'
+             ' behavior if this argument is missing is to traverse the'
+             ' --in-dir and process all AVI files.',
+        required=False,
     )
 
     vid_parser = subparsers.add_parser(
@@ -291,20 +318,31 @@ def main():
 
     if 'subcommand' in args:
         if args.subcommand == 'dir':
+
+            out_dir = args.in_dir
+            if args.out_dir is not None:
+                out_dir = args.out_dir
+
             files_to_process = []
-            for dirname, _, filelist in os.walk(args.in_dir):
-                for fname in filelist:
-                    if fname.lower().endswith('.avi'):
-                        fpath = os.path.join(dirname, fname)
-                        rel_fpath = os.path.relpath(fpath, args.in_dir)
-                        files_to_process.append(rel_fpath)
+            if args.batch_file is not None:
+                with open(args.batch_file) as f:
+                    for line in f:
+                        files_to_process.append(line.strip())
+
+            else:
+                for dirname, _, filelist in os.walk(args.in_dir):
+                    for fname in filelist:
+                        if fname.lower().endswith('.avi'):
+                            fpath = os.path.join(dirname, fname)
+                            rel_fpath = os.path.relpath(fpath, args.in_dir)
+                            files_to_process.append(rel_fpath)
 
             with mp.Pool(args.num_procs) as p:
                 for rel_fpath in files_to_process:
                     for pose_suffix in args.pose_suffix:
                         p.apply_async(
                             process_video_relpath,
-                            (rel_fpath, pose_suffix, args.in_dir, exclude_points),
+                            (rel_fpath, pose_suffix, args.in_dir, out_dir, exclude_points),
                             dict(),
                             lambda x: None,
                             lambda x: print(x))

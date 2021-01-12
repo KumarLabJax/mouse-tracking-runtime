@@ -30,6 +30,14 @@ import models
 #       output-fecal-boli/fecalboli/pose_hrnet/fecalboli_2020-06-19_02/best_state.pth \
 #       experiments/fecalboli/fecalboli_2020-06-19_02.yaml
 
+# Strain Survey:
+#   python -u tools/inferfecalbolicountbatch.py \
+#       --allow-missing-video \
+#       --root-dir '/home/sheppk/smb/labshare' \
+#       --batch-file 'data/fecal-boli/strain-survey-batch-2019-05-29.txt' \
+#       output-fecal-boli/fecalboli/pose_hrnet/fecalboli_2020-06-19_02/best_state.pth \
+#       experiments/fecalboli/fecalboli_2020-06-19_02.yaml
+
 def main():
     parser = argparse.ArgumentParser()
 
@@ -63,6 +71,11 @@ def main():
         default=1,
         help='what sampling interval should we use for frames',
     )
+    parser.add_argument(
+        '--allow-missing-video',
+        help='allow missing videos with warning',
+        action='store_true',
+    )
 
     args = parser.parse_args()
     sample_intervals_frames = args.sample_interval_min * 60 * 30
@@ -93,6 +106,13 @@ def main():
                 vid_path_root, _ = os.path.splitext(vid_path)
                 vid_fb_count_path = vid_path_root + '_fecal_boli_counts.yaml'
                 print(vid_fb_count_path)
+
+                if args.allow_missing_video:
+                    if not os.path.exists(vid_path):
+                        print('WARNING: ' + vid_path + ' does not exist')
+                        continue
+                else:
+                    assert os.path.exists(vid_path), vid_path + ' does not exist'
 
                 with imageio.get_reader(vid_path) as frame_reader:
 

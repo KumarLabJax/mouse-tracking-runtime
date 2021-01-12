@@ -42,6 +42,12 @@ FRAMES_PER_MINUTE = 30 * 60
 #       --cfg experiments/corner/corner_2020-06-30_01.yaml \
 #       --root-dir ~/smb/labshare \
 #       --batch-file /home/sheppk/projects/massimo-deep-hres-net/netfiles.csv
+#
+#   time python -u tools/infercorners.py \
+#       --model-file output-corner/simplepoint/pose_hrnet/corner_2020-06-30_01/best_state.pth \
+#       --cfg experiments/corner/corner_2020-06-30_01.yaml \
+#       --root-dir ~/smb/labshare \
+#       --batch-file data/corner/leinani-corner-batch-2020-08-20.txt
 
 def argmax_2d(tensor):
 

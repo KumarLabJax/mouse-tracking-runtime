@@ -39,8 +39,23 @@ FRAMES_PER_MINUTE = 30 * 60
 #       experiments/fecalboli/fecalboli_2020-06-19_02.yaml \
 #       one-min-clip-4.avi
 
-def infer_fecal_boli_xy(model, frames, min_heatmap_val, image_out_dir=None, image_name_prefix='fb-inf-'):
-# def infer_fecal_boli_xy(model, frames, min_heatmap_val):
+#     for i in `ls poseintervals-temp/*.avi`
+#     do
+#         echo "PROCESSING ${i}"
+#         python -u tools/inferfecalbolicount.py \
+#             --min-heatmap-val 0.75 \
+#             --image-out-dir "poseintervals-temp" \
+#             output-fecal-boli/fecalboli/pose_hrnet/fecalboli_2020-06-19_02/best_state.pth \
+#             experiments/fecalboli/fecalboli_2020-06-19_02.yaml \
+#             "${i}"
+#     done
+
+def infer_fecal_boli_xy(
+        model,
+        frames,
+        min_heatmap_val,
+        image_out_dir=None,
+        image_name_prefix='fb-inf-'):
 
     xform = transforms.Compose([
         transforms.ToTensor(),
@@ -212,8 +227,16 @@ def main():
 
     with imageio.get_reader(args.video) as frame_reader:
 
+        out_prefex, _ = os.path.splitext(os.path.basename(args.video))
+        out_prefex += '_fecal_boli_'
+
         frame_reader = itertools.islice(frame_reader, 0, None, sample_intervals_frames)
-        fecal_boli_counts = infer_fecal_boli_counts(model, frame_reader, args.min_heatmap_val, args.image_out_dir)
+        fecal_boli_counts = infer_fecal_boli_counts(
+            model,
+            frame_reader,
+            args.min_heatmap_val,
+            args.image_out_dir,
+            out_prefex)
         for counts in fecal_boli_counts:
             print('counts:', counts)
 

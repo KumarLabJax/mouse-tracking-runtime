@@ -2,11 +2,11 @@
 #
 #SBATCH --job-name=infer-poseest-arr
 #
-#SBATCH --time=12:00:00
+#SBATCH --time=6:00:00
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=10
 #SBATCH --gres=gpu:1
-#SBATCH --partition=gpu
+#SBATCH --qos=inference
 #SBATCH --mem=16G
 #SBATCH --nice
 
