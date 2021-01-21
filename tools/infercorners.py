@@ -24,7 +24,8 @@ import cv2
 import string
 import os.path
 
-import skimage
+import skimage.draw
+import skimage.io
 
 FRAMES_PER_MINUTE = 30 * 60
 
@@ -48,6 +49,13 @@ FRAMES_PER_MINUTE = 30 * 60
 #       --cfg experiments/corner/corner_2020-06-30_01.yaml \
 #       --root-dir ~/smb/labshare \
 #       --batch-file data/corner/leinani-corner-batch-2020-08-20.txt
+#
+#   share_root='/run/user/1000/gvfs/smb-share:server=bht2stor.jax.org,share=vkumar'
+#   time python -u tools/infercorners.py \
+#       --model-file output-corner/simplepoint/pose_hrnet/corner_2020-06-30_01/best_state.pth \
+#       --cfg experiments/corner/corner_2020-06-30_01.yaml \
+#       --root-dir "${share_root}" \
+#       --batch-file ~/projects/gaitanalysis/data/metadata/strain-survey-b6j-bjnj-only-batch-2021-01-18.txt
 
 def argmax_2d(tensor):
 
