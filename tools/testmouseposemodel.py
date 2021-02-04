@@ -1,6 +1,7 @@
 import argparse
 import h5py
 import numpy as np
+import scipy.stats
 
 import matplotlib.pyplot as plt
 
@@ -21,6 +22,8 @@ from core.inference import get_max_preds
 
 import dataset
 import models
+
+CM_PER_PIXEL = 19.5 * 2.54 / 400
 
 
 NOSE_INDEX = 0
@@ -63,6 +66,11 @@ INDEX_NAMES = [
     'Tip Tail',
 ]
 
+# Example:
+#   python -u tools/testmouseposemodel.py \
+#       --model-file ../pose-est-env/pose-est-model.pth \
+#       ../pose-est-env/pose-est-conf.yaml
+
 def main():
     parser = argparse.ArgumentParser()
 
@@ -77,27 +85,6 @@ def main():
         help='the dataset to use for inference',
         default=None,
     )
-
-    parser.add_argument(
-        '--show-err-thresh',
-        help='for each keypoint where pixel error is >= this threshold we print a message and'
-             ' show a debug image.',
-        default=None,
-        type=float,
-    )
-
-    parser.add_argument(
-        '--confidence-threshold',
-        help='minimum confidence threshold to test',
-        default=0.0,
-        type=float,
-    )
-
-    # parser.add_argument(
-    #     '--out-dir',
-    #     help='the output directory to use',
-    #     default='temp',
-    # )
 
     parser.add_argument(
         'cfg',
@@ -139,11 +126,9 @@ def main():
 
     with torch.no_grad():
 
+        pixel_err_dists = []
         with h5py.File(cfg.DATASET.ROOT, 'r') as hdf5file:
-            l2_pixel_err_sum = np.zeros(12, dtype=np.float32)
-            l2_pixel_err_max = np.zeros(12, dtype=np.float32)
-            accepted_point_count = np.zeros(12, dtype=np.uint32)
-            frame_count = 0
+
             for name, group in hdf5file[cfg.DATASET.TEST_SET].items():
                 if 'frames' in group and 'points' in group:
                     points = group['points']
@@ -172,72 +157,91 @@ def main():
                         preds = preds.astype(np.uint16).squeeze(0)
                         maxvals = maxvals.squeeze(2).squeeze(0)
 
-                        over_threshold = maxvals >= args.confidence_threshold
-
-                        # print('preds:', preds.shape, preds.dtype)
-                        # print('maxvals:', maxvals.shape, maxvals.dtype)
-
-                        # print(preds)
-
-                        # print('diff:', preds.dtype, grp_frame_pts.dtype)
                         pixel_err = preds.astype(np.float32) - grp_frame_pts
-                        # print(pixel_err)
+                        pixel_err_dist = np.linalg.norm(pixel_err, ord=2, axis=1)
+                        pixel_err_dists.append(pixel_err_dist)
 
-                        l2_pixel_err = np.linalg.norm(pixel_err, ord=2, axis=1)
+        pixel_err_dists = np.stack(pixel_err_dists)
 
-                        # print('l2_pixel_err:', l2_pixel_err.shape, l2_pixel_err.dtype)
-                        l2_pixel_err[~over_threshold] = 0
-                        # print(l2_pixel_err)
+        pixel_err_dist_mean = np.nanmean(pixel_err_dists)
+        pixel_err_dist_sem = scipy.stats.sem(pixel_err_dists, axis=None, nan_policy='omit')
 
-                        # if args.show_err_thresh is not None:
-                        #     over_thresh = np.transpose(np.nonzero(
-                        #         l2_pixel_err >= args.show_err_thresh))
+        pixel_err_dist_mean = np.nanmean(pixel_err_dists)
+        pixel_err_dist_sem = scipy.stats.sem(pixel_err_dists, axis=None, nan_policy='omit')
 
-                        #     for curr_over_thresh in over_thresh:
-                        #         print('Bad value for:   ', INDEX_NAMES[curr_over_thresh[1]])
-                        #         print('Confidence:      ', maxvals[curr_over_thresh[0], curr_over_thresh[1]])
-                        #         print('Pixel Distance:  ', l2_pixel_err[curr_over_thresh[0], curr_over_thresh[1]])
+        pixel_err_dist_means = np.nanmean(pixel_err_dists, axis=0)
+        pixel_dist_sems = scipy.stats.sem(pixel_err_dists, axis=0, nan_policy='omit')
 
-                        #         curr_heatmap = inf_out[curr_over_thresh[0], curr_over_thresh[1], ...]
-                        #         curr_heatmap = np.ma.masked_where(curr_heatmap < 0.1, curr_heatmap)
-                        #         plt.imshow(data_numpy, cmap='gray', vmin=0, vmax=255)
-                        #         plt.imshow(curr_heatmap, cmap=plt.get_cmap('YlOrRd'), alpha=0.4)
-                        #         plt.show()
+        print(pixel_err_dist_mean)
+        print(pixel_err_dist_sem)
+        print(f'Pixel MEA: {pixel_err_dist_mean:.2f} ±{pixel_err_dist_sem:.2f} {pixel_err_dist_mean * CM_PER_PIXEL:.2f} ±{pixel_err_dist_sem * CM_PER_PIXEL:.2f}')
+        print()
 
-                        if l2_pixel_err_sum is None:
-                            l2_pixel_err_sum = l2_pixel_err.copy()
-                            l2_pixel_err_max = l2_pixel_err.copy()
-                        else:
-                            l2_pixel_err_sum += l2_pixel_err
-                            l2_pixel_err_max = np.maximum(l2_pixel_err_max, l2_pixel_err)
+        print(f'NOSE Pixel MAE:              {pixel_err_dist_means[NOSE_INDEX]:.2f} ±{pixel_dist_sems[NOSE_INDEX]:.2f} {pixel_err_dist_means[NOSE_INDEX] * CM_PER_PIXEL:.2f} ±{pixel_dist_sems[NOSE_INDEX] * CM_PER_PIXEL:.2f}')
+        print(f'LEFT_EAR Pixel MAE:          {pixel_err_dist_means[LEFT_EAR_INDEX]:.2f} ±{pixel_dist_sems[LEFT_EAR_INDEX]:.2f} {pixel_err_dist_means[LEFT_EAR_INDEX] * CM_PER_PIXEL:.2f} ±{pixel_dist_sems[LEFT_EAR_INDEX] * CM_PER_PIXEL:.2f}')
+        print(f'RIGHT_EAR Pixel MAE:         {pixel_err_dist_means[RIGHT_EAR_INDEX]:.2f} ±{pixel_dist_sems[RIGHT_EAR_INDEX]:.2f} {pixel_err_dist_means[RIGHT_EAR_INDEX] * CM_PER_PIXEL:.2f} ±{pixel_dist_sems[RIGHT_EAR_INDEX] * CM_PER_PIXEL:.2f}')
+        print(f'BASE_NECK Pixel MAE:         {pixel_err_dist_means[BASE_NECK_INDEX]:.2f} ±{pixel_dist_sems[BASE_NECK_INDEX]:.2f} {pixel_err_dist_means[BASE_NECK_INDEX] * CM_PER_PIXEL:.2f} ±{pixel_dist_sems[BASE_NECK_INDEX] * CM_PER_PIXEL:.2f}')
+        print(f'LEFT_FRONT_PAW Pixel MAE:    {pixel_err_dist_means[LEFT_FRONT_PAW_INDEX]:.2f} ±{pixel_dist_sems[LEFT_FRONT_PAW_INDEX]:.2f} {pixel_err_dist_means[LEFT_FRONT_PAW_INDEX] * CM_PER_PIXEL:.2f} ±{pixel_dist_sems[LEFT_FRONT_PAW_INDEX] * CM_PER_PIXEL:.2f}')
+        print(f'RIGHT_FRONT_PAW Pixel MAE:   {pixel_err_dist_means[RIGHT_FRONT_PAW_INDEX]:.2f} ±{pixel_dist_sems[RIGHT_FRONT_PAW_INDEX]:.2f} {pixel_err_dist_means[RIGHT_FRONT_PAW_INDEX] * CM_PER_PIXEL:.2f} ±{pixel_dist_sems[RIGHT_FRONT_PAW_INDEX] * CM_PER_PIXEL:.2f}')
+        print(f'CENTER_SPINE Pixel MAE:      {pixel_err_dist_means[CENTER_SPINE_INDEX]:.2f} ±{pixel_dist_sems[CENTER_SPINE_INDEX]:.2f} {pixel_err_dist_means[CENTER_SPINE_INDEX] * CM_PER_PIXEL:.2f} ±{pixel_dist_sems[CENTER_SPINE_INDEX] * CM_PER_PIXEL:.2f}')
+        print(f'LEFT_REAR_PAW Pixel MAE:     {pixel_err_dist_means[LEFT_REAR_PAW_INDEX]:.2f} ±{pixel_dist_sems[LEFT_REAR_PAW_INDEX]:.2f} {pixel_err_dist_means[LEFT_REAR_PAW_INDEX] * CM_PER_PIXEL:.2f} ±{pixel_dist_sems[LEFT_REAR_PAW_INDEX] * CM_PER_PIXEL:.2f}')
+        print(f'RIGHT_REAR_PAW Pixel MAE:    {pixel_err_dist_means[RIGHT_REAR_PAW_INDEX]:.2f} ±{pixel_dist_sems[RIGHT_REAR_PAW_INDEX]:.2f} {pixel_err_dist_means[RIGHT_REAR_PAW_INDEX] * CM_PER_PIXEL:.2f} ±{pixel_dist_sems[RIGHT_REAR_PAW_INDEX] * CM_PER_PIXEL:.2f}')
+        print(f'BASE_TAIL Pixel MAE:         {pixel_err_dist_means[BASE_TAIL_INDEX]:.2f} ±{pixel_dist_sems[BASE_TAIL_INDEX]:.2f} {pixel_err_dist_means[BASE_TAIL_INDEX] * CM_PER_PIXEL:.2f} ±{pixel_dist_sems[BASE_TAIL_INDEX] * CM_PER_PIXEL:.2f}')
+        print(f'MID_TAIL Pixel MAE:          {pixel_err_dist_means[MID_TAIL_INDEX]:.2f} ±{pixel_dist_sems[MID_TAIL_INDEX]:.2f} {pixel_err_dist_means[MID_TAIL_INDEX] * CM_PER_PIXEL:.2f} ±{pixel_dist_sems[MID_TAIL_INDEX] * CM_PER_PIXEL:.2f}')
+        print(f'TIP_TAIL Pixel MAE:          {pixel_err_dist_means[TIP_TAIL_INDEX]:.2f} ±{pixel_dist_sems[TIP_TAIL_INDEX]:.2f} {pixel_err_dist_means[TIP_TAIL_INDEX] * CM_PER_PIXEL:.2f} ±{pixel_dist_sems[TIP_TAIL_INDEX] * CM_PER_PIXEL:.2f}')
+        print()
 
-                        accepted_point_count += over_threshold
-                        frame_count += 1
+        # From DLC paper:
+        #
+        # "We illustrate the power of this approach by tracking the snout, ears
+        # and tail base of a mouse during an odor-guided navigation task, multiple
+        # body parts of a fruit fly behaving in a 3D chamber, and joints of individual
+        # mouse digits during a reaching task."
+        #
+        # "Thus far, we used a part detector based on the 50-layer deep ResNet-5024,27.
+        # We also trained deeper networks with 101 layers and found that both the
+        # training and testing errors decreased slightly, suggesting that the performance
+        # can be further improved if required (average test RMSE for three identical
+        # splits of 50% training set fraction:
+        # ResNet-50, 3.09 ± 0.04; ResNet-101, 2.90 ± 0.09; ResNet-101 with intermediate
+        # supervision, 2.88 ± 0.06; pixel mean ± s.e.m.; see Supplementary Fig. 2b)."
 
-        l2_pixel_err_mean = l2_pixel_err_sum / accepted_point_count
-        # l2_pixel_err_mean = l2_pixel_err_mean.squeeze(0)
-        # l2_pixel_err_max = l2_pixel_err_max.squeeze(0)
+        dlc_pixel_err_dists = pixel_err_dists[[NOSE_INDEX, LEFT_EAR_INDEX, RIGHT_EAR_INDEX, BASE_TAIL_INDEX], ...]
 
-        print('L2 Pixel Error Mean of Means:  ', l2_pixel_err_mean.mean(), l2_pixel_err_max.max())
-        print('NOSE Pixel Error:              ', l2_pixel_err_mean[NOSE_INDEX], 'Max:', l2_pixel_err_max[NOSE_INDEX], 'Passed Thresh:', accepted_point_count[NOSE_INDEX], '({})'.format(accepted_point_count[NOSE_INDEX] / frame_count))
+        dlc_pixel_err_dist_mean = np.nanmean(dlc_pixel_err_dists)
+        dlc_pixel_dist_sem = scipy.stats.sem(dlc_pixel_err_dists, axis=None, nan_policy='omit')
+        print(f'DLC L2 Pixel Error Mean: {dlc_pixel_err_dist_mean:.2f} ±{dlc_pixel_dist_sem:.2f}')
+        print()
 
-        print('LEFT_EAR Pixel Error:          ', l2_pixel_err_mean[LEFT_EAR_INDEX], 'Max:', l2_pixel_err_max[LEFT_EAR_INDEX], 'Passed Thresh:', accepted_point_count[LEFT_EAR_INDEX], '({})'.format(accepted_point_count[LEFT_EAR_INDEX] / frame_count))
-        print('RIGHT_EAR Pixel Error:         ', l2_pixel_err_mean[RIGHT_EAR_INDEX], 'Max:', l2_pixel_err_max[RIGHT_EAR_INDEX], 'Passed Thresh:', accepted_point_count[RIGHT_EAR_INDEX], '({})'.format(accepted_point_count[RIGHT_EAR_INDEX] / frame_count))
+        pixel_err_dists_sq = pixel_err_dists * pixel_err_dists
+        pixel_rmses = np.sqrt(np.sum(pixel_err_dists_sq, axis=0) / pixel_err_dists_sq.shape[0])
 
-        print('BASE_NECK Pixel Error:         ', l2_pixel_err_mean[BASE_NECK_INDEX], 'Max:', l2_pixel_err_max[BASE_NECK_INDEX], 'Passed Thresh:', accepted_point_count[BASE_NECK_INDEX], '({})'.format(accepted_point_count[BASE_NECK_INDEX] / frame_count))
+        pixel_rmse = np.sqrt(np.sum(pixel_err_dists_sq) / pixel_err_dists_sq.size)
 
-        print('LEFT_FRONT_PAW Pixel Error:    ', l2_pixel_err_mean[LEFT_FRONT_PAW_INDEX], 'Max:', l2_pixel_err_max[LEFT_FRONT_PAW_INDEX], 'Passed Thresh:', accepted_point_count[LEFT_FRONT_PAW_INDEX], '({})'.format(accepted_point_count[LEFT_FRONT_PAW_INDEX] / frame_count))
-        print('RIGHT_FRONT_PAW Pixel Error:   ', l2_pixel_err_mean[RIGHT_FRONT_PAW_INDEX], 'Max:', l2_pixel_err_max[RIGHT_FRONT_PAW_INDEX], 'Passed Thresh:', accepted_point_count[RIGHT_FRONT_PAW_INDEX], '({})'.format(accepted_point_count[RIGHT_FRONT_PAW_INDEX] / frame_count))
+        print(f'Pixel RMSE: {pixel_rmse:.2f} ±{pixel_err_dist_sem:.2f} {pixel_rmse * CM_PER_PIXEL:.2f} ±{pixel_err_dist_sem * CM_PER_PIXEL:.2f}')
+        print()
 
-        print('CENTER_SPINE Pixel Error:      ', l2_pixel_err_mean[CENTER_SPINE_INDEX], 'Max:', l2_pixel_err_max[CENTER_SPINE_INDEX], 'Passed Thresh:', accepted_point_count[CENTER_SPINE_INDEX], '({})'.format(accepted_point_count[CENTER_SPINE_INDEX] / frame_count))
+        print(f'NOSE Pixel RMSE:              {pixel_rmses[NOSE_INDEX]:.2f} ±{pixel_dist_sems[NOSE_INDEX]:.2f} {pixel_rmses[NOSE_INDEX] * CM_PER_PIXEL:.2f} ±{pixel_dist_sems[NOSE_INDEX] * CM_PER_PIXEL:.2f}')
+        print(f'LEFT_EAR Pixel RMSE:          {pixel_rmses[LEFT_EAR_INDEX]:.2f} ±{pixel_dist_sems[LEFT_EAR_INDEX]:.2f} {pixel_rmses[LEFT_EAR_INDEX] * CM_PER_PIXEL:.2f} ±{pixel_dist_sems[LEFT_EAR_INDEX] * CM_PER_PIXEL:.2f}')
+        print(f'RIGHT_EAR Pixel RMSE:         {pixel_rmses[RIGHT_EAR_INDEX]:.2f} ±{pixel_dist_sems[RIGHT_EAR_INDEX]:.2f} {pixel_rmses[RIGHT_EAR_INDEX] * CM_PER_PIXEL:.2f} ±{pixel_dist_sems[RIGHT_EAR_INDEX] * CM_PER_PIXEL:.2f}')
+        print(f'BASE_NECK Pixel RMSE:         {pixel_rmses[BASE_NECK_INDEX]:.2f} ±{pixel_dist_sems[BASE_NECK_INDEX]:.2f} {pixel_rmses[BASE_NECK_INDEX] * CM_PER_PIXEL:.2f} ±{pixel_dist_sems[BASE_NECK_INDEX] * CM_PER_PIXEL:.2f}')
+        print(f'LEFT_FRONT_PAW Pixel RMSE:    {pixel_rmses[LEFT_FRONT_PAW_INDEX]:.2f} ±{pixel_dist_sems[LEFT_FRONT_PAW_INDEX]:.2f} {pixel_rmses[LEFT_FRONT_PAW_INDEX] * CM_PER_PIXEL:.2f} ±{pixel_dist_sems[LEFT_FRONT_PAW_INDEX] * CM_PER_PIXEL:.2f}')
+        print(f'RIGHT_FRONT_PAW Pixel RMSE:   {pixel_rmses[RIGHT_FRONT_PAW_INDEX]:.2f} ±{pixel_dist_sems[RIGHT_FRONT_PAW_INDEX]:.2f} {pixel_rmses[RIGHT_FRONT_PAW_INDEX] * CM_PER_PIXEL:.2f} ±{pixel_dist_sems[RIGHT_FRONT_PAW_INDEX] * CM_PER_PIXEL:.2f}')
+        print(f'CENTER_SPINE Pixel RMSE:      {pixel_rmses[CENTER_SPINE_INDEX]:.2f} ±{pixel_dist_sems[CENTER_SPINE_INDEX]:.2f} {pixel_rmses[CENTER_SPINE_INDEX] * CM_PER_PIXEL:.2f} ±{pixel_dist_sems[CENTER_SPINE_INDEX] * CM_PER_PIXEL:.2f}')
+        print(f'LEFT_REAR_PAW Pixel RMSE:     {pixel_rmses[LEFT_REAR_PAW_INDEX]:.2f} ±{pixel_dist_sems[LEFT_REAR_PAW_INDEX]:.2f} {pixel_rmses[LEFT_REAR_PAW_INDEX] * CM_PER_PIXEL:.2f} ±{pixel_dist_sems[LEFT_REAR_PAW_INDEX] * CM_PER_PIXEL:.2f}')
+        print(f'RIGHT_REAR_PAW Pixel RMSE:    {pixel_rmses[RIGHT_REAR_PAW_INDEX]:.2f} ±{pixel_dist_sems[RIGHT_REAR_PAW_INDEX]:.2f} {pixel_rmses[RIGHT_REAR_PAW_INDEX] * CM_PER_PIXEL:.2f} ±{pixel_dist_sems[RIGHT_REAR_PAW_INDEX] * CM_PER_PIXEL:.2f}')
+        print(f'BASE_TAIL Pixel RMSE:         {pixel_rmses[BASE_TAIL_INDEX]:.2f} ±{pixel_dist_sems[BASE_TAIL_INDEX]:.2f} {pixel_rmses[BASE_TAIL_INDEX] * CM_PER_PIXEL:.2f} ±{pixel_dist_sems[BASE_TAIL_INDEX] * CM_PER_PIXEL:.2f}')
+        print(f'MID_TAIL Pixel RMSE:          {pixel_rmses[MID_TAIL_INDEX]:.2f} ±{pixel_dist_sems[MID_TAIL_INDEX]:.2f} {pixel_rmses[MID_TAIL_INDEX] * CM_PER_PIXEL:.2f} ±{pixel_dist_sems[MID_TAIL_INDEX] * CM_PER_PIXEL:.2f}')
+        print(f'TIP_TAIL Pixel RMSE:          {pixel_rmses[TIP_TAIL_INDEX]:.2f} ±{pixel_dist_sems[TIP_TAIL_INDEX]:.2f} {pixel_rmses[TIP_TAIL_INDEX] * CM_PER_PIXEL:.2f} ±{pixel_dist_sems[TIP_TAIL_INDEX] * CM_PER_PIXEL:.2f}')
+        print()
 
-        print('LEFT_REAR_PAW Pixel Error:     ', l2_pixel_err_mean[LEFT_REAR_PAW_INDEX], 'Max:', l2_pixel_err_max[LEFT_REAR_PAW_INDEX], 'Passed Thresh:', accepted_point_count[LEFT_REAR_PAW_INDEX], '({})'.format(accepted_point_count[NOSE_INDEX] / frame_count))
-        print('RIGHT_REAR_PAW Pixel Error:    ', l2_pixel_err_mean[RIGHT_REAR_PAW_INDEX], 'Max:', l2_pixel_err_max[RIGHT_REAR_PAW_INDEX], 'Passed Thresh:', accepted_point_count[RIGHT_REAR_PAW_INDEX], '({})'.format(accepted_point_count[RIGHT_REAR_PAW_INDEX] / frame_count))
+        pixel_err_dists_x2 = pixel_err_dists * 2
+        pixel_err_dists_sq = pixel_err_dists_x2 * pixel_err_dists_x2
+        pixel_rmses = np.sqrt(np.sum(pixel_err_dists_sq, axis=0) / pixel_err_dists_sq.shape[0])
 
-        print('BASE_TAIL Pixel Error:         ', l2_pixel_err_mean[BASE_TAIL_INDEX], 'Max:', l2_pixel_err_max[BASE_TAIL_INDEX], 'Passed Thresh:', accepted_point_count[BASE_TAIL_INDEX], '({})'.format(accepted_point_count[BASE_TAIL_INDEX] / frame_count))
-        print('MID_TAIL Pixel Error:          ', l2_pixel_err_mean[MID_TAIL_INDEX], 'Max:', l2_pixel_err_max[MID_TAIL_INDEX], 'Passed Thresh:', accepted_point_count[MID_TAIL_INDEX], '({})'.format(accepted_point_count[MID_TAIL_INDEX] / frame_count))
-        print('TIP_TAIL Pixel Error:          ', l2_pixel_err_mean[TIP_TAIL_INDEX], 'Max:', l2_pixel_err_max[TIP_TAIL_INDEX], 'Passed Thresh:', accepted_point_count[TIP_TAIL_INDEX], '({})'.format(accepted_point_count[TIP_TAIL_INDEX] / frame_count))
+        pixel_rmse = np.sqrt(np.sum(pixel_err_dists_sq) / pixel_err_dists_sq.size)
 
+        print(f'Pixel RMSE x2: {pixel_rmse:.2f} ±{pixel_err_dist_sem:.2f}')
 
 if __name__ == "__main__":
     main()
