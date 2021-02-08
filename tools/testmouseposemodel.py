@@ -2,6 +2,7 @@ import argparse
 import h5py
 import numpy as np
 import scipy.stats
+import yaml
 
 import matplotlib.pyplot as plt
 
@@ -87,6 +88,19 @@ def main():
     )
 
     parser.add_argument(
+        '--category-yaml',
+        help='a YAML file describing which category the validation images fall into',
+        default=None,
+    )
+
+    parser.add_argument(
+        '--category-count-cap',
+        help='if this is selected we shuffle then cap the count in each category',
+        type=int,
+        required=False,
+    )
+
+    parser.add_argument(
         'cfg',
         help='the configuration for the model to use for inference',
     )
@@ -102,6 +116,15 @@ def main():
     if args.dataset_root:
         cfg.DATASET.ROOT = args.dataset_root
     cfg.freeze()
+
+    name_category_map = dict()
+    if args.category_yaml:
+        with open(args.category_yaml, 'r') as category_yaml_file:
+            category_dict_list = yaml.safe_load(category_yaml_file)
+            for category_dict in category_dict_list:
+                for group_name in category_dict['group_names']:
+                    # print(category_dict['category_name'], group_name)
+                    name_category_map[group_name] = category_dict['category_name']
 
     # cudnn related setting
     cudnn.benchmark = cfg.CUDNN.BENCHMARK
@@ -126,10 +149,18 @@ def main():
 
     with torch.no_grad():
 
-        pixel_err_dists = []
+        category_pixel_err_dists = dict()
         with h5py.File(cfg.DATASET.ROOT, 'r') as hdf5file:
 
             for name, group in hdf5file[cfg.DATASET.TEST_SET].items():
+                category = 'default'
+                if name in name_category_map:
+                    category = name_category_map[name]
+
+                # print('NAME:', name, category)
+                if category not in category_pixel_err_dists:
+                    category_pixel_err_dists[category] = []
+                
                 if 'frames' in group and 'points' in group:
                     points = group['points']
                     for grp_frame_index in range(points.shape[0]):
@@ -159,89 +190,100 @@ def main():
 
                         pixel_err = preds.astype(np.float32) - grp_frame_pts
                         pixel_err_dist = np.linalg.norm(pixel_err, ord=2, axis=1)
-                        pixel_err_dists.append(pixel_err_dist)
+                        category_pixel_err_dists[category].append(pixel_err_dist)
 
-        pixel_err_dists = np.stack(pixel_err_dists)
+        rng = np.random.default_rng(1111)
+        for category, pixel_err_dists in category_pixel_err_dists.items():
 
-        pixel_err_dist_mean = np.nanmean(pixel_err_dists)
-        pixel_err_dist_sem = scipy.stats.sem(pixel_err_dists, axis=None, nan_policy='omit')
+            if args.category_count_cap is not None:
+                rng.shuffle(pixel_err_dists)
+                pixel_err_dists = pixel_err_dists[:args.category_count_cap]
 
-        pixel_err_dist_mean = np.nanmean(pixel_err_dists)
-        pixel_err_dist_sem = scipy.stats.sem(pixel_err_dists, axis=None, nan_policy='omit')
+            print()
+            print('=======================')
+            print('DATA CATEGORY:', category, 'COUNT:', len(pixel_err_dists))
 
-        pixel_err_dist_means = np.nanmean(pixel_err_dists, axis=0)
-        pixel_dist_sems = scipy.stats.sem(pixel_err_dists, axis=0, nan_policy='omit')
+            pixel_err_dists = np.stack(pixel_err_dists)
 
-        print(pixel_err_dist_mean)
-        print(pixel_err_dist_sem)
-        print(f'Pixel MEA: {pixel_err_dist_mean:.2f} ±{pixel_err_dist_sem:.2f} {pixel_err_dist_mean * CM_PER_PIXEL:.2f} ±{pixel_err_dist_sem * CM_PER_PIXEL:.2f}')
-        print()
+            pixel_err_dist_mean = np.nanmean(pixel_err_dists)
+            pixel_err_dist_sem = scipy.stats.sem(pixel_err_dists, axis=None, nan_policy='omit')
 
-        print(f'NOSE Pixel MAE:              {pixel_err_dist_means[NOSE_INDEX]:.2f} ±{pixel_dist_sems[NOSE_INDEX]:.2f} {pixel_err_dist_means[NOSE_INDEX] * CM_PER_PIXEL:.2f} ±{pixel_dist_sems[NOSE_INDEX] * CM_PER_PIXEL:.2f}')
-        print(f'LEFT_EAR Pixel MAE:          {pixel_err_dist_means[LEFT_EAR_INDEX]:.2f} ±{pixel_dist_sems[LEFT_EAR_INDEX]:.2f} {pixel_err_dist_means[LEFT_EAR_INDEX] * CM_PER_PIXEL:.2f} ±{pixel_dist_sems[LEFT_EAR_INDEX] * CM_PER_PIXEL:.2f}')
-        print(f'RIGHT_EAR Pixel MAE:         {pixel_err_dist_means[RIGHT_EAR_INDEX]:.2f} ±{pixel_dist_sems[RIGHT_EAR_INDEX]:.2f} {pixel_err_dist_means[RIGHT_EAR_INDEX] * CM_PER_PIXEL:.2f} ±{pixel_dist_sems[RIGHT_EAR_INDEX] * CM_PER_PIXEL:.2f}')
-        print(f'BASE_NECK Pixel MAE:         {pixel_err_dist_means[BASE_NECK_INDEX]:.2f} ±{pixel_dist_sems[BASE_NECK_INDEX]:.2f} {pixel_err_dist_means[BASE_NECK_INDEX] * CM_PER_PIXEL:.2f} ±{pixel_dist_sems[BASE_NECK_INDEX] * CM_PER_PIXEL:.2f}')
-        print(f'LEFT_FRONT_PAW Pixel MAE:    {pixel_err_dist_means[LEFT_FRONT_PAW_INDEX]:.2f} ±{pixel_dist_sems[LEFT_FRONT_PAW_INDEX]:.2f} {pixel_err_dist_means[LEFT_FRONT_PAW_INDEX] * CM_PER_PIXEL:.2f} ±{pixel_dist_sems[LEFT_FRONT_PAW_INDEX] * CM_PER_PIXEL:.2f}')
-        print(f'RIGHT_FRONT_PAW Pixel MAE:   {pixel_err_dist_means[RIGHT_FRONT_PAW_INDEX]:.2f} ±{pixel_dist_sems[RIGHT_FRONT_PAW_INDEX]:.2f} {pixel_err_dist_means[RIGHT_FRONT_PAW_INDEX] * CM_PER_PIXEL:.2f} ±{pixel_dist_sems[RIGHT_FRONT_PAW_INDEX] * CM_PER_PIXEL:.2f}')
-        print(f'CENTER_SPINE Pixel MAE:      {pixel_err_dist_means[CENTER_SPINE_INDEX]:.2f} ±{pixel_dist_sems[CENTER_SPINE_INDEX]:.2f} {pixel_err_dist_means[CENTER_SPINE_INDEX] * CM_PER_PIXEL:.2f} ±{pixel_dist_sems[CENTER_SPINE_INDEX] * CM_PER_PIXEL:.2f}')
-        print(f'LEFT_REAR_PAW Pixel MAE:     {pixel_err_dist_means[LEFT_REAR_PAW_INDEX]:.2f} ±{pixel_dist_sems[LEFT_REAR_PAW_INDEX]:.2f} {pixel_err_dist_means[LEFT_REAR_PAW_INDEX] * CM_PER_PIXEL:.2f} ±{pixel_dist_sems[LEFT_REAR_PAW_INDEX] * CM_PER_PIXEL:.2f}')
-        print(f'RIGHT_REAR_PAW Pixel MAE:    {pixel_err_dist_means[RIGHT_REAR_PAW_INDEX]:.2f} ±{pixel_dist_sems[RIGHT_REAR_PAW_INDEX]:.2f} {pixel_err_dist_means[RIGHT_REAR_PAW_INDEX] * CM_PER_PIXEL:.2f} ±{pixel_dist_sems[RIGHT_REAR_PAW_INDEX] * CM_PER_PIXEL:.2f}')
-        print(f'BASE_TAIL Pixel MAE:         {pixel_err_dist_means[BASE_TAIL_INDEX]:.2f} ±{pixel_dist_sems[BASE_TAIL_INDEX]:.2f} {pixel_err_dist_means[BASE_TAIL_INDEX] * CM_PER_PIXEL:.2f} ±{pixel_dist_sems[BASE_TAIL_INDEX] * CM_PER_PIXEL:.2f}')
-        print(f'MID_TAIL Pixel MAE:          {pixel_err_dist_means[MID_TAIL_INDEX]:.2f} ±{pixel_dist_sems[MID_TAIL_INDEX]:.2f} {pixel_err_dist_means[MID_TAIL_INDEX] * CM_PER_PIXEL:.2f} ±{pixel_dist_sems[MID_TAIL_INDEX] * CM_PER_PIXEL:.2f}')
-        print(f'TIP_TAIL Pixel MAE:          {pixel_err_dist_means[TIP_TAIL_INDEX]:.2f} ±{pixel_dist_sems[TIP_TAIL_INDEX]:.2f} {pixel_err_dist_means[TIP_TAIL_INDEX] * CM_PER_PIXEL:.2f} ±{pixel_dist_sems[TIP_TAIL_INDEX] * CM_PER_PIXEL:.2f}')
-        print()
+            pixel_err_dist_mean = np.nanmean(pixel_err_dists)
+            pixel_err_dist_sem = scipy.stats.sem(pixel_err_dists, axis=None, nan_policy='omit')
 
-        # From DLC paper:
-        #
-        # "We illustrate the power of this approach by tracking the snout, ears
-        # and tail base of a mouse during an odor-guided navigation task, multiple
-        # body parts of a fruit fly behaving in a 3D chamber, and joints of individual
-        # mouse digits during a reaching task."
-        #
-        # "Thus far, we used a part detector based on the 50-layer deep ResNet-5024,27.
-        # We also trained deeper networks with 101 layers and found that both the
-        # training and testing errors decreased slightly, suggesting that the performance
-        # can be further improved if required (average test RMSE for three identical
-        # splits of 50% training set fraction:
-        # ResNet-50, 3.09 ± 0.04; ResNet-101, 2.90 ± 0.09; ResNet-101 with intermediate
-        # supervision, 2.88 ± 0.06; pixel mean ± s.e.m.; see Supplementary Fig. 2b)."
+            pixel_err_dist_means = np.nanmean(pixel_err_dists, axis=0)
+            pixel_dist_sems = scipy.stats.sem(pixel_err_dists, axis=0, nan_policy='omit')
 
-        dlc_pixel_err_dists = pixel_err_dists[[NOSE_INDEX, LEFT_EAR_INDEX, RIGHT_EAR_INDEX, BASE_TAIL_INDEX], ...]
+            print(pixel_err_dist_mean)
+            print(pixel_err_dist_sem)
+            print(f'Pixel MEA: {pixel_err_dist_mean:.2f} ±{pixel_err_dist_sem:.2f} {pixel_err_dist_mean * CM_PER_PIXEL:.2f} ±{pixel_err_dist_sem * CM_PER_PIXEL:.2f}')
+            print()
 
-        dlc_pixel_err_dist_mean = np.nanmean(dlc_pixel_err_dists)
-        dlc_pixel_dist_sem = scipy.stats.sem(dlc_pixel_err_dists, axis=None, nan_policy='omit')
-        print(f'DLC L2 Pixel Error Mean: {dlc_pixel_err_dist_mean:.2f} ±{dlc_pixel_dist_sem:.2f}')
-        print()
+            print(f'NOSE Pixel MAE:              {pixel_err_dist_means[NOSE_INDEX]:.2f} ±{pixel_dist_sems[NOSE_INDEX]:.2f} {pixel_err_dist_means[NOSE_INDEX] * CM_PER_PIXEL:.2f} ±{pixel_dist_sems[NOSE_INDEX] * CM_PER_PIXEL:.2f}')
+            print(f'LEFT_EAR Pixel MAE:          {pixel_err_dist_means[LEFT_EAR_INDEX]:.2f} ±{pixel_dist_sems[LEFT_EAR_INDEX]:.2f} {pixel_err_dist_means[LEFT_EAR_INDEX] * CM_PER_PIXEL:.2f} ±{pixel_dist_sems[LEFT_EAR_INDEX] * CM_PER_PIXEL:.2f}')
+            print(f'RIGHT_EAR Pixel MAE:         {pixel_err_dist_means[RIGHT_EAR_INDEX]:.2f} ±{pixel_dist_sems[RIGHT_EAR_INDEX]:.2f} {pixel_err_dist_means[RIGHT_EAR_INDEX] * CM_PER_PIXEL:.2f} ±{pixel_dist_sems[RIGHT_EAR_INDEX] * CM_PER_PIXEL:.2f}')
+            print(f'BASE_NECK Pixel MAE:         {pixel_err_dist_means[BASE_NECK_INDEX]:.2f} ±{pixel_dist_sems[BASE_NECK_INDEX]:.2f} {pixel_err_dist_means[BASE_NECK_INDEX] * CM_PER_PIXEL:.2f} ±{pixel_dist_sems[BASE_NECK_INDEX] * CM_PER_PIXEL:.2f}')
+            print(f'LEFT_FRONT_PAW Pixel MAE:    {pixel_err_dist_means[LEFT_FRONT_PAW_INDEX]:.2f} ±{pixel_dist_sems[LEFT_FRONT_PAW_INDEX]:.2f} {pixel_err_dist_means[LEFT_FRONT_PAW_INDEX] * CM_PER_PIXEL:.2f} ±{pixel_dist_sems[LEFT_FRONT_PAW_INDEX] * CM_PER_PIXEL:.2f}')
+            print(f'RIGHT_FRONT_PAW Pixel MAE:   {pixel_err_dist_means[RIGHT_FRONT_PAW_INDEX]:.2f} ±{pixel_dist_sems[RIGHT_FRONT_PAW_INDEX]:.2f} {pixel_err_dist_means[RIGHT_FRONT_PAW_INDEX] * CM_PER_PIXEL:.2f} ±{pixel_dist_sems[RIGHT_FRONT_PAW_INDEX] * CM_PER_PIXEL:.2f}')
+            print(f'CENTER_SPINE Pixel MAE:      {pixel_err_dist_means[CENTER_SPINE_INDEX]:.2f} ±{pixel_dist_sems[CENTER_SPINE_INDEX]:.2f} {pixel_err_dist_means[CENTER_SPINE_INDEX] * CM_PER_PIXEL:.2f} ±{pixel_dist_sems[CENTER_SPINE_INDEX] * CM_PER_PIXEL:.2f}')
+            print(f'LEFT_REAR_PAW Pixel MAE:     {pixel_err_dist_means[LEFT_REAR_PAW_INDEX]:.2f} ±{pixel_dist_sems[LEFT_REAR_PAW_INDEX]:.2f} {pixel_err_dist_means[LEFT_REAR_PAW_INDEX] * CM_PER_PIXEL:.2f} ±{pixel_dist_sems[LEFT_REAR_PAW_INDEX] * CM_PER_PIXEL:.2f}')
+            print(f'RIGHT_REAR_PAW Pixel MAE:    {pixel_err_dist_means[RIGHT_REAR_PAW_INDEX]:.2f} ±{pixel_dist_sems[RIGHT_REAR_PAW_INDEX]:.2f} {pixel_err_dist_means[RIGHT_REAR_PAW_INDEX] * CM_PER_PIXEL:.2f} ±{pixel_dist_sems[RIGHT_REAR_PAW_INDEX] * CM_PER_PIXEL:.2f}')
+            print(f'BASE_TAIL Pixel MAE:         {pixel_err_dist_means[BASE_TAIL_INDEX]:.2f} ±{pixel_dist_sems[BASE_TAIL_INDEX]:.2f} {pixel_err_dist_means[BASE_TAIL_INDEX] * CM_PER_PIXEL:.2f} ±{pixel_dist_sems[BASE_TAIL_INDEX] * CM_PER_PIXEL:.2f}')
+            print(f'MID_TAIL Pixel MAE:          {pixel_err_dist_means[MID_TAIL_INDEX]:.2f} ±{pixel_dist_sems[MID_TAIL_INDEX]:.2f} {pixel_err_dist_means[MID_TAIL_INDEX] * CM_PER_PIXEL:.2f} ±{pixel_dist_sems[MID_TAIL_INDEX] * CM_PER_PIXEL:.2f}')
+            print(f'TIP_TAIL Pixel MAE:          {pixel_err_dist_means[TIP_TAIL_INDEX]:.2f} ±{pixel_dist_sems[TIP_TAIL_INDEX]:.2f} {pixel_err_dist_means[TIP_TAIL_INDEX] * CM_PER_PIXEL:.2f} ±{pixel_dist_sems[TIP_TAIL_INDEX] * CM_PER_PIXEL:.2f}')
+            print()
 
-        pixel_err_dists_sq = pixel_err_dists * pixel_err_dists
-        pixel_rmses = np.sqrt(np.sum(pixel_err_dists_sq, axis=0) / pixel_err_dists_sq.shape[0])
+            # From DLC paper:
+            #
+            # "We illustrate the power of this approach by tracking the snout, ears
+            # and tail base of a mouse during an odor-guided navigation task, multiple
+            # body parts of a fruit fly behaving in a 3D chamber, and joints of individual
+            # mouse digits during a reaching task."
+            #
+            # "Thus far, we used a part detector based on the 50-layer deep ResNet-5024,27.
+            # We also trained deeper networks with 101 layers and found that both the
+            # training and testing errors decreased slightly, suggesting that the performance
+            # can be further improved if required (average test RMSE for three identical
+            # splits of 50% training set fraction:
+            # ResNet-50, 3.09 ± 0.04; ResNet-101, 2.90 ± 0.09; ResNet-101 with intermediate
+            # supervision, 2.88 ± 0.06; pixel mean ± s.e.m.; see Supplementary Fig. 2b)."
 
-        pixel_rmse = np.sqrt(np.sum(pixel_err_dists_sq) / pixel_err_dists_sq.size)
+            dlc_pixel_err_dists = pixel_err_dists[[NOSE_INDEX, LEFT_EAR_INDEX, RIGHT_EAR_INDEX, BASE_TAIL_INDEX], ...]
 
-        print(f'Pixel RMSE: {pixel_rmse:.2f} ±{pixel_err_dist_sem:.2f} {pixel_rmse * CM_PER_PIXEL:.2f} ±{pixel_err_dist_sem * CM_PER_PIXEL:.2f}')
-        print()
+            dlc_pixel_err_dist_mean = np.nanmean(dlc_pixel_err_dists)
+            dlc_pixel_dist_sem = scipy.stats.sem(dlc_pixel_err_dists, axis=None, nan_policy='omit')
+            print(f'DLC L2 Pixel Error Mean: {dlc_pixel_err_dist_mean:.2f} ±{dlc_pixel_dist_sem:.2f}')
+            print()
 
-        print(f'NOSE Pixel RMSE:              {pixel_rmses[NOSE_INDEX]:.2f} ±{pixel_dist_sems[NOSE_INDEX]:.2f} {pixel_rmses[NOSE_INDEX] * CM_PER_PIXEL:.2f} ±{pixel_dist_sems[NOSE_INDEX] * CM_PER_PIXEL:.2f}')
-        print(f'LEFT_EAR Pixel RMSE:          {pixel_rmses[LEFT_EAR_INDEX]:.2f} ±{pixel_dist_sems[LEFT_EAR_INDEX]:.2f} {pixel_rmses[LEFT_EAR_INDEX] * CM_PER_PIXEL:.2f} ±{pixel_dist_sems[LEFT_EAR_INDEX] * CM_PER_PIXEL:.2f}')
-        print(f'RIGHT_EAR Pixel RMSE:         {pixel_rmses[RIGHT_EAR_INDEX]:.2f} ±{pixel_dist_sems[RIGHT_EAR_INDEX]:.2f} {pixel_rmses[RIGHT_EAR_INDEX] * CM_PER_PIXEL:.2f} ±{pixel_dist_sems[RIGHT_EAR_INDEX] * CM_PER_PIXEL:.2f}')
-        print(f'BASE_NECK Pixel RMSE:         {pixel_rmses[BASE_NECK_INDEX]:.2f} ±{pixel_dist_sems[BASE_NECK_INDEX]:.2f} {pixel_rmses[BASE_NECK_INDEX] * CM_PER_PIXEL:.2f} ±{pixel_dist_sems[BASE_NECK_INDEX] * CM_PER_PIXEL:.2f}')
-        print(f'LEFT_FRONT_PAW Pixel RMSE:    {pixel_rmses[LEFT_FRONT_PAW_INDEX]:.2f} ±{pixel_dist_sems[LEFT_FRONT_PAW_INDEX]:.2f} {pixel_rmses[LEFT_FRONT_PAW_INDEX] * CM_PER_PIXEL:.2f} ±{pixel_dist_sems[LEFT_FRONT_PAW_INDEX] * CM_PER_PIXEL:.2f}')
-        print(f'RIGHT_FRONT_PAW Pixel RMSE:   {pixel_rmses[RIGHT_FRONT_PAW_INDEX]:.2f} ±{pixel_dist_sems[RIGHT_FRONT_PAW_INDEX]:.2f} {pixel_rmses[RIGHT_FRONT_PAW_INDEX] * CM_PER_PIXEL:.2f} ±{pixel_dist_sems[RIGHT_FRONT_PAW_INDEX] * CM_PER_PIXEL:.2f}')
-        print(f'CENTER_SPINE Pixel RMSE:      {pixel_rmses[CENTER_SPINE_INDEX]:.2f} ±{pixel_dist_sems[CENTER_SPINE_INDEX]:.2f} {pixel_rmses[CENTER_SPINE_INDEX] * CM_PER_PIXEL:.2f} ±{pixel_dist_sems[CENTER_SPINE_INDEX] * CM_PER_PIXEL:.2f}')
-        print(f'LEFT_REAR_PAW Pixel RMSE:     {pixel_rmses[LEFT_REAR_PAW_INDEX]:.2f} ±{pixel_dist_sems[LEFT_REAR_PAW_INDEX]:.2f} {pixel_rmses[LEFT_REAR_PAW_INDEX] * CM_PER_PIXEL:.2f} ±{pixel_dist_sems[LEFT_REAR_PAW_INDEX] * CM_PER_PIXEL:.2f}')
-        print(f'RIGHT_REAR_PAW Pixel RMSE:    {pixel_rmses[RIGHT_REAR_PAW_INDEX]:.2f} ±{pixel_dist_sems[RIGHT_REAR_PAW_INDEX]:.2f} {pixel_rmses[RIGHT_REAR_PAW_INDEX] * CM_PER_PIXEL:.2f} ±{pixel_dist_sems[RIGHT_REAR_PAW_INDEX] * CM_PER_PIXEL:.2f}')
-        print(f'BASE_TAIL Pixel RMSE:         {pixel_rmses[BASE_TAIL_INDEX]:.2f} ±{pixel_dist_sems[BASE_TAIL_INDEX]:.2f} {pixel_rmses[BASE_TAIL_INDEX] * CM_PER_PIXEL:.2f} ±{pixel_dist_sems[BASE_TAIL_INDEX] * CM_PER_PIXEL:.2f}')
-        print(f'MID_TAIL Pixel RMSE:          {pixel_rmses[MID_TAIL_INDEX]:.2f} ±{pixel_dist_sems[MID_TAIL_INDEX]:.2f} {pixel_rmses[MID_TAIL_INDEX] * CM_PER_PIXEL:.2f} ±{pixel_dist_sems[MID_TAIL_INDEX] * CM_PER_PIXEL:.2f}')
-        print(f'TIP_TAIL Pixel RMSE:          {pixel_rmses[TIP_TAIL_INDEX]:.2f} ±{pixel_dist_sems[TIP_TAIL_INDEX]:.2f} {pixel_rmses[TIP_TAIL_INDEX] * CM_PER_PIXEL:.2f} ±{pixel_dist_sems[TIP_TAIL_INDEX] * CM_PER_PIXEL:.2f}')
-        print()
+            pixel_err_dists_sq = pixel_err_dists * pixel_err_dists
+            pixel_rmses = np.sqrt(np.sum(pixel_err_dists_sq, axis=0) / pixel_err_dists_sq.shape[0])
 
-        pixel_err_dists_x2 = pixel_err_dists * 2
-        pixel_err_dists_sq = pixel_err_dists_x2 * pixel_err_dists_x2
-        pixel_rmses = np.sqrt(np.sum(pixel_err_dists_sq, axis=0) / pixel_err_dists_sq.shape[0])
+            pixel_rmse = np.sqrt(np.sum(pixel_err_dists_sq) / pixel_err_dists_sq.size)
 
-        pixel_rmse = np.sqrt(np.sum(pixel_err_dists_sq) / pixel_err_dists_sq.size)
+            print(f'Pixel RMSE: {pixel_rmse:.2f} ±{pixel_err_dist_sem:.2f} {pixel_rmse * CM_PER_PIXEL:.2f} ±{pixel_err_dist_sem * CM_PER_PIXEL:.2f}')
+            print()
 
-        print(f'Pixel RMSE x2: {pixel_rmse:.2f} ±{pixel_err_dist_sem:.2f}')
+            print(f'NOSE Pixel RMSE:              {pixel_rmses[NOSE_INDEX]:.2f} ±{pixel_dist_sems[NOSE_INDEX]:.2f} {pixel_rmses[NOSE_INDEX] * CM_PER_PIXEL:.2f} ±{pixel_dist_sems[NOSE_INDEX] * CM_PER_PIXEL:.2f}')
+            print(f'LEFT_EAR Pixel RMSE:          {pixel_rmses[LEFT_EAR_INDEX]:.2f} ±{pixel_dist_sems[LEFT_EAR_INDEX]:.2f} {pixel_rmses[LEFT_EAR_INDEX] * CM_PER_PIXEL:.2f} ±{pixel_dist_sems[LEFT_EAR_INDEX] * CM_PER_PIXEL:.2f}')
+            print(f'RIGHT_EAR Pixel RMSE:         {pixel_rmses[RIGHT_EAR_INDEX]:.2f} ±{pixel_dist_sems[RIGHT_EAR_INDEX]:.2f} {pixel_rmses[RIGHT_EAR_INDEX] * CM_PER_PIXEL:.2f} ±{pixel_dist_sems[RIGHT_EAR_INDEX] * CM_PER_PIXEL:.2f}')
+            print(f'BASE_NECK Pixel RMSE:         {pixel_rmses[BASE_NECK_INDEX]:.2f} ±{pixel_dist_sems[BASE_NECK_INDEX]:.2f} {pixel_rmses[BASE_NECK_INDEX] * CM_PER_PIXEL:.2f} ±{pixel_dist_sems[BASE_NECK_INDEX] * CM_PER_PIXEL:.2f}')
+            print(f'LEFT_FRONT_PAW Pixel RMSE:    {pixel_rmses[LEFT_FRONT_PAW_INDEX]:.2f} ±{pixel_dist_sems[LEFT_FRONT_PAW_INDEX]:.2f} {pixel_rmses[LEFT_FRONT_PAW_INDEX] * CM_PER_PIXEL:.2f} ±{pixel_dist_sems[LEFT_FRONT_PAW_INDEX] * CM_PER_PIXEL:.2f}')
+            print(f'RIGHT_FRONT_PAW Pixel RMSE:   {pixel_rmses[RIGHT_FRONT_PAW_INDEX]:.2f} ±{pixel_dist_sems[RIGHT_FRONT_PAW_INDEX]:.2f} {pixel_rmses[RIGHT_FRONT_PAW_INDEX] * CM_PER_PIXEL:.2f} ±{pixel_dist_sems[RIGHT_FRONT_PAW_INDEX] * CM_PER_PIXEL:.2f}')
+            print(f'CENTER_SPINE Pixel RMSE:      {pixel_rmses[CENTER_SPINE_INDEX]:.2f} ±{pixel_dist_sems[CENTER_SPINE_INDEX]:.2f} {pixel_rmses[CENTER_SPINE_INDEX] * CM_PER_PIXEL:.2f} ±{pixel_dist_sems[CENTER_SPINE_INDEX] * CM_PER_PIXEL:.2f}')
+            print(f'LEFT_REAR_PAW Pixel RMSE:     {pixel_rmses[LEFT_REAR_PAW_INDEX]:.2f} ±{pixel_dist_sems[LEFT_REAR_PAW_INDEX]:.2f} {pixel_rmses[LEFT_REAR_PAW_INDEX] * CM_PER_PIXEL:.2f} ±{pixel_dist_sems[LEFT_REAR_PAW_INDEX] * CM_PER_PIXEL:.2f}')
+            print(f'RIGHT_REAR_PAW Pixel RMSE:    {pixel_rmses[RIGHT_REAR_PAW_INDEX]:.2f} ±{pixel_dist_sems[RIGHT_REAR_PAW_INDEX]:.2f} {pixel_rmses[RIGHT_REAR_PAW_INDEX] * CM_PER_PIXEL:.2f} ±{pixel_dist_sems[RIGHT_REAR_PAW_INDEX] * CM_PER_PIXEL:.2f}')
+            print(f'BASE_TAIL Pixel RMSE:         {pixel_rmses[BASE_TAIL_INDEX]:.2f} ±{pixel_dist_sems[BASE_TAIL_INDEX]:.2f} {pixel_rmses[BASE_TAIL_INDEX] * CM_PER_PIXEL:.2f} ±{pixel_dist_sems[BASE_TAIL_INDEX] * CM_PER_PIXEL:.2f}')
+            print(f'MID_TAIL Pixel RMSE:          {pixel_rmses[MID_TAIL_INDEX]:.2f} ±{pixel_dist_sems[MID_TAIL_INDEX]:.2f} {pixel_rmses[MID_TAIL_INDEX] * CM_PER_PIXEL:.2f} ±{pixel_dist_sems[MID_TAIL_INDEX] * CM_PER_PIXEL:.2f}')
+            print(f'TIP_TAIL Pixel RMSE:          {pixel_rmses[TIP_TAIL_INDEX]:.2f} ±{pixel_dist_sems[TIP_TAIL_INDEX]:.2f} {pixel_rmses[TIP_TAIL_INDEX] * CM_PER_PIXEL:.2f} ±{pixel_dist_sems[TIP_TAIL_INDEX] * CM_PER_PIXEL:.2f}')
+            print()
+
+            pixel_err_dists_x2 = pixel_err_dists * 2
+            pixel_err_dists_sq = pixel_err_dists_x2 * pixel_err_dists_x2
+            pixel_rmses = np.sqrt(np.sum(pixel_err_dists_sq, axis=0) / pixel_err_dists_sq.shape[0])
+
+            pixel_rmse = np.sqrt(np.sum(pixel_err_dists_sq) / pixel_err_dists_sq.size)
+
+            print(f'Pixel RMSE x2: {pixel_rmse:.2f} ±{pixel_err_dist_sem:.2f}')
 
 if __name__ == "__main__":
     main()
