@@ -62,7 +62,12 @@ import os
 #       --root-dir "../gaitanalysis/spot-check" \
 #       --outdir fecal-boli-image-batch4 \
 #       --frames-per-vid 1
-
+#
+# share_root='/run/user/1002/gvfs/smb-share:server=bht2stor.jax.org,share=vkumar'
+# python tools/sampleframes.py \
+#       --root-dir "${share_root}" \
+#       --outdir sampled_frames_strain_survey_diverse \
+#       --batch ~/projects/gaitanalysis/data/metadata/strain-survey-selected-subset-batch-2019-04-18.txt
 
 
 def main():
@@ -71,7 +76,12 @@ def main():
     parser.add_argument(
         '--videos',
         nargs='+',
+        default=[],
         help='the input videos',
+    )
+    parser.add_argument(
+        '--batch',
+        help='batch file listing input videos (as an alternative to the videos option)'
     )
     parser.add_argument(
         '--root-dir',
@@ -99,9 +109,8 @@ def main():
 
     root_dir = os.path.normpath(args.root_dir)
 
-    for vid_fname in args.videos:
+    def process_vid(net_id, vid_fname):
         print('Processing:', vid_fname)
-        net_id = os.path.relpath(os.path.normpath(vid_fname), root_dir)
 
         video_len = 0
         with imageio.get_reader(vid_fname) as reader:
@@ -130,6 +139,18 @@ def main():
                     net_id.replace('/', '+').replace('\\', '+'),
                     frame_index)
                 imageio.imwrite(os.path.join(args.outdir, frame_fname), img_data)
+
+    for vid_fname in args.videos:
+        net_id = os.path.relpath(os.path.normpath(vid_fname), root_dir)
+
+        process_vid(net_id, vid_fname)
+
+    if args.batch:
+        with open(args.batch, 'r') as batch:
+            for net_id in batch:
+                net_id = net_id.strip()
+                vid_fname = os.path.join(args.root_dir, net_id)
+                process_vid(net_id, vid_fname)
 
 
 if __name__ == "__main__":
