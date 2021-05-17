@@ -228,7 +228,7 @@ def main():
 
             print(pixel_err_dist_mean)
             print(pixel_err_dist_sem)
-            print(f'Pixel MEA: {pixel_err_dist_mean:.2f} ±{pixel_err_dist_sem:.2f} {pixel_err_dist_mean * CM_PER_PIXEL:.2f} ±{pixel_err_dist_sem * CM_PER_PIXEL:.2f}')
+            print(f'OVERALL MAE: {pixel_err_dist_mean:.2f} ±{pixel_err_dist_sem:.2f} {pixel_err_dist_mean * CM_PER_PIXEL:.2f} ±{pixel_err_dist_sem * CM_PER_PIXEL:.2f}')
             print()
 
             print(f'NOSE Pixel MAE:              {pixel_err_dist_means[NOSE_INDEX]:.2f} ±{pixel_dist_sems[NOSE_INDEX]:.2f} {pixel_err_dist_means[NOSE_INDEX] * CM_PER_PIXEL:.2f} ±{pixel_dist_sems[NOSE_INDEX] * CM_PER_PIXEL:.2f}')

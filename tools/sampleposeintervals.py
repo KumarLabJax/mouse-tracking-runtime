@@ -55,6 +55,15 @@ import random
 #       --start-frame 54000 \
 #       --pose-version 3
 
+#   share_root='/run/user/1000/gvfs/smb-share:server=bht2stor.jax.org,share=vkumar'
+#   python ~/projects/deep-high-resolution-net.pytorch/tools/sampleposeintervals.py \
+#       --batch-file bxd-batch-huddle-2021-04-21.txt \
+#       --root-dir "${share_root}" \
+#       --out-dir . \
+#       --out-frame-count 9000 \
+#       --start-frame 54000 \
+#       --pose-version 3
+
 
 def main():
     parser = argparse.ArgumentParser()
