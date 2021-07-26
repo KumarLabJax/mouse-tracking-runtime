@@ -1,4 +1,5 @@
 import argparse
+import csv
 import imageio
 import itertools
 import math
@@ -25,6 +26,27 @@ import os
 #       --outdir fecal-boli-image-batch4
 
 
+def write_frames(root_dir, net_id, frame_indexes, out_dir):
+    vid_fname = os.path.join(root_dir, net_id)
+    print('Processing:', vid_fname, 'with', len(frame_indexes), 'frames')
+
+    net_id_root, _ = os.path.splitext(net_id)
+
+    frame_indexes = sorted(frame_indexes)
+    os.makedirs(out_dir, exist_ok=True)
+    with imageio.get_reader(vid_fname) as reader:
+        for frame_index in frame_indexes:
+            if frame_index < 0:
+                print('ignoring negative frame index', frame_index)
+                continue
+
+            img_data = reader.get_data(frame_index)
+            frame_fname = '{}_{}.png'.format(
+                net_id_root.replace('/', '+').replace('\\', '+'),
+                frame_index)
+            imageio.imwrite(os.path.join(out_dir, frame_fname), img_data)
+
+
 def main():
     parser = argparse.ArgumentParser()
 
@@ -34,15 +56,27 @@ def main():
         help='the input videos',
     )
     parser.add_argument(
-        '--root-dir',
-        required=True,
-        help='when determining video network ID this prefix root is stripped from the video name',
-    )
-    parser.add_argument(
         '--frame-indexes',
         type=int,
         nargs='+',
         help='the frame indexes to extract',
+    )
+    parser.add_argument(
+        '--frame-table',
+        help='A tab separated file where the first column is the video NetID and all'
+             ' subsequent columns are zero based frame indexes to extract. This argument'
+             ' can be used instead of the videos and frame-indexes arguments.',
+    )
+    parser.add_argument(
+        '--frame-table-row',
+        help='An optional argument to specify that just a single zero-based index row'
+             ' should be processed from the frame table.',
+        type=int,
+    )
+    parser.add_argument(
+        '--root-dir',
+        required=True,
+        help='when determining video network ID this prefix root is stripped from the video name',
     )
     parser.add_argument(
         '--outdir',
@@ -54,19 +88,20 @@ def main():
 
     root_dir = os.path.normpath(args.root_dir)
 
-    for vid_fname in args.videos:
-        print('Processing:', vid_fname)
-        net_id = os.path.relpath(os.path.normpath(vid_fname), root_dir)
+    if args.videos is not None:
+        for vid_fname in args.videos:
+            net_id = os.path.relpath(os.path.normpath(vid_fname), root_dir)
+            write_frames(root_dir, net_id, args.frame_indexes, args.outdir)
 
-        frame_indexes = sorted(args.frame_indexes)
-        os.makedirs(args.outdir, exist_ok=True)
-        with imageio.get_reader(vid_fname) as reader:
-            for frame_index in frame_indexes:
-                img_data = reader.get_data(frame_index)
-                frame_fname = '{}_{}.png'.format(
-                    net_id.replace('/', '+').replace('\\', '+'),
-                    frame_index)
-                imageio.imwrite(os.path.join(args.outdir, frame_fname), img_data)
+    if args.frame_table:
+        with open(args.frame_table, newline='') as frame_table_file:
+            frame_table_reader = csv.reader(frame_table_file, delimiter='\t')
+            for row_index, row in enumerate(frame_table_reader):
+                if args.frame_table_row is None or row_index == args.frame_table_row:
+                    if len(row) >= 2:
+                        net_id = row[0].strip()
+                        frame_indexes = sorted(int(x.strip()) for x in row[1:])
+                        write_frames(root_dir, net_id, frame_indexes, args.outdir)
 
 
 if __name__ == "__main__":
