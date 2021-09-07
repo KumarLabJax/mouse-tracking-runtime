@@ -78,24 +78,29 @@ def main():
         required=True,
         help='the configuration for the model to use for inference',
     )
-
     parser.add_argument(
         '--model-file',
         required=True,
         help='the model file to use for inference',
     )
-
     parser.add_argument(
         '--batch-file',
-        required=True,
+        required=False,
         help='the batch file listing videos to process',
     )
-
     parser.add_argument(
         '--root-dir',
-        required=True,
+        required=False,
         help='the root directory that batch file paths are build off of'
     )
+    parser.add_argument(
+        '--videos',
+        required=False,
+        nargs='+',
+        help='specify video paths on the command line as an alternative'
+             ' to using the "--batch-file" and "--root-dir" arguments',
+    )
+    
 
     args = parser.parse_args()
     cfg.defrost()
@@ -127,7 +132,17 @@ def main():
         ),
     ])
 
-    # mockup = None
+    video_filenames = []
+    with open(args.batch_file) as batch_file:
+        for line in batch_file:
+            vid_filename = line.strip()
+            if vid_filename:
+                video_filename = os.path.join(args.root_dir, vid_filename)
+                video_filenames.append(video_filename)
+
+    if args.videos:
+        for video_filename in args.videos:
+            video_filenames.append(video_filename)
 
     with torch.no_grad(), open(args.batch_file) as batch_file:
         for line in batch_file:
