@@ -133,18 +133,19 @@ def main():
     ])
 
     video_filenames = []
-    with open(args.batch_file) as batch_file:
-        for line in batch_file:
-            vid_filename = line.strip()
-            if vid_filename:
-                video_filename = os.path.join(args.root_dir, vid_filename)
-                video_filenames.append(video_filename)
+    if args.batch_file:
+        with open(args.batch_file) as batch_file:
+            for line in batch_file:
+                vid_filename = line.strip()
+                if vid_filename:
+                    video_filename = os.path.join(args.root_dir, vid_filename)
+                    video_filenames.append(video_filename)
 
     if args.videos:
         for video_filename in args.videos:
             video_filenames.append(video_filename)
 
-    with torch.no_grad(), open(args.batch_file) as batch_file:
+    with torch.no_grad():
         for video_filename in video_filenames:
             if not os.path.isfile(video_filename):
                 print(f'ERROR: {video_filename} is not a valid file')
