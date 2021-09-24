@@ -1,27 +1,22 @@
 # build like:
-#   singularity build --fakeroot multi-mouse-pose-2020-02-12.sif multi-mouse-pose-2020-02-12.def
+#   singularity build --fakeroot corner-detection-2021-08-25.sif corner-detection-2021-08-25.def
 
 Bootstrap: docker
 From: nvcr.io/nvidia/cuda:10.2-base-ubuntu18.04
 
 %files
-    /home/sheppk/projects/pose-est-env /
+    /home/sheppk/projects/corner-detection-env /
     ../requirements.txt /
 
 %runscript
 
-    # /pose-est-env/multimousepose-conf.yaml is experiments/multimouse/multimouse_2020-02-03_06.yaml
-    # and /pose-est-env/multimousepose.pth is
-    # output-multi-mouse/multimousepose/pose_hrnet/multimouse_2020-02-03_06/best_state.pth
-    python3 -u /pose-est-env/deep-hres-net/tools/infermultimousepose.py \
-        --max-embed-sep-within-instances 0.3 \
-        --min-embed-sep-between-instances 0.2 \
-        --min-pose-heatmap-val 1.0 \
-        --max-inst-dist-px 75 \
-        --pose-smoothing \
-        /pose-est-env/multimousepose.pth \
-        /pose-est-env/multimousepose-conf.yaml \
-        "${1}" "${2}"
+    # /corner-detection-env/corner-conf.yaml is experiments/corner/corner_2020-06-30_01.yaml
+    # and /corner-detection-env/cornerdetection.pth is
+    # output-corner/simplepoint/pose_hrnet/corner_2020-06-30_01/best_state.pth
+    python3 -u /corner-detection-env/deep-hres-net/tools/infercorners.py \
+        --cfg /corner-detection-env/corner-conf.yaml \
+        --model-file /corner-detection-env/cornerdetection.pth
+        --videos "${1}"
 
 %post
     apt-get -y update
