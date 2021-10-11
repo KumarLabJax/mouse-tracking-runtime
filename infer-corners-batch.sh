@@ -1,6 +1,6 @@
 #!/bin/bash
 #
-#SBATCH --job-name=infer-poseest-arr
+#SBATCH --job-name=infer-corners
 #
 #SBATCH --time=6:00:00
 #SBATCH --ntasks=1
@@ -36,30 +36,30 @@ then
                 echo "DUMP OF CURRENT ENVIRONMENT:"
                 env
                 echo "BEGIN PROCESSING: ${VIDEO_FILE}"
-                H5_OUT_FILE="${VIDEO_FILE%.*}_pose_est_v2.h5"
+                CORNERS_FILE="${VIDEO_FILE%.*}_corners_v2.yaml"
                 module load singularity
-                singularity run --nv "${ROOT_DIR}/deep-hres-net-2019-06-28.simg" "${VIDEO_FILE}" "${H5_OUT_FILE}"
+                singularity run --nv "${ROOT_DIR}/corner-detection-2021-08-25.sif" "${VIDEO_FILE}"
 
                 # Retry several times if we have to. Unfortunately this is needed because
                 # ffmpeg will sporadically give the following error on winter:
                 #       ffmpeg: symbol lookup error: /.singularity.d/libs/libGL.so.1: undefined symbol: _glapi_tls_Current
                 #
                 # You can test this by simply running:
-                #       singularity exec --nv deep-hres-net-2019-06-28.simg ffmpeg
+                #       singularity exec --nv corner-detection-2021-08-25.sif ffmpeg
                 #
                 # which will fail about 1 out of 10 times or so. I (Keith) haven't been able to
                 # figure out a solution for this except for retrying several times.
                 MAX_RETRIES=10
                 for (( i=0; i<"${MAX_RETRIES}"; i++ ))
                 do
-                    if [[ ! -f "${H5_OUT_FILE}" ]]
+                    if [[ ! -f "${CORNERS_FILE}" ]]
                     then
                         echo "WARNING: FAILED TO GENERATE OUTPUT FILE. RETRY ATTEMPT ${i}"
-                        singularity run --nv "${ROOT_DIR}/deep-hres-net-2019-06-28.simg" "${VIDEO_FILE}" "${H5_OUT_FILE}"
+                        singularity run --nv "${ROOT_DIR}/corner-detection-2021-08-25.sif" "${VIDEO_FILE}"
                     fi
                 done
 
-                if [[ ! -f "${H5_OUT_FILE}" ]]
+                if [[ ! -f "${CORNERS_FILE}" ]]
                 then
                     echo "ERROR: FAILED TO GENERATE OUTPUT FILE WITH NO MORE RETRIES"
                 fi
@@ -84,9 +84,10 @@ else
         echo "Submitting an array job for ${test_count} videos"
 
         # Here we perform a self-submit
+        echo sbatch --export=ROOT_DIR="$(dirname "${0}")",BATCH_FILE="${1}" --array="1-${test_count}%24" "${0}"
         sbatch --export=ROOT_DIR="$(dirname "${0}")",BATCH_FILE="${1}" --array="1-${test_count}%24" "${0}"
     else
-        echo "ERROR: you need to provide a batch file to process. Eg: ./infer-poseest-batch.sh batchfile.txt" >&2
+        echo "ERROR: you need to provide a batch file to process. Eg: ./infer-corners-batch.sh batchfile.txt" >&2
         exit 1
     fi
 fi

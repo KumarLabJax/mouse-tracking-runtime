@@ -1,4 +1,5 @@
 import argparse
+import cv2
 import imageio
 import itertools
 import math
@@ -100,9 +101,15 @@ def main():
         help='the output directory',
     )
     parser.add_argument(
-        '--include-neighbor-frames',
+        '--neighbor-frame-count',
+        type=int,
+        default=0,
+        help='how many frames to the left and right should we also gather',
+    )
+    parser.add_argument(
+        '--mark-frame',
         action='store_true',
-        help='extract neighboring frames too (ie for frame n we also save frame n-1 and n+1)'
+        help='mark the central frame (to facilitate annotation)',
     )
 
     args = parser.parse_args()
@@ -124,20 +131,25 @@ def main():
 
         frames_to_sample = np.random.choice(video_len, args.frames_per_vid, replace=False)
 
-        if args.include_neighbor_frames:
-            frames_to_sample = sorted(set(itertools.chain.from_iterable(
-                (max(f - 1, 0), f, min(f + 1, video_len - 1))
+        neigh_count = args.neighbor_frame_count
+        if neigh_count > 0:
+            all_frames_to_sample = sorted(set(itertools.chain.from_iterable(
+                range(max(f - neigh_count, 0), min(f + neigh_count + 1, video_len))
                 for f in frames_to_sample)))
         else:
-            frames_to_sample = sorted(frames_to_sample)
+            all_frames_to_sample = sorted(frames_to_sample)
 
         os.makedirs(args.outdir, exist_ok=True)
         with imageio.get_reader(vid_fname) as reader:
-            for frame_index in frames_to_sample:
+            for frame_index in all_frames_to_sample:
                 img_data = reader.get_data(frame_index)
-                frame_fname = '{}_{}.png'.format(
+                if args.mark_frame and frame_index in frames_to_sample:
+                    mark_frame(img_data)
+
+                frame_fname = '{}_{:06d}.png'.format(
                     net_id.replace('/', '+').replace('\\', '+'),
                     frame_index)
+
                 imageio.imwrite(os.path.join(args.outdir, frame_fname), img_data)
 
     for vid_fname in args.videos:
@@ -151,6 +163,38 @@ def main():
                 net_id = net_id.strip()
                 vid_fname = os.path.join(args.root_dir, net_id)
                 process_vid(net_id, vid_fname)
+
+
+def mark_frame(img_data):
+    img_height, img_width, _ = img_data.shape
+    cv2.rectangle(
+        img_data,
+        (0, 0),
+        (3, 3),
+        (0, 0, 255),
+        -1,
+    )
+    cv2.rectangle(
+        img_data,
+        (0, img_width - 1),
+        (3, img_width - 4),
+        (0, 0, 255),
+        -1,
+    )
+    cv2.rectangle(
+        img_data,
+        (img_height - 1, 0),
+        (img_height - 4, 3),
+        (0, 0, 255),
+        -1,
+    )
+    cv2.rectangle(
+        img_data,
+        (img_height - 1, img_width - 1),
+        (img_height - 4, img_width - 4),
+        (0, 0, 255),
+        -1,
+    )
 
 
 if __name__ == "__main__":
