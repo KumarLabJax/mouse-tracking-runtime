@@ -1,240 +1,125 @@
-# Deep High-Resolution Representation Learning for Human Pose Estimation (accepted to CVPR2019)
-## News
-- Our new work [High-Resolution Representations for Labeling Pixels and Regions](https://arxiv.org/abs/1904.04514) is available at [HRNet](https://github.com/HRNet). Our HRNet has been applied to a wide range of vision tasks, such as [image classification](https://github.com/HRNet/HRNet-Image-Classification), [objection detection](https://github.com/HRNet/HRNet-Object-Detection), [semantic segmentation](https://github.com/HRNet/HRNet-Semantic-Segmentation) and [facial landmark](https://github.com/HRNet/HRNet-Facial-Landmark-Detection).
+# Mouse Pose HR Net
 
-## Introduction
-This is an official pytorch implementation of [*Deep High-Resolution Representation Learning for Human Pose Estimation*](https://arxiv.org/abs/1902.09212). 
-In this work, we are interested in the human pose estimation problem with a focus on learning reliable high-resolution representations. Most existing methods **recover high-resolution representations from low-resolution representations** produced by a high-to-low resolution network. Instead, our proposed network **maintains high-resolution representations** through the whole process.
-We start from a high-resolution subnetwork as the first stage, gradually add high-to-low resolution subnetworks one by one to form more stages, and connect the mutli-resolution subnetworks **in parallel**. We conduct **repeated multi-scale fusions** such that each of the high-to-low resolution representations receives information from other parallel representations over and over, leading to rich high-resolution representations. As a result, the predicted keypoint heatmap is potentially more accurate and spatially more precise. We empirically demonstrate the effectiveness of our network through the superior pose estimation results over two benchmark datasets: the COCO keypoint detection dataset and the MPII Human Pose dataset. </br>
+This repository is a forked and significantly modified version of the [official HRNet repository](https://github.com/leoxiaobin/deep-high-resolution-net.pytorch) in order to support mouse pose inference. This repository contains two main approaches for inferring mouse pose. Firstly we have a single mouse pose inference script: `tools/infermousepose.py`. The pose output for single mouse pose is currently used by our [gait analysis system](https://github.com/KumarLabJax/gaitanalysis) to extract the gait metrics that analize. We also have implemented multi-mouse pose estimation. The entry point for multi-mouse pose is the `tools/infermultimousepose.py` script. We describe these tools and others in more detail below:
 
-![Illustrating the architecture of the proposed HRNet](/figures/hrnet.png)
-## Main Results
-### Results on MPII val
-| Arch               | Head | Shoulder | Elbow | Wrist |  Hip | Knee | Ankle | Mean | Mean@0.1 |
-|--------------------|------|----------|-------|-------|------|------|-------|------|----------|
-| pose_resnet_50     | 96.4 |     95.3 |  89.0 |  83.2 | 88.4 | 84.0 |  79.6 | 88.5 |     34.0 |
-| pose_resnet_101    | 96.9 |     95.9 |  89.5 |  84.4 | 88.4 | 84.5 |  80.7 | 89.1 |     34.0 |
-| pose_resnet_152    | 97.0 |     95.9 |  90.0 |  85.0 | 89.2 | 85.3 |  81.3 | 89.6 |     35.0 |
-| **pose_hrnet_w32** | 97.1 |     95.9 |  90.3 |  86.4 | 89.1 | 87.1 |  83.3 | 90.3 |     37.7 |
+## Tools
 
-### Note:
-- Flip test is used.
-- Input size is 256x256
-- pose_resnet_[50,101,152] is our previous work of [*Simple Baselines for Human Pose Estimation and Tracking*](http://openaccess.thecvf.com/content_ECCV_2018/html/Bin_Xiao_Simple_Baselines_for_ECCV_2018_paper.html)
+* `tools/addpixelunits.py`: adds pixel-to-centimeter conversion metadata to the pose file
+* `tools/infercorners.py`: this script performs corner detection which we use to convert pixel space to real-world physical space
+* `tools/inferfecalbolicount.py`: this script will locate fecal boli in the open field and provide minute by minute counts in the output
+* `tools/infermousepose.py`: we use this script to infer single mouse pose for every frame in a video
+* `tools/infermultimousepose.py`: we use this script to infer multi mouse pose for every frame in a video
+* `tools/mousetrain.py`: our script for training the neural network on single mouse pose
+* `tools/testcornermodel.py`: script for testing the corner detection model and printing accuracy statistics
+* `tools/testfecalboli.py`: script for testing the fecal boli detection model and printing accuracy statistics
+* `tools/testmouseposemodel.py`: script for testing the single mouse pose model and printing accuracy statistics
+* `tools/testmultimouseinference.py`: script for testing the multi-mouse model and printing accuracy statistics
 
-### Results on COCO val2017 with detector having human AP of 56.4 on COCO val2017 dataset
-| Arch               | Input size | #Params | GFLOPs |    AP | Ap .5 | AP .75 | AP (M) | AP (L) |    AR | AR .5 | AR .75 | AR (M) | AR (L) |
-|--------------------|------------|---------|--------|-------|-------|--------|--------|--------|-------|-------|--------|--------|--------|
-| pose_resnet_50     |    256x192 | 34.0M   |    8.9 | 0.704 | 0.886 |  0.783 |  0.671 |  0.772 | 0.763 | 0.929 |  0.834 |  0.721 |  0.824 |
-| pose_resnet_50     |    384x288 | 34.0M   |   20.0 | 0.722 | 0.893 |  0.789 |  0.681 |  0.797 | 0.776 | 0.932 |  0.838 |  0.728 |  0.846 |
-| pose_resnet_101    |    256x192 | 53.0M   |   12.4 | 0.714 | 0.893 |  0.793 |  0.681 |  0.781 | 0.771 | 0.934 |  0.840 |  0.730 |  0.832 |
-| pose_resnet_101    |    384x288 | 53.0M   |   27.9 | 0.736 | 0.896 |  0.803 |  0.699 |  0.811 | 0.791 | 0.936 |  0.851 |  0.745 |  0.858 |
-| pose_resnet_152    |    256x192 | 68.6M   |   15.7 | 0.720 | 0.893 |  0.798 |  0.687 |  0.789 | 0.778 | 0.934 |  0.846 |  0.736 |  0.839 |
-| pose_resnet_152    |    384x288 | 68.6M   |   35.3 | 0.743 | 0.896 |  0.811 |  0.705 |  0.816 | 0.797 | 0.937 |  0.858 |  0.751 |  0.863 |
-| **pose_hrnet_w32** |    256x192 | 28.5M   |    7.1 | 0.744 | 0.905 |  0.819 |  0.708 |  0.810 | 0.798 | 0.942 |  0.865 |  0.757 |  0.858 |
-| **pose_hrnet_w32** |    384x288 | 28.5M   |   16.0 | 0.758 | 0.906 |  0.825 |  0.720 |  0.827 | 0.809 | 0.943 |  0.869 |  0.767 |  0.871 |
-| **pose_hrnet_w48** |    256x192 | 63.6M   |   14.6 | 0.751 | 0.906 |  0.822 |  0.715 |  0.818 | 0.804 | 0.943 |  0.867 |  0.762 |  0.864 |
-| **pose_hrnet_w48** |    384x288 | 63.6M   |   32.9 | 0.763 | 0.908 |  0.829 |  0.723 |  0.834 | 0.812 | 0.942 |  0.871 |  0.767 |  0.876 |
+This repository includes the following tools. All of them provide command line help if they are run like: `python3 tools/scriptname.py --help`. Additionally most include comments in the script source code which show example invokations.
 
-### Note:
-- Flip test is used.
-- Person detector has person AP of 56.4 on COCO val2017 dataset.
-- pose_resnet_[50,101,152] is our previous work of [*Simple Baselines for Human Pose Estimation and Tracking*](http://openaccess.thecvf.com/content_ECCV_2018/html/Bin_Xiao_Simple_Baselines_for_ECCV_2018_paper.html).
-- GFLOPs is for convolution and linear layers only.
+## Installation
 
+Before starting make sure you have `python3` installed. This code has been developed and tested on `python 3.8.10`. The recommended approach to installing dependencies is to use a virtual like:
 
-### Results on COCO test-dev2017 with detector having human AP of 60.9 on COCO test-dev2017 dataset
-| Arch               | Input size | #Params | GFLOPs |    AP | Ap .5 | AP .75 | AP (M) | AP (L) |    AR | AR .5 | AR .75 | AR (M) | AR (L) |
-|--------------------|------------|---------|--------|-------|-------|--------|--------|--------|-------|-------|--------|--------|--------|
-| pose_resnet_152    |    384x288 | 68.6M   |   35.3 | 0.737 | 0.919 |  0.828 |  0.713 |  0.800 | 0.790 | 0.952 |  0.856 |  0.748 |  0.849 |
-| **pose_hrnet_w48** |    384x288 | 63.6M   |   32.9 | 0.755 | 0.925 |  0.833 |  0.719 |  0.815 | 0.805 | 0.957 |  0.874 |  0.763 |  0.863 |
-| **pose_hrnet_w48\*** |    384x288 | 63.6M   |   32.9 | 0.770 | 0.927 |  0.845 |  0.734 |  0.831 | 0.820 | 0.960 |  0.886 |  0.778 |  0.877 |
+    python3 -m venv mousepose-venv
+    source mousepose-venv/bin/activate
 
-### Note:
-- Flip test is used.
-- Person detector has person AP of 60.9 on COCO test-dev2017 dataset.
-- pose_resnet_152 is our previous work of [*Simple Baselines for Human Pose Estimation and Tracking*](http://openaccess.thecvf.com/content_ECCV_2018/html/Bin_Xiao_Simple_Baselines_for_ECCV_2018_paper.html).
-- GFLOPs is for convolution and linear layers only.
-- pose_hrnet_w48\* means using additional data from [AI challenger](https://challenger.ai/dataset/keypoint) for training.
+    # now switch to the pose repo dir and install requirements
+    cd $MOUSEPOSE_REPO_DIR
+    pip3 install -r requirements.txt
 
-## Environment
-The code is developed using python 3.6 on Ubuntu 16.04. NVIDIA GPUs are needed. The code is developed and tested using 4 NVIDIA P100 GPU cards. Other platforms or GPU cards are not fully tested.
+Note that we also have prebuilt singularity VMs that we will be providing to simplify this process.
 
-## Quick start
-### Installation
-1. Install pytorch >= v1.0.0 following [official instruction](https://pytorch.org/).
-   **Note that if you use pytorch's version < v1.0.0, you should following the instruction at <https://github.com/Microsoft/human-pose-estimation.pytorch> to disable cudnn's implementations of BatchNorm layer. We encourage you to use higher pytorch's version(>=v1.0.0)**
-2. Clone this repo, and we'll call the directory that you cloned as ${POSE_ROOT}.
-3. Install dependencies:
-   ```
-   pip install -r requirements.txt
-   ```
-4. Make libs:
-   ```
-   cd ${POSE_ROOT}/lib
-   make
-   ```
-5. Install [COCOAPI](https://github.com/cocodataset/cocoapi):
-   ```
-   # COCOAPI=/path/to/clone/cocoapi
-   git clone https://github.com/cocodataset/cocoapi.git $COCOAPI
-   cd $COCOAPI/PythonAPI
-   # Install into global site-packages
-   make install
-   # Alternatively, if you do not have permissions or prefer
-   # not to install the COCO API into global site-packages
-   python3 setup.py install --user
-   ```
-   Note that instructions like # COCOAPI=/path/to/install/cocoapi indicate that you should pick a path where you'd like to have the software cloned and then set an environment variable (COCOAPI in this case) accordingly.
-4. Init output(training model output directory) and log(tensorboard log directory) directory:
+## Pose File Formats
 
-   ```
-   mkdir output 
-   mkdir log
-   ```
+The following describes our pose file HDF5 formats. `tools/infermousepose.py` will generate the v2 format for single mouse and `tools/infermultimousepose.py` will generate the v3 format.
 
-   Your directory tree should look like this:
+### Single-Mouse Pose Estimation v2 Format
 
-   ```
-   ${POSE_ROOT}
-   ├── data
-   ├── experiments
-   ├── lib
-   ├── log
-   ├── models
-   ├── output
-   ├── tools 
-   ├── README.md
-   └── requirements.txt
-   ```
+Each video has a corresponding HDF5 file that contains pose estimation coordinates and confidences. These files will have the same name as the corresponding video except that you replace ".avi" with "_pose_est_v2.h5"
 
-6. Download pretrained models from our model zoo([GoogleDrive](https://drive.google.com/drive/folders/1hOTihvbyIxsm5ygDpbUuJ7O_tzv4oXjC?usp=sharing) or [OneDrive](https://1drv.ms/f/s!AhIXJn_J-blW231MH2krnmLq5kkQ))
-   ```
-   ${POSE_ROOT}
-    `-- models
-        `-- pytorch
-            |-- imagenet
-            |   |-- hrnet_w32-36af842e.pth
-            |   |-- hrnet_w48-8ef0771d.pth
-            |   |-- resnet50-19c8e357.pth
-            |   |-- resnet101-5d3b4d8f.pth
-            |   `-- resnet152-b121ed2d.pth
-            |-- pose_coco
-            |   |-- pose_hrnet_w32_256x192.pth
-            |   |-- pose_hrnet_w32_384x288.pth
-            |   |-- pose_hrnet_w48_256x192.pth
-            |   |-- pose_hrnet_w48_384x288.pth
-            |   |-- pose_resnet_101_256x192.pth
-            |   |-- pose_resnet_101_384x288.pth
-            |   |-- pose_resnet_152_256x192.pth
-            |   |-- pose_resnet_152_384x288.pth
-            |   |-- pose_resnet_50_256x192.pth
-            |   `-- pose_resnet_50_384x288.pth
-            `-- pose_mpii
-                |-- pose_hrnet_w32_256x256.pth
-                |-- pose_hrnet_w48_256x256.pth
-                |-- pose_resnet_101_256x256.pth
-                |-- pose_resnet_152_256x256.pth
-                `-- pose_resnet_50_256x256.pth
+Each HDF5 file contains two datasets:
 
-   ```
-   
-### Data preparation
-**For MPII data**, please download from [MPII Human Pose Dataset](http://human-pose.mpi-inf.mpg.de/). The original annotation files are in matlab format. We have converted them into json format, you also need to download them from [OneDrive](https://1drv.ms/f/s!AhIXJn_J-blW00SqrairNetmeVu4) or [GoogleDrive](https://drive.google.com/drive/folders/1En_VqmStnsXMdldXA6qpqEyDQulnmS3a?usp=sharing).
-Extract them under {POSE_ROOT}/data, and make them look like this:
-```
-${POSE_ROOT}
-|-- data
-`-- |-- mpii
-    `-- |-- annot
-        |   |-- gt_valid.mat
-        |   |-- test.json
-        |   |-- train.json
-        |   |-- trainval.json
-        |   `-- valid.json
-        `-- images
-            |-- 000001163.jpg
-            |-- 000003072.jpg
-```
+* "poseest/points":
+  this is a dataset with size (#frames x #keypoints x 2) where #keypoints is 12 following the indexing scheme shown below and the last dimension of size 2 is used hold the pixel (x, y) position of the respective frame # and keypoint #
+  the datatype is a 16bit unsigned integer
+* "poseest/confidence":
+  this dataset has size (#frames x #keypoints) and assigns a 0-1 confidence value to each of the 12 points (sometimes the confidence goes slightly higher than 1). I tend to threshold at 0.3 as being "very low confidence". When the mouse is not in the arena almost all confidence values should be < 0.3.
+  the datatype is a 32 bit floating point
 
-**For COCO data**, please download from [COCO download](http://cocodataset.org/#download), 2017 Train/Val is needed for COCO keypoints training and validation. We also provide person detection result of COCO val2017 and test-dev2017 to reproduce our multi-person pose estimation results. Please download from [OneDrive](https://1drv.ms/f/s!AhIXJn_J-blWzzDXoz5BeFl8sWM-) or [GoogleDrive](https://drive.google.com/drive/folders/1fRUDNUDxe9fjqcRZ2bnF_TKMlO0nB_dk?usp=sharing).
-Download and extract them under {POSE_ROOT}/data, and make them look like this:
-```
-${POSE_ROOT}
-|-- data
-`-- |-- coco
-    `-- |-- annotations
-        |   |-- person_keypoints_train2017.json
-        |   `-- person_keypoints_val2017.json
-        |-- person_detection_results
-        |   |-- COCO_val2017_detections_AP_H_56_person.json
-        |   |-- COCO_test-dev2017_detections_AP_H_609_person.json
-        `-- images
-            |-- train2017
-            |   |-- 000000000009.jpg
-            |   |-- 000000000025.jpg
-            |   |-- 000000000030.jpg
-            |   |-- ... 
-            `-- val2017
-                |-- 000000000139.jpg
-                |-- 000000000285.jpg
-                |-- 000000000632.jpg
-                |-- ... 
-```
+The "poseest" group can have attributes attached
 
-### Training and Testing
+* "cm_per_pixel" (optional):
+  defines how many centimeters a pixel of open field represents
+  the datatype is 32 bit floating point scalar
+* "cm_per_pixel_source" (optional):
+  defines how the "cm_per_pixel" value was set. Value will be one of "corner_detection", "manually_set" or "default_alignment"
+  the datatype is string scalar
 
-#### Testing on MPII dataset using model zoo's models([GoogleDrive](https://drive.google.com/drive/folders/1hOTihvbyIxsm5ygDpbUuJ7O_tzv4oXjC?usp=sharing) or [OneDrive](https://1drv.ms/f/s!AhIXJn_J-blW231MH2krnmLq5kkQ))
- 
+The 12 point indexes have the following mapping to mouse body part:
 
-```
-python tools/test.py \
-    --cfg experiments/mpii/hrnet/w32_256x256_adam_lr1e-3.yaml \
-    TEST.MODEL_FILE models/pytorch/pose_mpii/pose_hrnet_w32_256x256.pth
-```
+* NOSE_INDEX = 0
+* LEFT_EAR_INDEX = 1
+* RIGHT_EAR_INDEX = 2
+* BASE_NECK_INDEX = 3
+* LEFT_FRONT_PAW_INDEX = 4
+* RIGHT_FRONT_PAW_INDEX = 5
+* CENTER_SPINE_INDEX = 6
+* LEFT_REAR_PAW_INDEX = 7
+* RIGHT_REAR_PAW_INDEX = 8
+* BASE_TAIL_INDEX = 9
+* MID_TAIL_INDEX = 10
+* TIP_TAIL_INDEX = 11
 
-#### Training on MPII dataset
+### Multi-Mouse Pose Estimation v3 Format
 
-```
-python tools/train.py \
-    --cfg experiments/mpii/hrnet/w32_256x256_adam_lr1e-3.yaml
-```
+Each video has a corresponding HDF5 file that contains pose estimation coordinates and confidences. These files will have the same name as the corresponding video except that you replace ".avi" with "_pose_est_v3.h5"
 
-#### Testing on COCO val2017 dataset using model zoo's models([GoogleDrive](https://drive.google.com/drive/folders/1hOTihvbyIxsm5ygDpbUuJ7O_tzv4oXjC?usp=sharing) or [OneDrive](https://1drv.ms/f/s!AhIXJn_J-blW231MH2krnmLq5kkQ))
- 
+Several of the datasets below have a dimension of length "maximum # instances". This is because the instance count can vary over time for a video either because mice are added or removed, or because of an error in inference. Since each frame has it's own instance count you must consult the "poseest/instance_count" dataset to determine the number of valid instances per frame.
 
-```
-python tools/test.py \
-    --cfg experiments/coco/hrnet/w32_256x192_adam_lr1e-3.yaml \
-    TEST.MODEL_FILE models/pytorch/pose_coco/pose_hrnet_w32_256x192.pth \
-    TEST.USE_GT_BBOX False
-```
+Each HDF5 file contains the following datasets:
 
-#### Training on COCO train2017 dataset
+* "poseest/points":
+  this is a dataset with size (#frames x maximum # instances x #keypoints x 2) where #keypoints is 12 following the indexing scheme shown below and the last dimension of size 2 is used hold the pixel (y, x) position of the respective frame # and keypoint #
+  the datatype is a 16bit unsigned integer
+* "poseest/confidence":
+  this dataset has size (#frames x maximum # instances x #keypoints) and assigns a confidence value to each of the 12 points. Values of 0 indicate a missing point. Anything higher than 0 indicates a valid point, so in that sense this dataset can be treated as binary.
+  the datatype is a 32 bit floating point
+* "poseest/instance_count":
+  this dataset has size (#frames) and gives the instance count for every frame (this can change when mice are added and removed, or if inference fails for some frames)
+  the datatype is an 8 bit unsigned integer
+* "poseest/instance_embedding":
+  Most applications can ignore this dataset. This is a dataset with size (#frames x maximum # instances x #keypoints) where #keypoints is 12 following the indexing scheme shown below. This dataset contains the instance embedding for the respective instance at the respective frame and point.
+  the datatype is a 32 bit floating point
+* "poseest/instance_track_id":
+  this is a dataset with size (#frames x maximum # instances) and contains the instance_track_id for each instance index on a per frame basis.
 
-```
-python tools/train.py \
-    --cfg experiments/coco/hrnet/w32_256x192_adam_lr1e-3.yaml \
-```
+The "poseest" group can have attributes attached
 
+* "cm_per_pixel" (optional):
+  defines how many centimeters a pixel of open field represents
+  the datatype is 32 bit floating point scalar
+* "cm_per_pixel_source" (optional):
+  defines how the "cm_per_pixel" value was set. Value will be one of "corner_detection", "manually_set" or "default_alignment"
+  the datatype is string scalar
 
-### Other applications
-Many other dense prediction tasks, such as segmentation, face alignment and object detection, etc. have been benefited by HRNet. More information can be found at [Deep High-Resolution Representation Learning](https://jingdongwang2017.github.io/Projects/HRNet/).
+The 12 keypoint indexes have the following mapping to mouse body part:
 
-### Citation
-If you use our code or models in your research, please cite with:
-```
-@inproceedings{sun2019deep,
-  title={Deep High-Resolution Representation Learning for Human Pose Estimation},
-  author={Sun, Ke and Xiao, Bin and Liu, Dong and Wang, Jingdong},
-  booktitle={CVPR},
-  year={2019}
-}
+* NOSE_INDEX = 0
+* LEFT_EAR_INDEX = 1
+* RIGHT_EAR_INDEX = 2
+* BASE_NECK_INDEX = 3
+* LEFT_FRONT_PAW_INDEX = 4
+* RIGHT_FRONT_PAW_INDEX = 5
+* CENTER_SPINE_INDEX = 6
+* LEFT_REAR_PAW_INDEX = 7
+* RIGHT_REAR_PAW_INDEX = 8
+* BASE_TAIL_INDEX = 9
+* MID_TAIL_INDEX = 10
+* TIP_TAIL_INDEX = 11
 
-@inproceedings{xiao2018simple,
-    author={Xiao, Bin and Wu, Haiping and Wei, Yichen},
-    title={Simple Baselines for Human Pose Estimation and Tracking},
-    booktitle = {European Conference on Computer Vision (ECCV)},
-    year = {2018}
-}
-```
+## Licensing
+
+This code is released under MIT license.
+
+The data produced in the associated paper used for training models are released on Zenodo under a Non-Commercial license.
