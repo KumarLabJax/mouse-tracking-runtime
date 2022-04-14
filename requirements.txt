@@ -7,7 +7,7 @@ scipy
 pandas
 pyyaml
 json_tricks
-scikit-image
+scikit-image==0.18.2
 yacs
 imageio-ffmpeg
 h5py

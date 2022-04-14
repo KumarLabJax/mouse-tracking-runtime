@@ -1,0 +1,5 @@
+steps:
+- name: 'gcr.io/cloud-builders/docker'
+  args: [ 'build', '-f', 'docker/Dockerfile', '-t', 'gcr.io/jax-jmcrs-behavior-sb-01/pose-est', '.' ]
+- name: 'gcr.io/cloud-builders/docker'
+  args: ['push', 'gcr.io/jax-jmcrs-behavior-sb-01/pose-est']
