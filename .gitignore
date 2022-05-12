@@ -106,7 +106,10 @@ plot/
 *.simg
 *.sif
 *.h5
+*.out
 runs/
+
+valid
 
 image-out*/
 sampled_frames*/
