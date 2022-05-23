@@ -17,7 +17,7 @@ from config import cfg
 from config import update_config
 from core.assocembedfunc import train, validate
 from core.assocembedloss import PoseEstAssocEmbedLoss, balanced_bcelogit_loss, weighted_bcelogit_loss
-from dataset.multimousepose import MultiPoseDataset, parse_poses
+from dataset.multimousepose import MultiPoseDataset, parse_poses_pkl
 from utils.utils import get_optimizer
 from utils.utils import save_checkpoint
 from utils.utils import create_logger
@@ -28,23 +28,19 @@ import models
 #
 #   python tools/trainmultimouse.py \
 #       --cfg experiments/multimouse/multimouse-1.yaml \
-#       --cvat-files \
-#           /run/user/1002/gvfs/smb-share:server=bht2stor.jax.org,share=vkumar/kumarlab-new/Brian/NeuralNets/MultiMousePose/Annotations/*.xml \
-#           /run/user/1002/gvfs/smb-share:server=bht2stor.jax.org,share=vkumar/kumarlab-new/Brian/NeuralNets/MultiMousePose/Annotations_NoMarkings/*.xml \
-#       --image-dir '/run/user/1002/gvfs/smb-share:server=bht2stor.jax.org,share=vkumar/kumarlab-new/Brian/NeuralNets/MultiMousePose/Dataset'
+#       --data-file /home/ghanba/mousepose_abed/scrap/all3_cloudfactory.h5\
+#       --image-dir /projects/compsci/USERS/ghanba/cloudfactory_annotations/all_frames/
 #
 #   singularity exec --nv vm/multi-mouse-pose-2019-11-04.sif python3 tools/trainmultimouse.py \
 #       --cfg experiments/multimouse/multimouse_2019-12-31_1.yaml \
-#       --cvat-files \
-#           data/multi-mouse/Annotations/*xml \
-#           data/multi-mouse/Annotations_NoMarkings/*.xml \
-#       --image-dir data/multi-mouse/Dataset
+#       --data-file all3_cloudfactory.h5 \
+#       --image-dir ./all_frames
 
 def parse_args():
     parser = argparse.ArgumentParser(description='train multi-mouse pose network')
 
-    parser.add_argument('--cvat-files',
-                        help='list of CVAT XML files to use',
+    parser.add_argument('--data-file',
+                        help='pkl file to use',
                         nargs='+',
                         required=True,
                         type=str)
@@ -110,34 +106,26 @@ def main():
         final_output_dir)
 
     if cfg.LOSS.POSE_LOSS_FUNC == 'MSE':
-        criterion = PoseEstAssocEmbedLoss(
-            pose_heatmap_weight = cfg.LOSS.POSE_HEATMAP_WEIGHT,
-            assoc_embedding_weight = cfg.LOSS.ASSOC_EMBEDDING_WEIGHT,
-            separation_term_weight = 5,
-            sigma = 5)
+        criterion = PoseEstAssocEmbedLoss()
+
     elif cfg.LOSS.POSE_LOSS_FUNC == 'BALANCED_BCE':
         criterion = PoseEstAssocEmbedLoss(
-            pose_heatmap_weight = cfg.LOSS.POSE_HEATMAP_WEIGHT,
-            assoc_embedding_weight = cfg.LOSS.ASSOC_EMBEDDING_WEIGHT,
-            separation_term_weight = 5,
-            sigma = 5,
             pose_loss_func = functools.partial(
                 balanced_bcelogit_loss,
                 fairness_quotient = cfg.LOSS.BALANCED_BCE_FAIRNESS_QUOTIENT))
+
     elif cfg.LOSS.POSE_LOSS_FUNC == 'WEIGHTED_BCE':
         criterion = PoseEstAssocEmbedLoss(
-            pose_heatmap_weight = cfg.LOSS.POSE_HEATMAP_WEIGHT,
-            assoc_embedding_weight = cfg.LOSS.ASSOC_EMBEDDING_WEIGHT,
-            separation_term_weight = 5,
-            sigma = 5,
             pose_loss_func = functools.partial(
                 weighted_bcelogit_loss,
                 pos_weight = cfg.LOSS.POSITIVE_LABEL_WEIGHT))
+        
     else:
         raise Exception('Unknown pose loss function: {}'.format(cfg.LOSS.POSE_LOSS_FUNC))
 
     # Data loading code
-    pose_labels = list(itertools.chain.from_iterable(parse_poses(f) for f in args.cvat_files))
+    pose_labels = list(itertools.chain.from_iterable(parse_poses_pkl(f) for f in args.data_file))
+
     validation_set_filename = cfg.DATASET.TEST_SET
     val_img_names = set()
     if os.path.exists(validation_set_filename):
@@ -249,7 +237,7 @@ def main():
                 swriter,
                 epoch)
 
-            if best_perf is None or perf_indicator >= best_perf:
+            if best_perf is None or (perf_indicator >= best_perf and epoch > cfg.TRAIN.END_EPOCH*.1):
                 best_perf = perf_indicator
                 logger.info('*** NEW BEST *** {}'.format(perf_indicator))
                 best_model_state_file = os.path.join(final_output_dir, 'best_state.pth')

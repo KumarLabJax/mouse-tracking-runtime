@@ -11,6 +11,7 @@ import sys
 import time
 
 import cv2
+import pims
 import matplotlib.pyplot as plt
 import numpy as np
 import pandas as pd
@@ -49,149 +50,153 @@ def get_mask(contours, img_shape):
     for cnt in contours:
         cv2.drawContours(mask, [cnt.astype(int)], 0, 255, -1)
     return mask
+
+
+def overlay_skeleton(img, pose_instances, branches=None, title=None):
+    if branches is None:
+        branches = [[4,6,5],[7,9,8],[0,3,6,9,10,11]]
     
+    plt.imshow(img, cmap='gray')
+    cmap = plt.get_cmap('Paired')
+    colors = [cmap(i) for i in np.linspace(0, 1, len(pose_instances))] 
+    colors_iter = itertools.cycle(colors)
+    for pose in pose_instances:
+        color = next(colors_iter)
+        plt.scatter(pose[:,1], pose[:,0], s=8, color=color)
+        #plot lines between points same color as points
+        for branch in branches:
+            for i in range(len(branch)-1):
+                if np.all(pose[branch[i],:] != [0,0]) and np.all(pose[branch[i+1],:] != [0,0]):
+                    plt.plot([pose[branch[i],1], pose[branch[i+1],1]], [pose[branch[i],0], pose[branch[i+1],0]], color=color)
+        plt.title(title)
+        plt.axis('off')
+
+
+def get_embedding(data_numpy, model_path, cfg_file):
+    # load config
+    cfg.defrost()
+    cfg.merge_from_file(cfg_file)
+    # cudnn related setting
+    cudnn.benchmark = cfg.CUDNN.BENCHMARK
+    torch.backends.cudnn.deterministic = cfg.CUDNN.DETERMINISTIC
+    torch.backends.cudnn.enabled = cfg.CUDNN.ENABLED
+    # load model
+    model = eval('models.' + cfg.MODEL.NAME + '.get_pose_net')(
+        cfg, is_train=False
+    )
+    model.load_state_dict(torch.load(model_path, map_location='cpu'), strict=False)
+    model.eval().cuda()
+
+    xform = transforms.Compose([
+            transforms.ToTensor(),
+            transforms.Normalize(
+                mean=[0.45, 0.45, 0.45],
+                std=[0.225, 0.225, 0.225],
+            ),
+        ])
+
+    tensor_stack = torch.stack([xform(data_numpy)])
+
+
+    with torch.no_grad():
+        output = model(tensor_stack.cuda())
+    # output_arr = output.detach().cpu().numpy()
+    return output, cfg
+
+def get_keypoints(
+            output, cfg, 
+            min_pose_heatmap_val,
+            min_embed_sep,
+            max_embed_sep,
+            max_inst_dist,
+            min_joint_count,
+            max_instance_count,
+            ):
+    pose_heatmap = output[0,:cfg.MODEL.NUM_JOINTS,:,:]
+    pose_localmax = aeutil.localmax2D(pose_heatmap, min_pose_heatmap_val, 5)
+    pose_embed_map = output[0,cfg.MODEL.NUM_JOINTS:,:,:]
+    pose_instances = aeutil.calc_pose_instances(
+                                pose_heatmap,
+                                pose_localmax,
+                                pose_embed_map,
+                                min_embed_sep,
+                                max_embed_sep,
+                                max_inst_dist)
+    
+    if min_joint_count is not None:
+        pose_instances = [
+            pi for pi in pose_instances
+            if len(pi.keypoints) >= min_joint_count
+        ]
+    
+    # if we have too many poses remove in order of lowest confidence
+    if (max_instance_count is not None
+            and len(pose_instances) > max_instance_count):
+        pose_instances.sort(key=lambda pi: pi.mean_inst_conf)
+        del pose_instances[max_instance_count:]
+    
+    points = np.zeros(
+                (max_instance_count, 12, 2),
+                dtype=np.uint16)
+    for pose_index, pose_instance in enumerate(pose_instances):
+        for keypoint in pose_instance.keypoints.values():
+            points[pose_index, keypoint['joint_index'], 0] = keypoint['y_pos']
+            points[pose_index, keypoint['joint_index'], 1] = keypoint['x_pos']
+    
+    return points
+
+
 # paths
 pkl_file = '/home/ghanba/mousepose_abed/scrap/all3_cloudfactory.h5'
 dataset_path = '/projects/compsci/USERS/ghanba/cloudfactory_annotations/all_frames/'
 
-cfg_file = '/projects/kumar-lab/multimouse-pipeline/model_zoo/hrnets/2021/multimouse_2021-10-26.yaml'
-model_path = '/projects/kumar-lab/multimouse-pipeline/model_zoo/hrnets/2021/best_state.pth'
+cfg_file1 = '/projects/kumar-lab/multimouse-pipeline/model_zoo/hrnets/2021/multimouse_2021-10-26.yaml'
+model_path1 = '/projects/kumar-lab/multimouse-pipeline/model_zoo/hrnets/2021/best_state.pth'
 
-# model_name = 'multimouse_cloudfactory_10'
-# model_path = f'/home/ghanba/mousepose_abed/deep-hres-net/output-multi-mouse/multimousepose/pose_hrnet/{model_name}/best_state.pth'
-# cfg_file = f'/home/ghanba/mousepose_abed/deep-hres-net/experiments/multimouse/cloudfactory/{model_name}.yml'
+model_name = 'multimouse_cloudfactory'
+model_path2 = f'/home/ghanba/mousepose_abed/deep-hres-net/output-multi-mouse1/multimousepose/pose_hrnet/{model_name}/best_state.pth'
+cfg_file2 = f'/home/ghanba/mousepose_abed/deep-hres-net/tmp/cloudfactory/{model_name}.yml'
 
-# load training data
-pose_labels = list(parse_poses_pkl(pkl_file))
-
-# randomly select a traning image
-np.random.seed(32)
-f_idx = np.random.randint(0, len(pose_labels))
-image_path = os.path.join(dataset_path, pose_labels[f_idx]['image_name'])
-data_numpy = skimage.io.imread(image_path, as_gray=True) * 255
-
-# show the image
-plt.imshow(data_numpy, cmap='gray')
-plt.show()
-
-# get one of the masks
-segs = pose_labels[f_idx]['seg_instances']
-mask = get_mask([segs[1]], data_numpy.shape)
-
-# show the mask
-masked_img = (255-mask)+((mask>0).astype(int)*data_numpy).astype(int)
-plt.imshow(masked_img, cmap='gray', vmin=0, vmax=100)
-plt.show()
-
-# make rgb image from masked_img
-masked_img = np.repeat(masked_img[:, :, np.newaxis], 3, axis=2).astype(np.float32)
-# show the rgb image
-plt.imshow(masked_img)
-plt.show()
-
-# load config
-cfg.defrost()
-cfg.merge_from_file(cfg_file)
-
-# cudnn related setting
-cudnn.benchmark = cfg.CUDNN.BENCHMARK
-torch.backends.cudnn.deterministic = cfg.CUDNN.DETERMINISTIC
-torch.backends.cudnn.enabled = cfg.CUDNN.ENABLED
-
-model = eval('models.' + cfg.MODEL.NAME + '.get_pose_net')(
-    cfg, is_train=False
-)
-
-# check if cuda is available
-if torch.cuda.is_available():
-    print('cuda is available')
-
-# load model
-model.load_state_dict(torch.load(model_path, map_location='cpu'), strict=False)
-model.eval().cuda()
-
-xform = transforms.Compose([
-        transforms.ToTensor(),
-        transforms.Normalize(
-            mean=[0.45, 0.45, 0.45],
-            std=[0.225, 0.225, 0.225],
-        ),
-    ])
-
-data_numpy = skimage.io.imread(image_path) * 255
-tensor_stack = torch.stack([xform(data_numpy)])
-# tensor_stack = torch.stack([xform(masked_img)])
-
-start = time.time()
-with torch.no_grad():
-    output = model(tensor_stack.cuda())
-end = time.time()
-print('time taken: ', end - start)
-output_arr = output.detach().cpu().numpy()
-
-# get the keypoints
-plt.imshow(output_arr[0, 6, :, :], cmap='cool')
-plt.show()
-
-# plot histogram of values in the output passed from a sigmoid layer
-def sigmoid(x):
-    return 1 / (1 + np.exp(-x))
-plt.hist(sigmoid(output_arr[0, 6, :, :].flatten()), bins=100)
-plt.show()
+video_path = '/home/ghanba/mousepose_abed/data/B6J_3M_stranger_4day+NV10-CBAX2+2019-07-26+MDX0008_2019-07-26_16-00-00_1.avi'
+frame_num = 17629
 
 # find embedding for the keypoints
-min_pose_heatmap_val = .1
+min_pose_heatmap_val = .2
 min_embed_sep = 0.2
-max_embed_sep = 0.5
-max_inst_dist = 100
-min_joint_count = 5
+max_embed_sep = 0.4
+max_inst_dist = 150
+min_joint_count = 3
 max_instance_count = 10
 
-pose_heatmap = output[0,:cfg.MODEL.NUM_JOINTS,:,:]
-pose_localmax = aeutil.localmax2D(pose_heatmap, min_pose_heatmap_val, 5)
-pose_embed_map = output[0,cfg.MODEL.NUM_JOINTS:,:,:]
-pose_instances = aeutil.calc_pose_instances(
-                            pose_heatmap,
-                            pose_localmax,
-                            pose_embed_map,
-                            min_embed_sep,
-                            max_embed_sep,
-                            max_inst_dist)
+vid = pims.Video(video_path)
+data_numpy = vid[frame_num]
 
-if min_joint_count is not None:
-    pose_instances = [
-        pi for pi in pose_instances
-        if len(pi.keypoints) >= min_joint_count
-    ]
+output, cfg = get_embedding(data_numpy, model_path1, cfg_file1)
+points1 = get_keypoints(output, cfg, min_pose_heatmap_val, min_embed_sep, max_embed_sep, max_inst_dist, min_joint_count, max_instance_count)
 
-# if we have too many poses remove in order of lowest confidence
-if (max_instance_count is not None
-        and len(pose_instances) > max_instance_count):
-    pose_instances.sort(key=lambda pi: pi.mean_inst_conf)
-    del pose_instances[max_instance_count:]
+output, cfg = get_embedding(data_numpy, model_path2, cfg_file2)
+points2 = get_keypoints(output, cfg, min_pose_heatmap_val, min_embed_sep, max_embed_sep, max_inst_dist, min_joint_count, max_instance_count)
 
-points = np.zeros(
-            (max_instance_count, 12, 2),
-            dtype=np.uint16)
-for pose_index, pose_instance in enumerate(pose_instances):
-    for keypoint in pose_instance.keypoints.values():
-        points[pose_index, keypoint['joint_index'], 0] = keypoint['y_pos']
-        points[pose_index, keypoint['joint_index'], 1] = keypoint['x_pos']
+plt.figure(figsize=(10,10))
+plt.subplot(1,2,1)
+overlay_skeleton(data_numpy, points, title='pose_instances')
 
-# show image with keypoints
-cmap = plt.get_cmap('Paired')
-colors = [cmap(i) for i in np.linspace(0, 1, len(pose_labels[f_idx]['pose_instances']))] 
-colors = itertools.cycle(colors)
-plt.figure(figsize=(8,8))
-plt.imshow(skimage.io.imread(image_path, as_gray=True) * 255, cmap='gray')
-for i in range(points.shape[0]):
-    color = next(colors)
-    plt.scatter(points[i,:,1], points[i,:,0], s=8, color=color)
-    #plot lines between points same color as points
-    for j in range(points.shape[1]-1):
-        if np.all(points[i,j,:] != [0,0]) and np.all(points[i,j+1,:] != [0,0]):
-            plt.plot([points[i,j,1], points[i,j+1,1]], [points[i,j,0], points[i,j+1,0]], color=color)
-plt.show()
+#%%
+# get pose 
+'''
+python -u tools/infermultimousepose.py \
+    --max-instance-count 4 \
+    --max-embed-sep-within-instances 0.4 \
+    --min-embed-sep-between-instances 0.2 \
+    --min-pose-heatmap-val .2 \
+    /home/ghanba/mousepose_abed/deep-hres-net/output-multi-mouse2/multimousepose/pose_hrnet/multimouse_cloudfactory/best_state.pth \
+    /home/ghanba/mousepose_abed/deep-hres-net/tmp/cloudfactory/multimouse_cloudfactory.yml \
+    '/home/ghanba/mousepose_abed/data/B6J_3M_stranger_4day+NV10-CBAX2+2019-07-26+MDX0008_2019-07-26_16-00-00_1.avi' \
+    '/home/ghanba/mousepose_abed/data/B6J_3M_stranger_4day+NV10-CBAX2+2019-07-26+MDX0008_2019-07-26_16-00-00_1.h5'
 
-
-# %%
+python -u tools/rendervidoverlay.py \
+    --exclude-forepaws --exclude-ears \
+    vid --in-vid '/home/ghanba/mousepose_abed/data/B6J_3M_stranger_4day+NV10-CBAX2+2019-07-26+MDX0008_2019-07-26_16-00-00_1.avi' \
+    --in-pose '/home/ghanba/mousepose_abed/data/B6J_3M_stranger_4day+NV10-CBAX2+2019-07-26+MDX0008_2019-07-26_16-00-00_1.h5' \
+    --out-vid '/home/ghanba/mousepose_abed/data/B6J_3M_stranger_4day+NV10-CBAX2+2019-07-26+MDX0008_2019-07-26_16-00-00_1_pose.avi'
+'''

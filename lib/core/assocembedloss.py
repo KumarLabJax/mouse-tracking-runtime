@@ -196,20 +196,10 @@ class PoseEstAssocEmbedLoss(nn.Module):
 
     def __init__(
             self,
-            pose_heatmap_weight=1.0,
-            assoc_embedding_weight=1.0,
-            separation_term_weight=1.0,
-            grouping_term_weight=1.0,
-            sigma=1.0,
             pose_loss_func=None):
 
         super(PoseEstAssocEmbedLoss, self).__init__()
 
-        self.pose_heatmap_weight = pose_heatmap_weight
-        self.assoc_embedding_weight = assoc_embedding_weight
-        self.separation_term_weight = separation_term_weight
-        self.grouping_term_weight = grouping_term_weight
-        self.sigma = sigma
         self.pose_loss_func = pose_loss_func
 
         self.loss_components = dict()
@@ -229,10 +219,11 @@ class PoseEstAssocEmbedLoss(nn.Module):
         lbl_instance_count = truth_labels['instance_count'].to(
             device=est_device,
             non_blocking=True)
-        pose_keypoint_count = lbl_joint_heatmaps.size(1)
 
-        inf_joint_heatmaps = inference_tensor[:, :pose_keypoint_count, ...]
-        inf_assoc_embed_map = inference_tensor[:, pose_keypoint_count:, ...]
+        pose_keypoint_count = lbl_joint_heatmaps.size(1)
+        assert inference_tensor.size(1) == pose_keypoint_count
+
+        inf_joint_heatmaps = inference_tensor
 
         if self.pose_loss_func is not None:
             pose_loss = self.pose_loss_func(
@@ -242,65 +233,8 @@ class PoseEstAssocEmbedLoss(nn.Module):
             pose_loss = nn.functional.mse_loss(
                 inf_joint_heatmaps,
                 lbl_joint_heatmaps)
-        embed_loss = self.pose_assoc_embed_loss(
-            inf_assoc_embed_map,
-            lbl_pose_instances,
-            lbl_instance_count)
-        combined_loss = pose_loss * self.pose_heatmap_weight + embed_loss * self.assoc_embedding_weight
 
         self.loss_components['pose_loss'] = pose_loss.detach()
-        self.loss_components['embed_loss'] = embed_loss.detach()
-        self.loss_components['weighted_pose_loss'] = pose_loss.detach() * self.pose_heatmap_weight
-        self.loss_components['weighted_embed_loss'] = embed_loss.detach() * self.assoc_embedding_weight
-        self.loss_components['combined_loss'] = combined_loss.detach()
 
-        return combined_loss
+        return pose_loss
 
-    def pose_assoc_embed_loss(
-            self,
-            batch_assoc_embed_maps,
-            batch_target_poses_xy,
-            batch_instance_counts):
-
-        batch_size = batch_target_poses_xy.size(0)
-        batch_losses = torch.zeros(
-            batch_size,
-            device=batch_assoc_embed_maps.device,
-            dtype=batch_assoc_embed_maps.dtype)
-
-        for sample_i in range(batch_size):
-
-            # pull out the values corresponding to the current sample in the mini batch
-            instance_count = batch_instance_counts[sample_i]
-            assoc_embed_maps = batch_assoc_embed_maps[sample_i, ...]
-            target_poses_xy = batch_target_poses_xy[sample_i, :instance_count, ...]
-
-            # extract the embedding values at the "truth" XY coordinates for each
-            # instance and calculate the reference embedding
-            embed_vals, keypoint_vis = _get_assoc_embed_values(assoc_embed_maps, target_poses_xy)
-
-            # remove instances with no visible keypoints
-            keypoint_vis_counts = keypoint_vis.sum(1)
-            visible_instances = keypoint_vis_counts > 0
-
-            keypoint_vis_counts = keypoint_vis_counts[visible_instances]
-            embed_vals = embed_vals[visible_instances, :]
-            keypoint_vis = keypoint_vis[visible_instances, :]
-
-            reference_embeds = embed_vals.sum(1) / keypoint_vis.sum(1).to(embed_vals)
-
-            # we take the loss expression defined in the associative embedding paper
-            # and break it down into two sub-expressions: an instance grouping part
-            # and a reference embedding separation part. We also apply a weighting to
-            # each of these loss components which is not in the paper's approach
-            inst_grp_term = _instance_grouping_term(embed_vals, keypoint_vis, reference_embeds)
-            if self.grouping_term_weight != 1:
-                inst_grp_term *= self.grouping_term_weight
-
-            sep_term = _ref_embedding_separation_term(reference_embeds, sigma=self.sigma)
-            if self.separation_term_weight != 1:
-                sep_term *= self.separation_term_weight
-
-            batch_losses[sample_i] = inst_grp_term + sep_term
-
-        return batch_losses.mean()

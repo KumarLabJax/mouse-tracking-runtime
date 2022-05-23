@@ -101,6 +101,7 @@ model-archive/
 
 draws/
 plot/
+tmp/
 
 *.avi
 *.simg

@@ -1,5 +1,6 @@
 import cv2
 import numpy as np
+import pandas as pd
 import os
 import re
 import skimage.io
@@ -63,6 +64,16 @@ def parse_poses(cvat_xml_path):
             'pose_instances': pose_instances,
         }
 
+def parse_poses_pkl(pkl_file):
+    df = pd.read_hdf(pkl_file, key='df')
+    # make a generator that yields the image name and 
+    # the pose_instances and seg_instances
+    for i, row in df.iterrows():
+        yield {
+            'image_name': row['image_name'],
+            'pose_instances': row['pose_instances'],
+            'seg_instances': row['seg_instances'],
+        }
 
 def _get_bounding_box(pose_instances, selected_indexes):
     all_points = np.concatenate([pose_instances[i] for i in selected_indexes])
@@ -82,6 +93,13 @@ def transform_points(xy_points, xform):
 
     return xy_points_xform[:2, :]
 
+def get_mask(contours, img_shape):
+    # a function to get a numpy array of contours 
+    # and return mask with all the inside pixels set to 1
+    mask = np.zeros(img_shape, dtype=np.uint8)
+    for cnt in contours:
+        cv2.drawContours(mask, [cnt.astype(int)], 0, 255, -1)
+    return mask
 
 def _read_image(image_path):
     data_numpy = skimage.io.imread(image_path, as_gray=True) * 255
@@ -127,7 +145,8 @@ class MultiPoseDataset(Dataset):
             [LEFT_REAR_PAW_INDEX, RIGHT_REAR_PAW_INDEX],
         ]
 
-        self.max_instance_count = max(len(pl['pose_instances']) for pl in self.pose_labels)
+        # self.max_instance_count = max(len(pl['pose_instances']) for pl in self.pose_labels)
+        self.max_instance_count = 1
 
     def __len__(self):
         return len(self.pose_labels)
@@ -270,6 +289,14 @@ class MultiPoseDataset(Dataset):
 
         image_path = os.path.join(self.image_dir, image_name)
         data_numpy = _read_image(image_path)
+
+        segs = pose_label['seg_instances']
+        rand_inst_idx = np.random.randint(0, len(segs))
+        mask = get_mask([segs[rand_inst_idx]], data_numpy.shape)
+        data_numpy = (255-mask)+((mask>0).astype(int)*data_numpy).astype(np.uint8)
+        
+        pose_instances = [pose_instances[rand_inst_idx]]
+        num_instances = 1
 
         if self.use_neighboring_frames:
             vid_fragment, frame_index = decompose_frame_name(image_path)

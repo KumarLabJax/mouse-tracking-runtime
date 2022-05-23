@@ -158,7 +158,7 @@ def process_video(in_video_path, pose_h5_path, out_video_path, exclude_points):
         h5py.File(pose_h5_path, 'r') as pose_h5, \
         imageio.get_writer(out_video_path, fps=30) as video_writer:
 
-        vid_grp = next(iter(pose_h5.values()))
+        vid_grp = pose_h5['poseest']
         major_version = 2
         if 'version' in vid_grp.attrs:
             major_version = vid_grp.attrs['version'][0]
@@ -166,7 +166,6 @@ def process_video(in_video_path, pose_h5_path, out_video_path, exclude_points):
         if major_version == 2:
             all_points = vid_grp['points'][:]
             for frame_index, image in enumerate(video_reader):
-
                 render_pose_overlay(
                     image,
                     all_points[frame_index, ...],
@@ -180,6 +179,7 @@ def process_video(in_video_path, pose_h5_path, out_video_path, exclude_points):
             all_instance_count = vid_grp['instance_count'][:]
             all_track_id = vid_grp['instance_track_id'][:]
             for frame_index, image in enumerate(video_reader):
+                print('frame: ' + str(frame_index), flush=True)
 
                 frame_instance_count = all_instance_count[frame_index]
                 if frame_instance_count > 0:
@@ -351,6 +351,7 @@ def main():
                 p.join()
 
         elif args.subcommand == 'vid':
+            print('Processing video: ' + args.in_vid, flush=True)
             process_video(args.in_vid, args.in_pose, args.out_vid, exclude_points)
 
     else:
