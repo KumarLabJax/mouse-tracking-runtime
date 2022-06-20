@@ -93,6 +93,13 @@ def transform_points(xy_points, xform):
 
     return xy_points_xform[:2, :]
 
+def fill_holes(mask):
+    im_floodfill = mask.copy() 
+    maskS = np.zeros((mask.shape[0]+2,mask.shape[1]+2),dtype=np.uint8)
+    cv2.floodFill(im_floodfill,maskS,(0, 0), 255)   # Core code 
+    im_floodfill_inv = cv2.bitwise_not(im_floodfill ) 
+    return mask | im_floodfill_inv[:,:,np.newaxis]
+
 def get_mask(contours, img_shape):
     # a function to get a numpy array of contours 
     # and return mask with all the inside pixels set to 1
@@ -293,8 +300,10 @@ class MultiPoseDataset(Dataset):
         segs = pose_label['seg_instances']
         rand_inst_idx = np.random.randint(0, len(segs))
         mask = get_mask([segs[rand_inst_idx]], data_numpy.shape)
+        mask = fill_holes(mask)
+        kernel = np.ones((5,5), np.uint8)
+        mask = cv2.dilate(mask, kernel, iterations=1)[:,:,np.newaxis]
         data_numpy = (255-mask)+((mask>0).astype(int)*data_numpy).astype(np.uint8)
-        
         pose_instances = [pose_instances[rand_inst_idx]]
         num_instances = 1
 

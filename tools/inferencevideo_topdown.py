@@ -121,6 +121,9 @@ def main():
     parser.add_argument('--max_instance_count', type=int, default=3, help='max instance count')
     args = parser.parse_args()
 
+    # log 
+
+
     vid = pims.Video(args.video_path)
     vid_len = len(vid)
     print('video length: {}'.format(vid_len))
@@ -157,7 +160,7 @@ def main():
         ])
 
     points = np.zeros((vid_len, 4, 12, 2), dtype=np.uint16)
-    for frame_num in tqdm(range(vid_len//1000)):
+    for frame_num in tqdm(range(vid_len)):
         
         pose_est_data = seg_data[frame_num,...]
 
@@ -179,7 +182,6 @@ def main():
         with torch.no_grad():
             output = model(tensor_stack.cuda())
 
-        start_time = time.time()
         for j in range(output.shape[0]):
                 points[frame_num, j, ...] = get_keypoints(output[j:j+1,...], cfg, 
                     args.min_pose_heatmap_val,
@@ -189,10 +191,9 @@ def main():
                     args.min_joint_count,
                     args.max_instance_count,
                     )[0].astype(np.int16)
-        print('time: {}'.format(time.time()-start_time))
     with h5py.File(args.h5_path_out, 'r+') as h5file:
-        data = h5file['poseest']['points']
-        data[...] = points
+        h5file.create_dataset('poseest/points', data=points)
+        
 
 if __name__ == '__main__':
     '''example:
@@ -211,16 +212,16 @@ if __name__ == '__main__':
 
     python inferencevideo_topdown.py  \
         --video_path=/home/ghanba/mousepose_abed/data/B6J_3M_stranger_4day+NV10-CBAX2+2019-07-26+MDX0008_2019-07-26_16-00-00_1.avi         \
-        --model_path=/home/ghanba/mousepose_abed/deep-hres-net/output-multi-mouse-topdown/multimousepose/pose_hrnet/multimouse_topdown_1/best_state.pth         \
+        --model_path=/home/ghanba/mousepose_abed/deep-hres-net/output-multi-mouse-topdown-dilated-5-fillholes-alldata/multimousepose/pose_hrnet/multimouse_topdown_1/best_state.pth         \
         --cfg_path=/home/ghanba/mousepose_abed/deep-hres-net/experiments/multimouse/cloudfactory/multimouse_topdown_1.yml         \
         --h5_path=/home/ghanba/B6J_3M_stranger_4day+NV10-CBAX2+2019-07-26+MDX0008_2019-07-26_16-00-00_1_pose_est_v4.h5 \
         --h5_path_out=/home/ghanba/B6J_3M_stranger_4day+NV10-CBAX2+2019-07-26+MDX0008_2019-07-26_16-00-00_1_pose_est_v4_out.h5 
 
-    python -u tools/rendervidoverlay.py \
-        --exclude-forepaws --exclude-ears \
+    python -u rendervidoverlay.py \
+        --exclude-forepaws --exclude-ears --exclude-tail\
         vid --in-vid '/home/ghanba/mousepose_abed/data/B6J_3M_stranger_4day+NV10-CBAX2+2019-07-26+MDX0008_2019-07-26_16-00-00_1.avi' \
         --in-pose '/home/ghanba/B6J_3M_stranger_4day+NV10-CBAX2+2019-07-26+MDX0008_2019-07-26_16-00-00_1_pose_est_v4_out.h5' \
         --out-vid '/home/ghanba/mousepose_abed/data/B6J_3M_stranger_4day+NV10-CBAX2+2019-07-26+MDX0008_2019-07-26_16-00-00_1_topdown.avi'
 
     '''
-    # main()
+    main()

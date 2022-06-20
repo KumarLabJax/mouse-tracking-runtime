@@ -14,5 +14,5 @@ export LD_LIBRARY_PATH=$LD_LIBRARY_PATH:/projects/robson-lab/software/miniconda/
 
 ~/.conda/envs/mousepose/bin/python tools/trainmultimouse.py  \
      --cfg "$1" \
-     --data-file /home/ghanba/mousepose_abed/scrap/cloudfactory_sample.h5  \
+     --data-file /home/ghanba/mousepose_abed/scrap/all3_cloudfactory.h5  \
      --image-dir /projects/compsci/USERS/ghanba/cloudfactory_annotations/all_frames/

@@ -5,7 +5,7 @@ import multiprocessing as mp
 import numpy as np
 import os
 import h5py
-
+from tqdm import tqdm
 
 NOSE_INDEX = 0
 LEFT_EAR_INDEX = 1
@@ -77,22 +77,9 @@ def render_pose_overlay(image, frame_points, exclude_points, color=(255, 255, 25
 
     for curr_line_indexes in line_pt_indexes:
         line_pts = np.array(
-            [(pt_x, pt_y) for pt_y, pt_x in frame_points[curr_line_indexes]],
+            [(pt_x, pt_y) for pt_y, pt_x in frame_points[curr_line_indexes] if pt_x != 0 and pt_y != 0],
             np.int32)
         cv2.polylines(image, [line_pts], False, (0, 0, 0), 2, cv2.LINE_AA)
-
-    for point_index in range(12):
-        if point_index in exclude_points:
-            continue
-
-        point_y, point_x = frame_points[point_index, :]
-
-        cv2.circle(image, (point_x, point_y), 3, (0, 0, 0), -1, cv2.LINE_AA)
-
-    for curr_line_indexes in line_pt_indexes:
-        line_pts = np.array(
-            [(pt_x, pt_y) for pt_y, pt_x in frame_points[curr_line_indexes]],
-            np.int32)
         cv2.polylines(image, [line_pts], False, color, 1, cv2.LINE_AA)
 
     for point_index in range(12):
@@ -101,6 +88,7 @@ def render_pose_overlay(image, frame_points, exclude_points, color=(255, 255, 25
 
         point_y, point_x = frame_points[point_index, :]
 
+        cv2.circle(image, (point_x, point_y), 3, (0, 0, 0), -1, cv2.LINE_AA)
         cv2.circle(image, (point_x, point_y), 2, color, -1, cv2.LINE_AA)
 
 
@@ -178,9 +166,7 @@ def process_video(in_video_path, pose_h5_path, out_video_path, exclude_points):
             all_confidence = vid_grp['confidence'][:]
             all_instance_count = vid_grp['instance_count'][:]
             all_track_id = vid_grp['instance_track_id'][:]
-            for frame_index, image in enumerate(video_reader):
-                print('frame: ' + str(frame_index), flush=True)
-
+            for frame_index, image in tqdm(enumerate(video_reader)):
                 frame_instance_count = all_instance_count[frame_index]
                 if frame_instance_count > 0:
                     render_pose_v3_overlay(
@@ -245,7 +231,14 @@ def main():
         default=False,
         help='should we exclude the ears',
     )
-
+    parser.add_argument(
+        '--exclude-tail',
+        action='store_true',
+        dest='exclude_tail',
+        default=False,
+        help='should we exclude the tail',
+    )
+    
     subparsers = parser.add_subparsers()
 
     dir_parser = subparsers.add_parser(
@@ -315,7 +308,10 @@ def main():
     if args.exclude_ears:
         exclude_points.add(LEFT_EAR_INDEX)
         exclude_points.add(RIGHT_EAR_INDEX)
-
+    if args.exclude_tail:
+        exclude_points.add(MID_TAIL_INDEX)
+        exclude_points.add(TIP_TAIL_INDEX)
+        
     if 'subcommand' in args:
         if args.subcommand == 'dir':
 
@@ -351,7 +347,6 @@ def main():
                 p.join()
 
         elif args.subcommand == 'vid':
-            print('Processing video: ' + args.in_vid, flush=True)
             process_video(args.in_vid, args.in_pose, args.out_vid, exclude_points)
 
     else:

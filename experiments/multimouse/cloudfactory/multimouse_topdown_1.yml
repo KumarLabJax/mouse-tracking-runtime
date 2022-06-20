@@ -5,7 +5,7 @@ CUDNN:
   ENABLED: true
 DATA_DIR: ''
 GPUS: (0,)
-OUTPUT_DIR: 'output-multi-mouse-topdown'
+OUTPUT_DIR: 'output-multi-mouse-topdown-dilated-5-fillholes-alldata'
 LOG_DIR: 'log'
 WORKERS: 24
 PRINT_FREQ: 50
