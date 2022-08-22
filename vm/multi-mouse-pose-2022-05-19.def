@@ -1,0 +1,39 @@
+# build like:
+#   singularity build --fakeroot multi-mouse-pose-2022-05-19.sif multi-mouse-pose-2022-05-19.def
+
+Bootstrap: docker
+From: nvcr.io/nvidia/cuda:11.1.1-base-ubuntu20.04
+
+%files
+    ../../deep-hres-net /
+    ../requirements.txt /
+
+%runscript
+    # no model was included, this will fail, but shows the structure of the call
+    python3 -u /deep-hres-net/tools/infermultimousepose.py \
+        --max-embed-sep-within-instances 0.3 \
+        --min-embed-sep-between-instances 0.2 \
+        --min-pose-heatmap-val 1.0 \
+        --max-inst-dist-px 75 \
+        --pose-smoothing \
+        /deep-hres-net/multimousepose.pth \
+        /deep-hres-net/multimousepose-conf.yaml \
+        "${1}" "${2}"
+
+%post
+    apt-get -y update
+    apt-get -y install less
+    apt-get -y install vim
+    apt-get -y install ffmpeg
+    apt-get -y install python3-pip
+    apt-get -y install libsm6
+    apt-get -y install libxext6
+    apt-get -y install libxrender-dev
+    apt-get -y install libjpeg8-dev
+    apt-get -y install zlib1g-dev
+    apt-get -y clean
+
+    # Upgrade pip
+    pip3 install --upgrade pip
+    pip3 install torch==1.10.1+cu111 torchvision==0.11.2+cu111 torchaudio==0.10.1 -f https://download.pytorch.org/whl/torch_stable.html
+    pip3 install -r /requirements.txt
