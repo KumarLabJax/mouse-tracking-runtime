@@ -159,7 +159,7 @@ def main():
             ),
         ])
 
-    points = np.zeros((vid_len, 4, 12, 2), dtype=np.uint16)
+    points = np.zeros((vid_len, 1, 12, 2), dtype=np.uint16)
     for frame_num in tqdm(range(vid_len)):
         
         pose_est_data = seg_data[frame_num,...]
@@ -181,6 +181,11 @@ def main():
         tensor_stack = torch.stack([xform(d) for d in batch])
         with torch.no_grad():
             output = model(tensor_stack.cuda())
+
+        if points.shape[1] < output.shape[0]:
+            points_resized = np.zeros((vid_len, output.shape[0], 12, 2), dtype=np.uint16)
+            points_resized[:, :points.shape[1], ...] = points
+            points = points_resized
 
         for j in range(output.shape[0]):
                 points[frame_num, j, ...] = get_keypoints(output[j:j+1,...], cfg, 
