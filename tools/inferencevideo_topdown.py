@@ -97,6 +97,10 @@ def get_keypoints(
                                 max_embed_sep,
                                 max_inst_dist)
     
+    # Early exit if no instances
+    if len(pose_instances) == 0:
+        return None
+
     if min_joint_count is not None:
         pose_instances = [
             pi for pi in pose_instances
@@ -142,6 +146,24 @@ class data_controller:
         self.__result_pose_mat = None
         self.__start_batch_generator()
         self.__start_dequeue_results()
+    def is_healthy(self):
+        is_healthy = True
+        if self.__reader_threads is not None:
+            for thread in self.__reader_threads:
+                if thread.exitcode is None or thread.exitcode == 0:
+                    pass
+                else:
+                    is_healthy = False
+        if self.__results_storage_thread is not None:
+            if self.__results_storage_thread.exitcode is None or self.__results_storage_thread.exitcode == 0:
+                pass
+            else:
+                is_healthy = False
+        # If something bad was detected, close down all threads so main code can exit
+        if not is_healthy:
+            for thread in mp.active_children():
+                thread.terminate()
+        return is_healthy
     # Opens the video and returns a reader object
     def __open_video(self):
         return pims.Video(self.__video_path)
@@ -185,6 +207,8 @@ class data_controller:
                 batch.append(data_numpy)
             if len(batch)!=0:
                 reader_queue.put((frame, np.stack(batch)))
+            else:
+                reader_queue.put((frame, None))
         vid.close()
         seg_file.close()
     def __start_batch_generator(self):
@@ -197,6 +221,8 @@ class data_controller:
         points = np.zeros((len(self.__frames), 1, 12, 2), dtype=np.uint16)
         for _ in self.__frames:
             frame, output = results_queue.get()
+            if output is None:
+                continue
             # Resize output matrix if necessary
             if points.shape[1] < output.shape[0]:
                 points_resized = np.zeros((len(self.__frames), output.shape[0], 12, 2), dtype=np.uint16)
@@ -245,7 +271,7 @@ def main():
     # copy the data to the output file
     with h5py.File(args.h5_path, 'r') as h5r:
         with h5py.File(args.h5_path_out, 'w') as h5w:
-            for obj in h5r.keys():        
+            for obj in h5r.keys():
                 h5r.copy(obj, h5w )
 
     # load config
@@ -266,21 +292,48 @@ def main():
     controller = data_controller(args.video_path, args.h5_path_out, args, preproc_thread_count=args.num_reader_threads)
     print('video frame count: ' + str(len(controller.get_frames())))
     for _ in tqdm(controller.get_frames()):
-        batch_frame, batch = controller.video_reader_queue.get()
-        tensor_stack = torch.from_numpy(batch)
-        with torch.no_grad():
-            output = model(tensor_stack.cuda())
-            results_npy = []
-            for j in range(output.shape[0]):
-                results_npy.append(get_keypoints(output[j:j+1,...], cfg, 
-                    args.min_pose_heatmap_val,
-                    args.min_embed_sep,
-                    args.max_embed_sep,
-                    args.max_inst_dist,
-                    args.min_joint_count,
-                    args.max_instance_count,
-                    )[0].astype(np.int16))
-        controller.results_queue.put((batch_frame, np.stack(results_npy)))
+        # Monitor if the reading threads are healthy
+        while True:
+            try:
+                batch_frame, batch = controller.video_reader_queue.get(timeout=5)
+                break
+            except queue.Empty:
+                if not controller.is_healthy():
+                    raise Exception('Reader thread died unexpectedly.')
+                continue
+        # Run the inference to retrieve the output
+        # None values must be sent to the results controller to know if a given batch produced no poses
+        if batch is not None:
+            with torch.no_grad():
+                tensor_stack = torch.from_numpy(batch)
+                output = model(tensor_stack.cuda())
+                results_npy = []
+                for j in range(output.shape[0]):
+                    # get_keypoints returns a numpy array based on the input tensor
+                    next_keypoints = get_keypoints(output[j:j+1,...], cfg, 
+                        args.min_pose_heatmap_val,
+                        args.min_embed_sep,
+                        args.max_embed_sep,
+                        args.max_inst_dist,
+                        args.min_joint_count,
+                        args.max_instance_count,
+                        )
+                    if next_keypoints is not None:
+                        results_npy.append(next_keypoints[0].astype(np.int16))
+            if len(results_npy)>0:
+                results_npy = np.stack(results_npy)
+            else:
+                results_npy = None
+        else:
+            results_npy = None
+        while True:
+            try:
+                controller.results_queue.put((batch_frame, results_npy), timeout=5)
+                break
+            except queue.Full:
+                if not controller.is_healthy():
+                    raise Exception('Writer thread died unexpectedly.')
+                continue
     points = controller.get_poses()
     with h5py.File(args.h5_path_out, 'r+') as h5file:
         h5file.create_dataset('poseest/points', data=points)
