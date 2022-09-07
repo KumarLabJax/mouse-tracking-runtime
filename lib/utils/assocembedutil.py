@@ -188,7 +188,7 @@ def calc_pose_instances(
             continue
 
         joint_xy = joint_localmax.nonzero()
-        joint_xy = np.transpose(joint_xy.cpu().numpy().reshape([2,-1]), [1,0])
+        joint_xy = joint_xy.cpu().numpy().reshape([-1,2])
 
         joint_insts = []
         for inst_index in range(joint_xy.shape[0]):
