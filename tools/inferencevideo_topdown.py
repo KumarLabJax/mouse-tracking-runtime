@@ -133,11 +133,9 @@ class data_controller:
         self.__seg_file = seg_data_file
         self.__args = args
         self.__frames = self.__safe_detect_frames(frames)
-        #self.video_reader_queue = mp.Queue(self.__args.batch_size*preproc_thread_count*5)
         self.video_reader_queue = mp.Queue(preproc_thread_count*5)
         self.__reader_threads = None
         self.__preproc_thread_count = preproc_thread_count
-        #self.results_queue = mp.Queue(self.__args.batch_size*5)
         self.results_queue = mp.Queue(5)
         self.__results_storage_thread = None
         self.__final_mat_queue = mp.JoinableQueue(1)
@@ -268,21 +266,10 @@ def main():
     controller = data_controller(args.video_path, args.h5_path_out, args, preproc_thread_count=args.num_reader_threads)
     print('video frame count: ' + str(len(controller.get_frames())))
     for _ in tqdm(controller.get_frames()):
-    #for _ in controller.get_frames():
-        # start_time = time.time()
         batch_frame, batch = controller.video_reader_queue.get()
-        # delta_time = time.time()-start_time
-        # print('Batch ' + str(batch_frame) + ' retrieved in ' + str(datetime.timedelta(seconds=delta_time)))
-        # start_time = time.time()
         tensor_stack = torch.from_numpy(batch)
-        # delta_time = time.time()-start_time
-        # print('Batch ' + str(batch_frame) + ' stacked in ' + str(datetime.timedelta(seconds=delta_time)))
-        # start_time = time.time()
         with torch.no_grad():
             output = model(tensor_stack.cuda())
-            # delta_time = time.time()-start_time
-            # print('Batch ' + str(batch_frame) + ' processed in ' + str(datetime.timedelta(seconds=delta_time)))
-            # start_time = time.time()
             results_npy = []
             for j in range(output.shape[0]):
                 results_npy.append(get_keypoints(output[j:j+1,...], cfg, 
@@ -293,12 +280,7 @@ def main():
                     args.min_joint_count,
                     args.max_instance_count,
                     )[0].astype(np.int16))
-        # delta_time = time.time()-start_time
-        # print('Batch ' + str(batch_frame) + ' (shape: ' + str(output.shape) + ') post-processed in ' + str(datetime.timedelta(seconds=delta_time)))
-        # start_time = time.time()
         controller.results_queue.put((batch_frame, np.stack(results_npy)))
-        # delta_time = time.time()-start_time
-        # print('Batch ' + str(batch_frame) + ' placed in out_queue in ' + str(datetime.timedelta(seconds=delta_time)))
     points = controller.get_poses()
     with h5py.File(args.h5_path_out, 'r+') as h5file:
         h5file.create_dataset('poseest/points', data=points)

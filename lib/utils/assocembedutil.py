@@ -10,7 +10,7 @@ def localmax2D(data, min_thresh, min_dist):
 
     Parameters:
         data (tensor): the tensor that we search for local maxima. This tensor must
-        have at least two dimensions (d1, d2, d3, ..., dn, rows, cols). Each 2D
+        have between 3 and 4 dimensions (d1, [d2,] rows, cols). Each 2D
         (rows, cols) slice will be searched for local maxima. If neighboring pixels
         have the same value we follow a simple tie breaking algorithm. The tie will
         be broken by considering the pixel with the larger row index greater, or if the
@@ -187,9 +187,11 @@ def calc_pose_instances(
         if torch.count_nonzero(joint_localmax)==0:
             continue
 
+        # Extract the peaks
         joint_xy = joint_localmax.nonzero()
         joint_xy = joint_xy.cpu().numpy().reshape([-1,2])
 
+        # Store the peaks in a list
         joint_insts = []
         for inst_index in range(joint_xy.shape[0]):
             joint_insts.append({
