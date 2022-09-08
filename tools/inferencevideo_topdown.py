@@ -22,6 +22,7 @@ from tqdm import tqdm
 
 import time, datetime
 import multiprocessing as mp
+import queue
 
 # Removes padding from a contour
 def get_trimmed_contour(padded_contour, default_val=-1):
