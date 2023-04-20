@@ -1,6 +1,7 @@
 import numpy as np
 import skimage.transform
 import imageio
+import time
 
 import torch
 import torch.nn.functional as torchfunc
@@ -67,9 +68,15 @@ torch.onnx.export(model,
 	dynamic_axes={'input' : {0 : 'batch_size'},
 				'output' : {0 : 'batch_size'}})
 
+start_time = time.time()
+with torch.no_grad():
+	model_out = model(batch_tensor)
+	preds = model_out.cpu().detach().numpy()
+	delta = time.time()-start_time
 
-model_out = model(batch_tensor)
-preds = model_out.cpu().detach().numpy()
+print('Elapsed time: ' + str(delta))
+# CPU: Elapsed time: 1.2886393070220947
+
 out_png = '/media/bgeuther/Storage/TempStorage/trained-models/2022_pose/gt-preds.png'
 imageio.imwrite(out_png, (np.clip(preds[0,0,:,:]*40,0,1)*255).astype(np.uint8))
 
