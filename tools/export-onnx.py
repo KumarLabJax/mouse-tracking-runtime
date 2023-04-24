@@ -76,6 +76,8 @@ with torch.no_grad():
 
 print('Elapsed time: ' + str(delta))
 # CPU: Elapsed time: 1.2886393070220947
+# GPU A100: Elapsed time: 0.048354148864746094
+
 
 out_png = '/media/bgeuther/Storage/TempStorage/trained-models/2022_pose/gt-preds.png'
 imageio.imwrite(out_png, (np.clip(preds[0,0,:,:]*40,0,1)*255).astype(np.uint8))
