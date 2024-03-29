@@ -6,6 +6,12 @@
 Bootstrap: docker
 From: nvcr.io/nvidia/tensorrt:23.01-py3
 
+%setup
+    mkdir -p ${SINGULARITY_ROOTFS}/onnx-runtime/
+
+%files
+    ../requirements.txt /onnx-runtime/.
+
 %post
     apt-get -y update
     apt-get -y install less ffmpeg python3-pip libsm6 libxext6 libxrender-dev libjpeg8-dev zlib1g-dev
@@ -13,4 +19,5 @@ From: nvcr.io/nvidia/tensorrt:23.01-py3
 
     # Upgrade pip
     pip3 install --upgrade pip
-    pip3 install -r ../requirements.txt
+    pip3 install -r /onnx-runtime/requirements.txt
+    pip install --upgrade onnxruntime-gpu --extra-index-url https://aiinfra.pkgs.visualstudio.com/PublicPackages/_packaging/onnxruntime-cuda-12/pypi/simple/

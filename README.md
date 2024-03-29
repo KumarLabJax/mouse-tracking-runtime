@@ -17,6 +17,12 @@ source onnx-runtime-venv/bin/activate
 pip install -r requirements.txt
 ```
 
+If you are running on a system with CUDA 12, you need to use a different onnx runtime (instructions from https://onnxruntime.ai/docs/install/)
+
+```
+pip install --upgrade onnxruntime-gpu --extra-index-url https://aiinfra.pkgs.visualstudio.com/PublicPackages/_packaging/onnxruntime-cuda-12/pypi/simple/
+```
+
 ## Singularity Containers
 
 See containers in vm folder.
