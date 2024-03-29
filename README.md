@@ -1,0 +1,71 @@
+# ONNX-Runtime Pipelines
+
+This is a collection of Kumar Lab pipelines converted over to ONNX-Runtime.
+This is specifically NOT designed for training new models, but rather takes ONNX-exported models and runs inference on videos using them.
+
+# Installation
+
+Both virtual environments and singularity containers are supported.
+
+## Virtual Environment
+
+Python 3.10 venv tested
+
+```
+python3 -m venv onnx-runtime-venv
+source onnx-runtime-venv/bin/activate
+pip install -r requirements.txt
+```
+
+## Singularity Containers
+
+See containers in vm folder.
+
+# Models
+
+## Single Mouse Segmentation
+
+Original Training Code: https://github.com/KumarLabJax/MouseTracking
+Trained Models:
+* Tracking Paper Model: https://zenodo.org/records/5806397
+* High Quality Segmenter: (Not published)
+
+## Single Mouse Pose
+
+Original Training Code: https://github.com/KumarLabJax/deep-hrnet-mouse
+Trained Models:
+* Gait Paper Model: https://zenodo.org/records/6380163
+
+## Multi-Mouse Pose
+
+Original Training Code: https://github.com/KumarLabJax/deep-hrnet-mouse
+Trained Models:
+* Top-down: In Progress
+* Bottom-up: (Not published)
+
+## Multi-Mouse Segmentation
+
+Original Training Code: In Progress
+Trained Models:
+* Panoptic Segmentation: In Progress
+
+## Static Objects
+
+### Arena Corners
+
+Original Training Code: In Progress
+Trained Models:
+* Object Detection API (2022): In Progress
+
+### Food Hopper
+
+Original Training Code: In Progress
+Trained Models:
+* Object Detection API (2022): In Progress
+
+### Lixit
+
+Original Training Code: In Progress
+Trained Models:
+* DeepLabCut: In Progress
+

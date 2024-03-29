@@ -1,0 +1,5 @@
+*.sif
+*.pyc
+__pycache__
+onnx-runtime-venv
+
