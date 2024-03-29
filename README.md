@@ -36,6 +36,10 @@ Trained Models:
 * Tracking Paper Model: https://zenodo.org/records/5806397
 * High Quality Segmenter: (Not published)
 
+```
+python -m tf2onnx.convert --saved-model /media/bgeuther/Storage/TempStorage/pose-validation/movenet/external/single_mouse_segmentation/ --output onnx-models/single-mouse-segmentation/tracking-paper.onnx --opset 17
+```
+
 ## Single Mouse Pose
 
 Original Training Code: https://github.com/KumarLabJax/deep-hrnet-mouse
