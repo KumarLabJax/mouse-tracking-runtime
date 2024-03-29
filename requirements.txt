@@ -7,3 +7,4 @@ tensorflow==2.13.1
 imageio==2.34.0
 sympy==1.12
 packaging==24.0
+opencv-python-headless==4.9.0.80
