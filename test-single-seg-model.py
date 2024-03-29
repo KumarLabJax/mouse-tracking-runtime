@@ -4,6 +4,11 @@ import imageio
 import numpy as np
 import time
 
+# Model converted using the following command:
+# python -m tf2onnx.convert --saved-model /media/bgeuther/Storage/TempStorage/pose-validation/movenet/external/single_mouse_segmentation/ --output onnx-models/single-mouse-segmentation/tracking-paper.onnx --opset 13
+
+# To convert INT64 -> INT32, there's a basic typecaster here: https://github.com/aadhithya/onnx-typecast
+# This casting will enable 'TensorrtExecutionProvider'
 out_onnx_model = 'onnx-models/single-mouse-segmentation/tracking-paper.onnx'
 model = onnx.load_model(out_onnx_model)
 onnx.checker.check_model(model)
@@ -16,8 +21,11 @@ options.enable_cpu_mem_arena = False
 options.enable_mem_reuse = True
 options.log_severity_level = 1
 options.log_verbosity_level = 1
+options.graph_optimization_level = onnxruntime.GraphOptimizationLevel.ORT_ENABLE_ALL
+options.optimized_model_filepath = 'onnx-models/single-mouse-segmentation/tracking-paper-optimized.onnx'
 
 ort_session = onnxruntime.InferenceSession(out_onnx_model, providers=[('CUDAExecutionProvider', {'device_id': 0, 'arena_extend_strategy': 'kNextPowerOfTwo', 'gpu_mem_limit': 1 * 1024 * 1024 * 1024, 'cudnn_conv_algo_search': 'EXHAUSTIVE', 'do_copy_in_default_stream': True}), 'CPUExecutionProvider'], sess_options=options)
+
 
 test_fname = 'tests/test-single-frame.png'
 test_frame = imageio.imread(test_fname).astype(np.float32)

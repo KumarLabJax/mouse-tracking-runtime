@@ -37,7 +37,7 @@ Trained Models:
 * High Quality Segmenter: (Not published)
 
 ```
-python -m tf2onnx.convert --saved-model /media/bgeuther/Storage/TempStorage/pose-validation/movenet/external/single_mouse_segmentation/ --output onnx-models/single-mouse-segmentation/tracking-paper.onnx --opset 17
+python -m tf2onnx.convert --saved-model /media/bgeuther/Storage/TempStorage/pose-validation/movenet/external/single_mouse_segmentation/ --output onnx-models/single-mouse-segmentation/tracking-paper.onnx --opset 13
 ```
 
 ## Single Mouse Pose
