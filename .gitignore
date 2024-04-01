@@ -1,5 +1,7 @@
 *.sif
 *.pyc
+*.png
+*.avi
 __pycache__
 onnx-runtime-venv
 onnx-models

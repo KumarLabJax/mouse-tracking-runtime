@@ -7,10 +7,14 @@ Bootstrap: docker
 From: nvcr.io/nvidia/tensorrt:23.01-py3
 
 %setup
-    mkdir -p ${SINGULARITY_ROOTFS}/onnx-runtime/
+    mkdir -p ${SINGULARITY_ROOTFS}/onnx-runtime/utils
+    mkdir -p ${SINGULARITY_ROOTFS}/onnx-models
 
 %files
     ../requirements.txt /onnx-runtime/.
+    ../*.py /onnx-runtime/.
+    ../utils/*.py /onnx-runtime/utils/.
+    ../onnx-models /onnx-models
 
 %post
     apt-get -y update
