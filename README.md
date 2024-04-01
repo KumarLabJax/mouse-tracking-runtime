@@ -67,15 +67,48 @@ Original Training Code: In Progress
 Trained Models:
 * Object Detection API (2022): In Progress
 
+Export the model using the tf-obj-api exporter (in obj-api environment):
+```
+python /object_detection/models/research/object_detection/exporter_main_v2.py --input_type image_tensor --pipeline_config_path /object_detection/code/tf-obj-api/corner-detection/single-object-testing/pipeline.config --trained_checkpoint_dir /media/bgeuther/Storage/TempStorage/pose-validation/movenet/arena_corner/output_models/ --output_directory /media/bgeuther/Storage/TempStorage/trained-models/static-objects/obj-api-corner/
+```
+Note that this needs to be run in the folder with annotations if the config points to label_map.pbtxt locally.
+`/media/bgeuther/Storage/TempStorage/pose-validation/movenet/arena_corner/` is the location of these annotations.
+
+Convert the model over to onnx:
+```
+python -m tf2onnx.convert --saved-model /media/bgeuther/Storage/TempStorage/trained-models/static-objects/obj-api-corner/saved_model/ --output onnx-models/static-objects/obj-api-corners.onnx --opset 13
+```
+
+```
+2024-04-01 09:55:41,353 - INFO - Model inputs: ['input_tensor']
+2024-04-01 09:55:41,353 - INFO - Model outputs: ['detection_boxes', 'detection_boxes_strided', 'detection_classes', 'detection_keypoint_scores', 'detection_keypoints', 'detection_multiclass_scores', 'detection_scores', 'num_detections']
+```
+
 ### Food Hopper
 
 Original Training Code: In Progress
 Trained Models:
 * Object Detection API (2022): In Progress
 
+Export the model using the tf-obj-api exporter (in obj-api environment):
+```
+python /object_detection/models/research/object_detection/exporter_main_v2.py --input_type image_tensor --pipeline_config_path /object_detection/code/tf-obj-api/food-detection/segmentation/pipeline.config --trained_checkpoint_dir /media/bgeuther/Storage/TempStorage/pose-validation/movenet/food_hopper/output_models/ --output_directory /media/bgeuther/Storage/TempStorage/trained-models/static-objects/obj-api-food/
+```
+Note that this needs to be run in the folder with annotations if the config points to label_map.pbtxt locally.
+`/media/bgeuther/Storage/TempStorage/pose-validation/movenet/food_hopper/` is the location of these annotations.
+
+Convert the model over to onnx:
+```
+python -m tf2onnx.convert --saved-model /media/bgeuther/Storage/TempStorage/trained-models/static-objects/obj-api-food/saved_model/ --output onnx-models/static-objects/obj-api-food.onnx --opset 13
+```
+
+```
+2024-04-01 09:56:32,297 - INFO - Model inputs: ['input_tensor']
+2024-04-01 09:56:32,297 - INFO - Model outputs: ['detection_boxes', 'detection_boxes_strided', 'detection_classes', 'detection_masks', 'detection_multiclass_scores', 'detection_scores', 'num_detections']
+```
+
 ### Lixit
 
 Original Training Code: In Progress
 Trained Models:
 * DeepLabCut: In Progress
-
