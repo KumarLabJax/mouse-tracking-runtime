@@ -41,8 +41,8 @@ def infer_pose_model(args):
 	pose_results = prediction_saver(dtype=np.uint16)
 	confidence_results = prediction_saver(dtype=np.float32)
 	vid_writer = None
-	if args.out_vid is not None:
-		vid_writer = imageio.get_writer(args.out_vid, fps=30)
+	if args.out_video is not None:
+		vid_writer = imageio.get_writer(args.out_video, fps=30)
 	performance_accumulator = time_accumulator(3, ['Preprocess', 'GPU Compute', 'Postprocess'])
 	# Main loop for inference
 	for frame_idx, frame in enumerate(frame_iter):
@@ -84,7 +84,7 @@ def main(argv):
 	vid_or_img.add_argument('--video', help='Video file for processing')
 	vid_or_img.add_argument('--frame', help='Image file for processing')
 	parser.add_argument('--out-file', help='Pose file to write out.', required=True)
-	parser.add_argument('--out-vid', help='Render the results to a video.', default=None)
+	parser.add_argument('--out-video', help='Render the results to a video.', default=None)
 	#
 	args = parser.parse_args()
 	if args.video:
