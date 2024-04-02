@@ -12,6 +12,7 @@ import time
 from utils.pose import argmax_2d, render_pose_overlay
 from utils.prediction_saver import prediction_saver
 from utils.writers import write_pose_data
+from utils.timers import time_accumulator
 
 
 def infer_pose_model(args):
@@ -42,20 +43,16 @@ def infer_pose_model(args):
 	vid_writer = None
 	if args.out_vid is not None:
 		vid_writer = imageio.get_writer(args.out_vid, fps=30)
-	preproc_time = []
-	gpu_time = []
-	postproc_time = []
+	performance_accumulator = time_accumulator(3, ['Preprocess', 'GPU Compute', 'Postprocess'])
 	# Main loop for inference
 	for frame_idx, frame in enumerate(frame_iter):
-		start_time = time.time()
+		t1 = time.time()
 		input_frame = np.expand_dims(frame.astype(np.float32), [0])
 		input_frame = np.transpose((input_frame / 255. - 0.45) / 0.225, [0, 3, 1, 2])
 		ort_inputs = {ort_session.get_inputs()[0].name: input_frame}
-		preproc_time.append(time.time() - start_time)
-		start_time = time.time()
+		t2 = time.time()
 		ort_outs = ort_session.run(None, ort_inputs)
-		gpu_time.append(time.time() - start_time)
-		start_time = time.time()
+		t3 = time.time()
 		confidence, pose = argmax_2d(ort_outs[0])
 		try:
 			pose_results.results_receiver_queue.put((1, np.expand_dims(pose, axis=0)), timeout=5)
@@ -69,20 +66,14 @@ def infer_pose_model(args):
 				sys.exit(1)
 			print(f'WARNING: Skipping inference on frame {frame_idx}')
 			continue
-		postproc_time.append(time.time() - start_time)
+		t4 = time.time()
+		performance_accumulator.add_batch_times([t1, t2, t3, t4])
 	pose_results.results_receiver_queue.put((None, None))
 	confidence_results.results_receiver_queue.put((None, None))
 	pose_matrix = pose_results.get_results()
 	confidence_matrix = confidence_results.get_results()
 	write_pose_data(args.out_file, pose_matrix, confidence_matrix)
-	preproc_time = np.mean(preproc_time)
-	gpu_time = np.mean(gpu_time)
-	postproc_time = np.mean(postproc_time)
-	total_time = preproc_time + gpu_time + postproc_time
-	print(f'Read Time: {np.round(preproc_time, 4)}s ({np.round(preproc_time / total_time, 4)*100}%)')
-	print(f'GPU Time: {np.round(gpu_time, 4)}s ({np.round(gpu_time / total_time, 4)*100}%)')
-	print(f'PostProc Time: {np.round(postproc_time, 4)}s ({np.round(postproc_time / total_time, 4)*100}%)')
-	print(f'Overall: {np.round(total_time, 4)} ({np.round(1/total_time, 2)} FPS)')
+	performance_accumulator.print_performance()
 
 
 def main(argv):

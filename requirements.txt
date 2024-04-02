@@ -5,7 +5,8 @@ torch==2.1.2
 tf2onnx==1.16.1
 tensorflow==2.13.1
 imageio==2.34.0
-imageio[ffmpeg]==0.4.9
+imageio[ffmpeg]
 sympy==1.12
 packaging==24.0
 opencv-python-headless==4.9.0.80
+scipy==1.10.1

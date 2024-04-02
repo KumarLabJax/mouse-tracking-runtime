@@ -4,7 +4,33 @@ import h5py
 import numpy as np
 
 
-def write_pose_data(pose_file, pose_matrix, confidence_matrix, config_str: str = '2019-06-26-param-search/mp-conf4.yaml', model_str: str = 'gait-model.onnx'):
+def adjust_pose_version(pose_file, version: int):
+	"""Safely adjusts the pose version.
+
+	Args:
+		pose_file: file to change the stored pose version
+		version: new version to use
+
+	Raises:
+		ValueError if version is not within a valid range
+	"""
+	if version < 2 or version > 6:
+		raise ValueError(f'Pose version {version} not allowed. Please select between 2-6.')
+
+	with h5py.File(pose_file, 'a') as out_file:
+		try:
+			current_version = out_file['poseest'].attrs['version'][0]
+		# KeyError can be either group or version not being present
+		# IndexError would be incorrect shape of the version attribute
+		except (KeyError, IndexError):
+			if 'poseest' not in out_file:
+				out_file.create_group('poseest')
+			current_version = -1
+		if current_version < version:
+			out_file['poseest'].attrs['version'] = np.asarray([version, 0], dtype=np.uint16)
+
+
+def write_pose_data(pose_file, pose_matrix: np.ndarray, confidence_matrix: np.ndarray, config_str: str = '2019-06-26-param-search/mp-conf4.yaml', model_str: str = 'gait-model.onnx'):
 	"""Writes pose_v2 data to a file.
 	
 	Args:
@@ -32,8 +58,10 @@ def write_pose_data(pose_file, pose_matrix, confidence_matrix, config_str: str =
 			del out_file['poseest/confidence']
 		out_file.create_dataset('poseest/confidence', data=confidence_matrix.astype(np.float32))
 
+	adjust_pose_version(pose_file, 2)
 
-def write_identity_data(pose_file, embeddings, config_str: str = 'MNAS_latent16', model_str: str = '2022-04-28_model.ckpt-183819'):
+
+def write_identity_data(pose_file, embeddings: np.ndarray, config_str: str = 'MNAS_latent16', model_str: str = '2022-04-28_model.ckpt-183819'):
 	"""Writes identity prediction data to a pose file.
 
 	Args:
@@ -53,8 +81,10 @@ def write_identity_data(pose_file, embeddings, config_str: str = 'MNAS_latent16'
 		out_file['poseest/identity_embeds'].attrs['config'] = config_str
 		out_file['poseest/identity_embeds'].attrs['model'] = model_str
 
+	adjust_pose_version(pose_file, 4)
 
-def write_seg_data(pose_file, seg_contours_matrix, seg_external_flags, config_str: str = '', model_str: str = ''):
+
+def write_seg_data(pose_file, seg_contours_matrix: np.ndarray, seg_external_flags: np.ndarray, config_str: str = '', model_str: str = ''):
 	"""Writes segmentation data to a pose file.
 
 	Args:
@@ -78,3 +108,25 @@ def write_seg_data(pose_file, seg_contours_matrix, seg_external_flags, config_st
 		if 'poseest/seg_external_flag' in out_file:
 			del out_file['poseest/seg_external_flag']
 		out_file.create_dataset('poseest/seg_external_flag', data=seg_external_flags, compression="gzip", compression_opts=9)
+
+	adjust_pose_version(pose_file, 6)
+
+
+def write_static_object_data(pose_file, object_data: np.ndarray, static_object: str, config_str: str = '', model_str: str = ''):
+	"""Writes segmentation data to a pose file.
+
+	Args:
+		pose_file: file to write the data to
+		object_data: static object data
+		static_object: name of object
+		config_str: string defining the configuration of the model used
+		model_str: string defining the checkpoint used
+	"""
+	with h5py.File(pose_file, 'a') as out_file:
+		if 'static_objects' in out_file and static_object in out_file['static_objects']:
+			del out_file['static_objects/' + static_object]
+		out_file.create_dataset('static_objects/' + static_object, data=object_data)
+		out_file['static_objects/' + static_object].attrs['config'] = config_str
+		out_file['static_objects/' + static_object].attrs['model'] = model_str
+
+	adjust_pose_version(pose_file, 5)
