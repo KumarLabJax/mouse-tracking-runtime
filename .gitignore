@@ -2,6 +2,7 @@
 *.pyc
 *.png
 *.avi
+*.h5
 __pycache__
 onnx-runtime-venv
 onnx-models

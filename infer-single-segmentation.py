@@ -1,0 +1,101 @@
+"""Inference script for single mouse pose model."""
+
+import argparse
+import sys
+import os
+import onnx
+import onnxruntime
+import imageio
+import numpy as np
+import queue
+import time
+from utils.segmentation import get_contours, pad_contours, render_segmentation_overlay
+from utils.prediction_saver import prediction_saver
+from utils.writers import write_seg_data
+from utils.timers import time_accumulator
+
+
+def infer_segmentation_model(args):
+	"""Main function to run a single mouse pose model."""
+	model = onnx.load_model(args.model)
+	onnx.checker.check_model(model)
+
+	options = onnxruntime.SessionOptions()
+	options.inter_op_num_threads = 1
+	options.intra_op_num_threads = 1
+	options.enable_mem_pattern = True
+	options.enable_cpu_mem_arena = False
+	options.enable_mem_reuse = True
+	options.log_severity_level = 1
+	options.log_verbosity_level = 1
+
+	ort_session = onnxruntime.InferenceSession(args.model, providers=[('CUDAExecutionProvider', {'device_id': 0, 'arena_extend_strategy': 'kNextPowerOfTwo', 'gpu_mem_limit': 1 * 1024 * 1024 * 1024, 'cudnn_conv_algo_search': 'EXHAUSTIVE', 'do_copy_in_default_stream': True}), 'CPUExecutionProvider'], sess_options=options)
+
+	if args.video:
+		vid_reader = imageio.get_reader(args.video)
+		frame_iter = vid_reader.iter_data()
+	else:
+		single_frame = imageio.imread(args.frame)
+		frame_iter = [single_frame]
+
+	segmentation_results = prediction_saver(dtype=np.int32)
+	seg_flag_results = prediction_saver(dtype=bool)
+	vid_writer = None
+	if args.out_video is not None:
+		vid_writer = imageio.get_writer(args.out_video, fps=30)
+	performance_accumulator = time_accumulator(3, ['Preprocess', 'GPU Compute', 'Postprocess'])
+	# Main loop for inference
+	for frame_idx, frame in enumerate(frame_iter):
+		t1 = time.time()
+		input_frame = frame.astype(np.float32)
+		input_frame = np.reshape(input_frame[:, :, 0], [1, 480, 480, 1])
+		ort_inputs = {ort_session.get_inputs()[0].name: input_frame}
+		t2 = time.time()
+		ort_outs = ort_session.run(None, ort_inputs)
+		t3 = time.time()
+		predicted_mask = ((ort_outs[0][0, :, :, 1] < ort_outs[0][0, :, :, 0]) * 255).astype(np.uint8)
+		contours, flags = get_contours(predicted_mask)
+		contour_matrix = pad_contours(contours)
+		flag_matrix = np.asarray(flags[0, :, 3] == -1).reshape([1, 1, -1])
+		try:
+			segmentation_results.results_receiver_queue.put((1, np.expand_dims(contour_matrix, (0, 1))), timeout=5)
+			seg_flag_results.results_receiver_queue.put((1, flag_matrix), timeout=5)
+			if vid_writer is not None:
+				rendered_segmentation = render_segmentation_overlay(contour_matrix, frame)
+				vid_writer.append_data(rendered_segmentation)
+		except queue.Full:
+			if not segmentation_results.is_healthy():
+				print('Writer thread died unexpectedly.', file=sys.stderr)
+				sys.exit(1)
+			print(f'WARNING: Skipping inference on frame {frame_idx}')
+			continue
+		t4 = time.time()
+		performance_accumulator.add_batch_times([t1, t2, t3, t4])
+	segmentation_results.results_receiver_queue.put((None, None))
+	seg_flag_results.results_receiver_queue.put((None, None))
+	segmentation_matrix = segmentation_results.get_results()
+	flag_matrix = seg_flag_results.get_results()
+	write_seg_data(args.out_file, segmentation_matrix, flag_matrix, 'full-model-tracking-paper', 'model.ckpt-415000')
+	performance_accumulator.print_performance()
+
+
+def main(argv):
+	"""Parse command line arguments."""
+	parser = argparse.ArgumentParser(description='Script that infers an onnx single mouse segmentation model.')
+	parser.add_argument('--model', help='Onnx saved model (*.onnx).', default='/onnx-models/single-mouse-segmentation/tracking-paper.onnx')
+	vid_or_img = parser.add_mutually_exclusive_group(required=True)
+	vid_or_img.add_argument('--video', help='Video file for processing')
+	vid_or_img.add_argument('--frame', help='Image file for processing')
+	parser.add_argument('--out-file', help='Pose file to write out.', required=True)
+	parser.add_argument('--out-video', help='Render the results to a video.', default=None)
+	#
+	args = parser.parse_args()
+	if args.video:
+		assert os.path.exists(args.video)
+	else:
+		assert os.path.exists(args.frame)
+	infer_segmentation_model(args)
+
+
+if __name__ == '__main__':
+	main(sys.argv[1:])

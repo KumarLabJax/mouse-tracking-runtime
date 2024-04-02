@@ -97,7 +97,7 @@ def write_seg_data(pose_file, seg_contours_matrix: np.ndarray, seg_external_flag
 	Raises:
 		AssertionError if shapes don't match
 	"""
-	assert seg_contours_matrix.shape[:3] == seg_external_flags[:3]
+	assert np.all(seg_contours_matrix.shape[:3] == seg_external_flags.shape)
 
 	with h5py.File(pose_file, 'a') as out_file:
 		if 'poseest/seg_data' in out_file:

@@ -37,8 +37,10 @@ Trained Models:
 * High Quality Segmenter: (Not published)
 
 ```
-python -m tf2onnx.convert --saved-model /media/bgeuther/Storage/TempStorage/pose-validation/movenet/external/single_mouse_segmentation/ --output onnx-models/single-mouse-segmentation/tracking-paper.onnx --opset 13
+python -m tf2onnx.convert --saved-model /media/bgeuther/Storage/TempStorage/pose-validation/movenet/external/single_mouse_segmentation/ --output onnx-models/single-mouse-segmentation/tracking-paper.onnx --opset 18
 ```
+
+There is a known issue related to the ConvTranspose op not being supported by ONNX-runtime on their CUDA provider, so it needs to run on the CPU. Why? It's apparently not popular enough of a layer. See https://github.com/microsoft/onnxruntime/issues/11312
 
 ## Single Mouse Pose
 

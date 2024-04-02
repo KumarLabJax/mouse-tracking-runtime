@@ -124,6 +124,7 @@ class prediction_saver:
 				prediction_matrix[cur_frames_used_count:cur_frames_used_count + prediction_count, :] = resized_predictions
 				cur_frames_used_count += prediction_count
 				available_new_frames -= prediction_count
+				cur_mat_size = next_mat_size
 		# Clip out unused info from the matrices
 		prediction_matrix = prediction_matrix[:cur_frames_used_count]
 		# Close down the dequeue thread
