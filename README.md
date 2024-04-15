@@ -29,6 +29,14 @@ pip install --upgrade onnxruntime-gpu --extra-index-url https://aiinfra.pkgs.vis
 
 See containers in vm folder.
 
+### Notes
+
+This container is a bit hacky, because we match "system" installed cuda runtime for tensorflow and allow pytorch to use pypi libraries. Only the major version needs to match.
+
+Tensorflow GPU runtime: https://www.tensorflow.org/install/source#gpu
+Container runtime: (Check using `nvcc --version` inside container)
+Pytorch runtime: https://pytorch.org/get-started/locally/
+
 # Models
 
 ## Single Mouse Segmentation
