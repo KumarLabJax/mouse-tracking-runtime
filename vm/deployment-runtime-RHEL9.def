@@ -7,14 +7,14 @@ Bootstrap: docker
 From: nvcr.io/nvidia/tensorrt:24.01-py3
 
 %setup
-    mkdir -p ${SINGULARITY_ROOTFS}/kumar-lab-models/deployment-runtime/
-    mkdir -p ${SINGULARITY_ROOTFS}/kumar-lab-models/models/
+    mkdir -p ${SINGULARITY_ROOTFS}/kumar_lab_models/deployment_runtime/
+    mkdir -p ${SINGULARITY_ROOTFS}/kumar_lab_models/models/
 
 %files
-    ../requirements.txt /kumar-lab-models/.
-    ../README.md /kumar-lab-models/.
-    ../deployment-runtime /kumar-lab-models/
-    ../models /kumar-lab-models/
+    ../requirements.txt /kumar_lab_models/.
+    ../README.md /kumar_lab_models/.
+    ../deployment_runtime /kumar_lab_models/
+    ../models /kumar_lab_models/
 
 %post
     apt-get -y update
@@ -23,5 +23,5 @@ From: nvcr.io/nvidia/tensorrt:24.01-py3
 
     # Upgrade pip
     pip3 install --upgrade pip
-    pip3 install -r /kumar-lab-models/requirements.txt
+    pip3 install -r /kumar_lab_models/requirements.txt
     pip install --upgrade onnxruntime-gpu --extra-index-url https://aiinfra.pkgs.visualstudio.com/PublicPackages/_packaging/onnxruntime-cuda-12/pypi/simple/
