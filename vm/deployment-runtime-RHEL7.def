@@ -1,5 +1,5 @@
 # build like:
-#   singularity build --fakeroot onnx-runtime.sif onnx-runtime.def
+#   singularity build --fakeroot deployment-runtime.sif deployment-runtime-RHEL7.def
 # This image is compliant with RHEL 7-8 host OS, not 9.
 # Please use the other definition file for RHEL 9 host OS.
 

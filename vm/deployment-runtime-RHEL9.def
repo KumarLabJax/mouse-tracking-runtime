@@ -1,20 +1,20 @@
 # build like:
-#   singularity build --fakeroot onnx-runtime.sif onnx-runtime.def
+#   singularity build --fakeroot deployment-runtime.sif deployment-runtime-RHEL9.def
 # This image is compliant with RHEL 7-8 host OS, not 9.
 # Please use the other definition file for RHEL 9 host OS.
 
 Bootstrap: docker
-From: nvcr.io/nvidia/tensorrt:23.01-py3
+From: nvcr.io/nvidia/tensorrt:24.01-py3
 
 %setup
-    mkdir -p ${SINGULARITY_ROOTFS}/onnx-runtime/utils
-    mkdir -p ${SINGULARITY_ROOTFS}/onnx-models
+    mkdir -p ${SINGULARITY_ROOTFS}/kumar-lab-models/deployment-runtime/
+    mkdir -p ${SINGULARITY_ROOTFS}/kumar-lab-models/models/
 
 %files
-    ../requirements.txt /onnx-runtime/.
-    ../*.py /onnx-runtime/.
-    ../utils/*.py /onnx-runtime/utils/.
-    ../onnx-models /onnx-models
+    ../requirements.txt /kumar-lab-models/.
+    ../README.md /kumar-lab-models/.
+    ../deployment-runtime /kumar-lab-models/
+    ../models /kumar-lab-models/
 
 %post
     apt-get -y update
@@ -23,5 +23,5 @@ From: nvcr.io/nvidia/tensorrt:23.01-py3
 
     # Upgrade pip
     pip3 install --upgrade pip
-    pip3 install -r /onnx-runtime/requirements.txt
+    pip3 install -r /kumar-lab-models/requirements.txt
     pip install --upgrade onnxruntime-gpu --extra-index-url https://aiinfra.pkgs.visualstudio.com/PublicPackages/_packaging/onnxruntime-cuda-12/pypi/simple/

@@ -1,8 +1,6 @@
-"""Inference script for single mouse pose model."""
+"""Inference function for executing ORT for a single mouse segmentation model."""
 
-import argparse
 import sys
-import os
 import onnx
 import onnxruntime
 import imageio
@@ -13,11 +11,13 @@ from utils.segmentation import get_contours, pad_contours, render_segmentation_o
 from utils.prediction_saver import prediction_saver
 from utils.writers import write_seg_data
 from utils.timers import time_accumulator
+from models.model_definitions import SINGLE_MOUSE_SEGMENTATION
 
 
-def infer_segmentation_model(args):
-	"""Main function to run a single mouse pose model."""
-	model = onnx.load_model(args.model)
+def infer_single_segmentation_ort(args):
+	"""Main function to run a single mouse segmentation model."""
+	model_definition = SINGLE_MOUSE_SEGMENTATION[args.model]
+	model = onnx.load_model(model_definition['ort-model'])
 	onnx.checker.check_model(model)
 
 	options = onnxruntime.SessionOptions()
@@ -29,7 +29,7 @@ def infer_segmentation_model(args):
 	options.log_severity_level = 1
 	options.log_verbosity_level = 1
 
-	ort_session = onnxruntime.InferenceSession(args.model, providers=[('CUDAExecutionProvider', {'device_id': 0, 'arena_extend_strategy': 'kNextPowerOfTwo', 'gpu_mem_limit': 1 * 1024 * 1024 * 1024, 'cudnn_conv_algo_search': 'EXHAUSTIVE', 'do_copy_in_default_stream': True}), 'CPUExecutionProvider'], sess_options=options)
+	ort_session = onnxruntime.InferenceSession(model_definition['ort-model'], providers=[('CUDAExecutionProvider', {'device_id': 0, 'arena_extend_strategy': 'kNextPowerOfTwo', 'gpu_mem_limit': 1 * 1024 * 1024 * 1024, 'cudnn_conv_algo_search': 'EXHAUSTIVE', 'do_copy_in_default_stream': True}), 'CPUExecutionProvider'], sess_options=options)
 
 	if args.video:
 		vid_reader = imageio.get_reader(args.video)
@@ -75,27 +75,5 @@ def infer_segmentation_model(args):
 	seg_flag_results.results_receiver_queue.put((None, None))
 	segmentation_matrix = segmentation_results.get_results()
 	flag_matrix = seg_flag_results.get_results()
-	write_seg_data(args.out_file, segmentation_matrix, flag_matrix, 'full-model-tracking-paper', 'model.ckpt-415000')
+	write_seg_data(args.out_file, segmentation_matrix, flag_matrix, model_definition['model-name'], model_definition['model-checkpoint'])
 	performance_accumulator.print_performance()
-
-
-def main(argv):
-	"""Parse command line arguments."""
-	parser = argparse.ArgumentParser(description='Script that infers an onnx single mouse segmentation model.')
-	parser.add_argument('--model', help='Onnx saved model (*.onnx).', default='/onnx-models/single-mouse-segmentation/tracking-paper.onnx')
-	vid_or_img = parser.add_mutually_exclusive_group(required=True)
-	vid_or_img.add_argument('--video', help='Video file for processing')
-	vid_or_img.add_argument('--frame', help='Image file for processing')
-	parser.add_argument('--out-file', help='Pose file to write out.', required=True)
-	parser.add_argument('--out-video', help='Render the results to a video.', default=None)
-	#
-	args = parser.parse_args()
-	if args.video:
-		assert os.path.exists(args.video)
-	else:
-		assert os.path.exists(args.frame)
-	infer_segmentation_model(args)
-
-
-if __name__ == '__main__':
-	main(sys.argv[1:])

@@ -3,6 +3,7 @@
 *.png
 *.avi
 *.h5
+*.onnx
 __pycache__
 onnx-runtime-venv
-onnx-models
+models
