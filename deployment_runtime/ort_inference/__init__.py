@@ -1,1 +1,2 @@
 from .single_segmentation import infer_single_segmentation_ort
+from .single_pose import infer_single_pose_ort

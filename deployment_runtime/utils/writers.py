@@ -30,7 +30,7 @@ def adjust_pose_version(pose_file, version: int):
 			out_file['poseest'].attrs['version'] = np.asarray([version, 0], dtype=np.uint16)
 
 
-def write_pose_data(pose_file, pose_matrix: np.ndarray, confidence_matrix: np.ndarray, config_str: str = '2019-06-26-param-search/mp-conf4.yaml', model_str: str = 'gait-model.onnx'):
+def write_pose_data(pose_file, pose_matrix: np.ndarray, confidence_matrix: np.ndarray, config_str: str = '', model_str: str = ''):
 	"""Writes pose_v2 data to a file.
 	
 	Args:
