@@ -38,7 +38,7 @@ def infer_single_segmentation_ort(args):
 		single_frame = imageio.imread(args.frame)
 		frame_iter = [single_frame]
 
-	segmentation_results = prediction_saver(dtype=np.int32)
+	segmentation_results = prediction_saver(dtype=np.int32, pad_value=-1)
 	seg_flag_results = prediction_saver(dtype=bool)
 	vid_writer = None
 	if args.out_video is not None:

@@ -6,9 +6,9 @@ import cv2
 import queue
 import time
 import sys
-from utils.static_objects import filter_square_keypoints, plot_keypoints
+from utils.static_objects import filter_square_keypoints, plot_keypoints, get_px_per_cm, DEFAULT_CM_PER_PX, ARENA_IMAGING_RESOLUTION
 from utils.prediction_saver import prediction_saver
-from utils.writers import write_static_object_data
+from utils.writers import write_static_object_data, write_pixel_per_cm_attr
 from utils.timers import time_accumulator
 from models.model_definitions import STATIC_ARENA_CORNERS
 
@@ -76,10 +76,17 @@ def infer_arena_corner_model(args):
 	try:
 		filtered_corners = filter_square_keypoints(corner_matrix)
 		write_static_object_data(args.out_file, filtered_corners, 'corners', model_definition['model-name'], model_definition['model-checkpoint'])
+		px_per_cm = get_px_per_cm(filtered_corners)
+		write_pixel_per_cm_attr(args.out_file, px_per_cm, 'corner_detection')
 		if args.out_image is not None:
 			render = plot_keypoints(filtered_corners, frame)
 			imageio.imwrite(args.out_image, render)
 	except ValueError:
-		print('Corners not successfully detected...')
+		if frame.shape[0] in ARENA_IMAGING_RESOLUTION.keys():
+			print('Corners not successfully detected, writing default px per cm...')
+			px_per_cm = DEFAULT_CM_PER_PX[ARENA_IMAGING_RESOLUTION[frame.shape[0]]]
+			write_pixel_per_cm_attr(args.out_file, px_per_cm, 'default_alignment')
+		else:
+			print('Corners not successfully detected, arena size not correctly detected from imaging size...')
 
 	performance_accumulator.print_performance()

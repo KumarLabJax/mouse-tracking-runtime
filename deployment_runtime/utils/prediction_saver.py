@@ -75,7 +75,7 @@ class prediction_saver:
 				continue
 			new_size = cur_mat_size
 			new_size[dim] = change
-			expansion = np.zeros(new_size, dtype=self.__dtype)
+			expansion = np.full(new_size, self.__pad_value, dtype=self.__dtype)
 			new_preds = np.concatenate((new_preds, expansion), axis=dim)
 			cur_mat_size = np.asarray(new_preds.shape)
 		return new_preds

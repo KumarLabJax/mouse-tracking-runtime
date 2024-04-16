@@ -8,7 +8,7 @@ import time
 import sys
 from utils.pose import argmax_2d, render_pose_overlay
 from utils.prediction_saver import prediction_saver
-from utils.writers import write_pose_data
+from utils.writers import write_pose_v2_data
 from utils.timers import time_accumulator
 from models.model_definitions import SINGLE_MOUSE_POSE
 
@@ -71,5 +71,5 @@ def infer_single_pose_ort(args):
 	confidence_results.results_receiver_queue.put((None, None))
 	pose_matrix = pose_results.get_results()
 	confidence_matrix = confidence_results.get_results()
-	write_pose_data(args.out_file, pose_matrix, confidence_matrix, model_definition['model-name'], model_definition['model-checkpoint'])
+	write_pose_v2_data(args.out_file, pose_matrix, confidence_matrix, model_definition['model-name'], model_definition['model-checkpoint'])
 	performance_accumulator.print_performance()

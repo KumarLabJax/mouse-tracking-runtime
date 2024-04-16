@@ -1,7 +1,19 @@
 import numpy as np
 import cv2
-from typing import List, Tuple
+from typing import Tuple
 from scipy.spatial.distance import cdist
+
+ARENA_SIZE_CM = 20.5 * 2.54  # 20.5 inches to cm
+
+DEFAULT_CM_PER_PX = {
+	'ltm': ARENA_SIZE_CM / 701,  # 700.570 +/- 10.952 pixels
+	'ofa': ARENA_SIZE_CM / 398,  # 397.992 +/- 8.069 pixels
+}
+
+ARENA_IMAGING_RESOLUTION = {
+	800: 'ltm',
+	480: 'ofa',
+}
 
 
 def plot_keypoints(kp: np.ndarray, img: np.ndarray, color: Tuple = (0, 0, 255)) -> np.ndarray:
@@ -71,3 +83,24 @@ def filter_square_keypoints(predictions: np.ndarray, tolerance: float = 25.0):
 		raise ValueError('Good predictions are moving!')
 
 	return np.mean(filtered_predictions, axis=0)
+
+
+def get_px_per_cm(corners: np.ndarray, arena_size_cm: float = ARENA_SIZE_CM) -> float:
+	"""Calculates the pixels per cm conversion for corner predictions.
+
+	Args:
+		corners: corner prediction data of shape [4, 2]
+
+	Returns:
+		coefficient to multiply pixels to get cm
+	"""
+	dists = measure_pair_dists(corners)
+	# Edges are shorter than diagonals
+	sorted_dists = np.sort(dists)
+	edges = sorted_dists[:4]
+	diags = sorted_dists[4:]
+	# Calculate all equivalent edge lengths (turn diagonals into equivalent edges)
+	edges = np.concatenate([np.sqrt(np.square(diags) / 2), edges])
+	cm_per_pixel = np.float32(arena_size_cm / np.mean(edges))
+
+	return cm_per_pixel

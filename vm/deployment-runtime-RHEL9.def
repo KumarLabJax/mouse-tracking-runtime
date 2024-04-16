@@ -1,7 +1,6 @@
 # build like:
 #   singularity build --fakeroot deployment-runtime.sif deployment-runtime-RHEL9.def
-# This image is compliant with RHEL 7-8 host OS, not 9.
-# Please use the other definition file for RHEL 9 host OS.
+# This image is compliant with RHEL 9 host OS.
 
 Bootstrap: docker
 From: nvcr.io/nvidia/tensorrt:24.01-py3

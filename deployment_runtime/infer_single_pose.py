@@ -5,6 +5,7 @@ import sys
 import os
 from ort_inference import infer_single_pose_ort
 
+
 def main(argv):
 	"""Parse command line arguments."""
 	parser = argparse.ArgumentParser(description='Script that infers an onnx single mouse pose model.')
