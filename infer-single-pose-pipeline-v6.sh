@@ -4,7 +4,7 @@
 #
 #SBATCH --time=6:00:00
 #SBATCH --ntasks=1
-#SBATCH --cpus-per-task=10
+#SBATCH --cpus-per-task=2
 #SBATCH --gres=gpu:1
 #SBATCH --qos=inference
 #SBATCH --mem=16G
@@ -40,9 +40,7 @@ if [[ -n "${SLURM_JOB_ID}" ]]; then
 	echo "Reading from batch: ${FULL_VIDEO_FILE_LIST}"
 	echo "Running inference on: ${FULL_VIDEO_FILE}"
 	echo "Using the following images:"
-	ls -l ${SINGLEMOUSE_POSE_IMG}
-	ls -l ${CORNER_IMG}
-	ls -l ${IDENTITY_IMG}
+	ls -l ${SINGULARITY_RUNTIME}
 	# Force group permissions if default log file used
 	LOG_FILE=/projects/kumar-lab/multimouse-pipeline/logs/slurm-${SLURM_JOB_NAME}-${SLURM_JOB_ID}_${SLURM_ARRAY_TASK_ID}.out
 	if [[ -f "${LOG_FILE}" ]]; then
@@ -64,24 +62,25 @@ if [[ -n "${SLURM_JOB_ID}" ]]; then
 		FAIL_STATE=$?
 
 		# Corner Inference step
-		if [[ $FAIL_STATE != 0 ]]; then
+		if [[ $FAIL_STATE == 0 ]]; then
 			echo "Running arena corner step:"
 			retry singularity exec --nv "${SINGULARITY_RUNTIME}" python3 /kumar_lab_models/deployment_runtime/infer_arena_corner.py --runtime ort --video "${FULL_VIDEO_FILE}" --out-file "${H5_V6_OUT_FILE}"
 			FAIL_STATE=$?
 		fi
 
 		# Segmentation Inference step
-		if [[ $FAIL_STATE != 0 ]]; then
+		if [[ $FAIL_STATE == 0 ]]; then
 			echo "Running segmentation step:"
 			retry singularity exec --nv "${SINGULARITY_RUNTIME}" python3 /kumar_lab_models/deployment_runtime/infer_single_segmentation.py --runtime tfs --video "${FULL_VIDEO_FILE}" --out-file "${H5_V6_OUT_FILE}"
 			FAIL_STATE=$?
 		fi
 
 		# Cleanup if successful
-		if [[ -f "${H5_V6_OUT_FILE}" ]]; then
-			rm ${FULL_VIDEO_FILE}
+		if [[ $FAIL_STATE == 0 ]]; then
+			# rm ${FULL_VIDEO_FILE}
 			echo "Finished video file: ${FULL_VIDEO_FILE}"
 		else
+			rm ${H5_V6_OUT_FILE}
 			echo "Pipeline failed for Video ${FULL_VIDEO_FILE}, Please Rerun."
 		fi
 	else
@@ -94,7 +93,7 @@ else
 			NUM_VIDEOS=`wc -l < ${1}`
 			# Here we perform a self-submit
 			echo "Submitting ${NUM_VIDEOS} Videos with detected number of animals in: ${1}"
-			sbatch --export=FULL_VIDEO_FILE_LIST="${1}" --array=1-"$NUM_VIDEOS"%24 "${0}"
+			sbatch --export=FULL_VIDEO_FILE_LIST="${1}" --array=1-"$NUM_VIDEOS"%56 "${0}"
 	else
 			echo "ERROR: you need to provide a video file to process. Eg: ./infer-single-pose-pipeline-v6.sh /full/path/movie_list.txt" >&2
 			exit 1
