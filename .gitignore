@@ -7,3 +7,4 @@
 __pycache__
 onnx-runtime-venv
 models
+!deployment_runtime/models
