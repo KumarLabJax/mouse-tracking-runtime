@@ -2,6 +2,14 @@
 
 import h5py
 import numpy as np
+from .matching import hungarian_match_points_seg
+
+
+class InvalidPoseFileException(Exception):
+	"""Exception if pose data doesn't make sense."""
+	def __init__(self, message, errors):   
+		"""Just a basic exception with a message."""         
+		super().__init__(message)
 
 
 def promote_pose_data(pose_file, current_version: int, new_version: int):
@@ -23,48 +31,63 @@ def promote_pose_data(pose_file, current_version: int, new_version: int):
 		v4 -> v5
 			no change (all data optional)
 		v5 -> v6
-			not supported
+			'poseest/instance_seg_id' and 'poseest/longterm_seg_id' are assigned to match existing pose data
 	"""
 	# Promote single mouse data to multimouse
-	if current_version < 3:
+	if current_version < 3 and new_version >= 3:
 		with h5py.File(pose_file, 'r') as f:
-			if len(f['poseest/points'].shape) == 3:
-				pass
-			else:
-				pose_data = np.expand_dims(f['poseest/points'][:], axis=1)
-				conf_data = np.expand_dims(f['poseest/confidence'][:], axis=1)
-				instance_count = np.full([pose_data.shape[0]], 1, dtype=np.uint8)
-				instance_embedding = np.full(conf_data.shape, 0, dtype=np.float32)
-				instance_track_id = np.full(pose_data.shape[:2], 0, dtype=np.uint32)
-				config_str = f['poseest/points'].attrs['config']
-				model_str = f['poseest/points'].attrs['model']
-				# Overwrite the existing data with a new axis
-				write_pose_v2_data(pose_file, pose_data, conf_data, config_str, model_str)
-				write_pose_v3_data(pose_file, instance_count, instance_embedding, instance_track_id)
-				current_version = 3
+			pose_data = np.reshape(f['poseest/points'][:], [-1, 1, 12, 2])
+			conf_data = np.reshape(f['poseest/confidence'][:], [-1, 1, 12])
+			instance_count = np.full([pose_data.shape[0]], 1, dtype=np.uint8)
+			instance_embedding = np.full(conf_data.shape, 0, dtype=np.float32)
+			instance_track_id = np.full(pose_data.shape[:2], 0, dtype=np.uint32)
+			config_str = f['poseest/points'].attrs['config']
+			model_str = f['poseest/points'].attrs['model']
+		# Overwrite the existing data with a new axis
+		write_pose_v2_data(pose_file, pose_data, conf_data, config_str, model_str)
+		write_pose_v3_data(pose_file, instance_count, instance_embedding, instance_track_id)
+		current_version = 3
 
 	# Add in v4 fields
 	if current_version < 4 and new_version >= 4:
 		with h5py.File(pose_file, 'r') as f:
 			track_data = f['poseest/instance_track_id'][:]
 			instance_data = f['poseest/instance_count'][:]
-			# Preserve longest tracks
-			num_mice = np.max(instance_data)
-			tracks, track_frame_counts = np.unique(track_data, return_counts=True)
-			track_frame_counts = track_frame_counts[tracks != 0]
-			tracks = tracks[tracks != 0]
-			tracks_to_keep = tracks[np.argsort(track_frame_counts)[:num_mice]]
-			# Generate dummy data
-			masks = np.full(track_data.shape, True, dtype=bool)
-			embeds = np.full([track_data.shape[0], 1], 0, dtype=np.float32)
-			ids = np.full(track_data.shape, 0, dtype=np.uint32)
-			centers = np.full([1, num_mice], 0, dtype=np.float64)
-			for i, cur_track in enumerate(tracks_to_keep):
-				observations = track_data == cur_track
-				masks[observations] = False
-				ids[observations] = i
-		write_pose_v4_data(pose_file, masks, embeds, ids, centers)
+		# Preserve longest tracks
+		num_mice = np.max(instance_data)
+		mouse_idxs = np.repeat([np.arange(track_data.shape[1])], track_data.shape[0], axis=0)
+		valid_idxs = np.repeat(np.reshape(instance_data, [-1, 1]), track_data.shape[1], axis=1)
+		masked_track_data = np.ma.array(track_data, mask=mouse_idxs > valid_idxs)
+		tracks, track_frame_counts = np.unique(masked_track_data, return_counts=True)
+		tracks_to_keep = tracks[np.argsort(track_frame_counts)[:num_mice]]
+		# Generate dummy data
+		masks = np.full(track_data.shape, True, dtype=bool)
+		embeds = np.full([track_data.shape[0], 1], 0, dtype=np.float32)
+		ids = np.full(track_data.shape, 0, dtype=np.uint32)
+		centers = np.full([1, num_mice], 0, dtype=np.float64)
+		for i, cur_track in enumerate(tracks_to_keep):
+			observations = track_data == cur_track
+			masks[observations] = False
+			ids[observations] = i + 1
+		write_pose_v4_data(pose_file, masks, ids, centers, embeds)
 		current_version = 4
+
+	# Match segmentation data with pose data
+	if current_version < 6 and new_version >= 6:
+		with h5py.File(pose_file, 'r') as f:
+			pose_data = f['poseest/points'][:]
+			pose_tracks = f['poseest/instance_track_id'][:]
+			pose_ids = f['poseest/instance_embed_id'][:]
+			seg_data = f['poseest/seg_data'][:]
+		seg_tracks = np.full(pose_tracks.shape, 0, dtype=np.uint32)
+		seg_ids = np.full(pose_tracks.shape, 0, dtype=np.uint32)
+		for frame in np.arange(pose_tracks.shape[0]):
+			matches = hungarian_match_points_seg(pose_data[frame], seg_data[frame])
+			for current_match in matches:
+				seg_tracks[frame, current_match[1]] = pose_tracks[frame, current_match[0]]
+				seg_ids[frame, current_match[1]] = pose_ids[frame, current_match[0]]
+		write_v6_tracklets(pose_file, seg_tracks, seg_ids)
+		current_version = 6
 
 
 def adjust_pose_version(pose_file, version: int):
@@ -103,14 +126,15 @@ def write_pose_v2_data(pose_file, pose_matrix: np.ndarray, confidence_matrix: np
 	Args:
 		pose_file: file to write the pose data to
 		pose_matrix: pose data of shape [frame, 12, 2] for one animal and [frame, num_animals, 12, 2] for multi-animal
-		confidence_matrix: confidence data of shape [frame, 12]
+		confidence_matrix: confidence data of shape [frame, 12] for one animal and [frame, num_animals, 12] for multi-animal
 		config_str: string defining the configuration of the model used
 		model_str: string defining the checkpoint used
 
 	Raises:
-		AssertionError if pose and confidence matrices don't have the same number of frames
+		InvalidPoseFileException if pose and confidence matrices don't have the same number of frames
 	"""
-	assert pose_matrix.shape[0] == confidence_matrix.shape[0]
+	if pose_matrix.shape[0] != confidence_matrix.shape[0]:
+		raise InvalidPoseFileException('Pose data does not match confidence data.')
 
 	with h5py.File(pose_file, 'a') as out_file:
 		if 'poseest/points' in out_file:
@@ -135,7 +159,7 @@ def write_pose_v3_data(pose_file, instance_count: np.ndarray = None, instance_em
 		instance_track: track id for the tracklet data of shape [frame, num_animals]
 
 	Raises:
-		AssertionError if a required dataset was either not provided or not present in the file
+		InvalidPoseFileException if a required dataset was either not provided or not present in the file
 	"""
 	with h5py.File(pose_file, 'a') as out_file:
 		if instance_count is not None:
@@ -143,48 +167,86 @@ def write_pose_v3_data(pose_file, instance_count: np.ndarray = None, instance_em
 				del out_file['poseest/instance_count']
 			out_file.create_dataset('poseest/instance_count', data=instance_count.astype(np.uint8))
 		else:
-			assert 'poseest/instance_count' in out_file
+			if 'poseest/instance_count' not in out_file:
+				raise InvalidPoseFileException('Instance count field was not provided and is required.')
 		if instance_embedding is not None:
 			if 'poseest/instance_embedding' in out_file:
 				del out_file['poseest/instance_embedding']
 			out_file.create_dataset('poseest/instance_embedding', data=instance_embedding.astype(np.float32))
 		else:
-			assert 'poseest/instance_embedding' in out_file
+			if 'poseest/instance_embedding' not in out_file:
+				raise InvalidPoseFileException('Instance embedding field was not provided and is required.')
 		if instance_track is not None:
 			if 'poseest/instance_track_id' in out_file:
 				del out_file['poseest/instance_track_id']
 			out_file.create_dataset('poseest/instance_track_id', data=instance_track.astype(np.uint32))
 		else:
-			assert 'poseest/instance_track_id' in out_file
+			if 'poseest/instance_track_id' not in out_file:
+				raise InvalidPoseFileException('Instance track id field was not provided and is required.')
 
 	adjust_pose_version(pose_file, 3)
 
 
-def write_pose_v4_data(pose_file, mask: np.ndarray, embeddings: np.ndarray, longterm_ids: np.ndarray, centers: np.ndarray):
+def write_pose_v4_data(pose_file, mask: np.ndarray, longterm_ids: np.ndarray, centers: np.ndarray, embeddings: np.ndarray = None):
 	"""Writes pose_v4 data fields to a file.
 
 	Args:
 		pose_file: file to write the pose data to
 		mask: identity masking data (0 = visible data, 1 = masked data) of shape [frame, num_animals]
-		embeddings: identity embedding vectors of shape [frame, num_animals, embed_dim]
 		longterm_ids: longterm identity assignments of shape [frame, num_animals]
 		centers: embedding centers of shape [num_ids, embed_dim]
+		embeddings: identity embedding vectors of shape [frame, num_animals, embed_dim]
+
+	Raises:
+		InvalidPoseFileException if a required dataset was either not provided or not present in the file
 	"""
 	with h5py.File(pose_file, 'a') as out_file:
 		if 'poseest/id_mask' in out_file:
 			del out_file['poseest/id_mask']
 		out_file.create_dataset('poseest/id_mask', data=mask.astype(bool))
-		if 'poseest/identity_embeds' in out_file:
-			del out_file['poseest/identity_embeds']
-		out_file.create_dataset('poseest/identity_embeds', data=embeddings.astype(np.float32))
 		if 'poseest/instance_embed_id' in out_file:
 			del out_file['poseest/instance_embed_id']
 		out_file.create_dataset('poseest/instance_embed_id', data=longterm_ids.astype(np.uint32))
 		if 'poseest/instance_id_center' in out_file:
 			del out_file['poseest/instance_id_center']
 		out_file.create_dataset('poseest/instance_id_center', data=centers.astype(np.float64))
+		if embeddings is not None:
+			if 'poseest/identity_embeds' in out_file:
+				del out_file['poseest/identity_embeds']
+			out_file.create_dataset('poseest/identity_embeds', data=embeddings.astype(np.float32))
+		else:
+			if 'poseest/identity_embeds' not in out_file:
+				raise InvalidPoseFileException('Identity embedding values not provided and is required.')
 
 	adjust_pose_version(pose_file, 4)
+
+
+def write_v6_tracklets(pose_file, segmentation_tracks: np.ndarray, segmentation_ids: np.ndarray):
+	"""Writes the optional segmentation tracklet and identity fields.
+
+	Args:
+		pose_file: file to write the data to
+		segmentation_tracks: segmentation track data of shape [frame, num_animals]
+		segmentation_ids: segmentation longterm id data of shape [frame, num_animals]
+
+	Raises:
+		InvalidPoseFileException if segmentation data is not present in the file or data is the wrong shape.
+	"""
+	with h5py.File(pose_file, 'a') as out_file:
+		if 'poseest/seg_data' not in out_file:
+			raise InvalidPoseFileException('Segmentation data not present in the file.')
+		seg_shape = out_file['poseest/seg_data'].shape[:2]
+		if segmentation_tracks.shape != seg_shape:
+			raise InvalidPoseFileException('Segmentation track data does not match segmentation data shape.')
+		if segmentation_ids.shape != seg_shape:
+			raise InvalidPoseFileException('Segmentation identity data does not match segmentation data shape.')
+
+		if 'poseest/instance_seg_id' in out_file:
+			del out_file['poseest/instance_seg_id']
+		out_file.create_dataset('poseest/instance_seg_id', data=segmentation_tracks.astype(np.uint32))
+		if 'poseest/longterm_seg_id' in out_file:
+			del out_file['poseest/longterm_seg_id']
+		out_file.create_dataset('poseest/longterm_seg_id', data=segmentation_ids.astype(np.uint32))
 
 
 def write_identity_data(pose_file, embeddings: np.ndarray, config_str: str = 'MNAS_latent16', model_str: str = '2022-04-28_model.ckpt-183819'):
@@ -197,10 +259,11 @@ def write_identity_data(pose_file, embeddings: np.ndarray, config_str: str = 'MN
 		model_str: string defining the checkpoint used
 
 	Raises:
-		AssertionError if embedding shapes don't match pose in file.
+		InvalidPoseFileException if embedding shapes don't match pose in file.
 	"""
 	with h5py.File(pose_file, 'a') as out_file:
-		assert out_file['poseest/points'].shape[:2] == embeddings.shape[:2]
+		if out_file['poseest/points'].shape[:2] != embeddings.shape[:2]:
+			raise InvalidPoseFileException('Keypoint data does not match embedding data shape.')
 		if 'poseest/identity_embeds' in out_file:
 			del out_file['poseest/identity_embeds']
 		out_file.create_dataset('poseest/identity_embeds', data=embeddings.astype(np.float32))
@@ -220,10 +283,14 @@ def write_seg_data(pose_file, seg_contours_matrix: np.ndarray, seg_external_flag
 		config_str: string defining the configuration of the model used
 		model_str: string defining the checkpoint used
 
+	Note:
+		This function will automatically match segmentation data with pose data when `adjust_pose_version` is called.
+
 	Raises:
 		AssertionError if shapes don't match
 	"""
-	assert np.all(seg_contours_matrix.shape[:3] == seg_external_flags.shape)
+	if np.all(seg_contours_matrix.shape[:3] != seg_external_flags.shape):
+		raise InvalidPoseFileException('Segmentation data shape does not match.')
 
 	with h5py.File(pose_file, 'a') as out_file:
 		if 'poseest/seg_data' in out_file:
