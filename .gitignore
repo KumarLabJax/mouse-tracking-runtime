@@ -2,6 +2,7 @@
 *.pyc
 *.png
 *.avi
+*.mp4
 *.h5
 *.onnx
 __pycache__
