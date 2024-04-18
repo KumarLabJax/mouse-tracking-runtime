@@ -37,10 +37,13 @@ if [[ -n "${SLURM_JOB_ID}" ]]; then
 	#env
 	FULL_VIDEO_FILE=`head -n $SLURM_ARRAY_TASK_ID $FULL_VIDEO_FILE_LIST | tail -n 1`
 	echo "Running on node: ${SLURM_JOB_NODELIST}"
+	echo "Assigned GPU: ${CUDA_VISIBLE_DEVICES}"
 	echo "Reading from batch: ${FULL_VIDEO_FILE_LIST}"
 	echo "Running inference on: ${FULL_VIDEO_FILE}"
 	echo "Using the following images:"
 	ls -l ${SINGULARITY_RUNTIME}
+	echo "Slurm job info: "
+	scontrol show job -d ${SLURM_JOB_ID}
 	# Force group permissions if default log file used
 	LOG_FILE=/projects/kumar-lab/multimouse-pipeline/logs/slurm-${SLURM_JOB_NAME}-${SLURM_JOB_ID}_${SLURM_ARRAY_TASK_ID}.out
 	if [[ -f "${LOG_FILE}" ]]; then
