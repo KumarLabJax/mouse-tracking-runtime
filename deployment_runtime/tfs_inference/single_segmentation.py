@@ -49,7 +49,10 @@ def infer_single_segmentation_tfs(args):
 			predicted_mask = (prediction[0][0, :, :, 1] < prediction[0][0, :, :, 0]).astype(np.uint8)
 			contours, flags = get_contours(predicted_mask)
 			contour_matrix = pad_contours(contours)
-			flag_matrix = np.asarray(flags[0, :, 3] == -1).reshape([1, 1, -1])
+			if len(flags) > 0:
+				flag_matrix = np.asarray(flags[0][:, 3] == -1).reshape([1, 1, -1])
+			else:
+				flag_matrix = np.zeros([0])
 			try:
 				segmentation_results.results_receiver_queue.put((1, np.expand_dims(contour_matrix, (0, 1))), timeout=5)
 				seg_flag_results.results_receiver_queue.put((1, flag_matrix), timeout=5)
