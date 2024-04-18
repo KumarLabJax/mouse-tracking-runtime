@@ -12,6 +12,30 @@ class InvalidPoseFileException(Exception):
 		super().__init__(message)
 
 
+def rle(inarray: np.ndarray):
+	"""Run length encoding, implemented using numpy.
+
+	Args:
+		inarray: 1d vector
+
+	Returns:
+		tuple of (starts, durations, values)
+		starts: start index of run
+		durations: duration of run
+		values: value of run
+	"""
+	ia = np.asarray(inarray)
+	n = len(ia)
+	if n == 0: 
+		return (None, None, None)
+	else:
+		y = ia[1:] != ia[:-1]
+		i = np.append(np.where(y), n - 1)
+		z = np.diff(np.append(-1, i))
+		p = np.cumsum(np.append(0, z))[:-1]
+		return (p, z, ia[i])
+
+
 def promote_pose_data(pose_file, current_version: int, new_version: int):
 	"""Promotes the data contained within a pose file to a higher version.
 
@@ -38,11 +62,22 @@ def promote_pose_data(pose_file, current_version: int, new_version: int):
 		with h5py.File(pose_file, 'r') as f:
 			pose_data = np.reshape(f['poseest/points'][:], [-1, 1, 12, 2])
 			conf_data = np.reshape(f['poseest/confidence'][:], [-1, 1, 12])
-			instance_count = np.full([pose_data.shape[0]], 1, dtype=np.uint8)
-			instance_embedding = np.full(conf_data.shape, 0, dtype=np.float32)
-			instance_track_id = np.full(pose_data.shape[:2], 0, dtype=np.uint32)
 			config_str = f['poseest/points'].attrs['config']
 			model_str = f['poseest/points'].attrs['model']
+		# 0.3 is used in JABS
+		# 0.4 is used for multi-mouse predictions
+		# 0.5 is a typical default
+		bad_pose_data = conf_data < 0.3
+		pose_data[np.repeat(np.expand_dims(bad_pose_data, -1), 2, axis=-1)] = 0
+		conf_data[bad_pose_data] = 0
+		instance_count = np.full([pose_data.shape[0]], 1, dtype=np.uint8)
+		instance_count[np.all(bad_pose_data, axis=-1).reshape(-1)] = 0
+		instance_embedding = np.full(conf_data.shape, 0, dtype=np.float32)
+		# Tracks can only be continuous blocks
+		instance_track_id = np.full(pose_data.shape[:2], 0, dtype=np.uint32)
+		rle_starts, rle_durations, rle_values = rle(instance_count)
+		for i, (start, duration) in enumerate(zip(rle_starts[rle_values == 1], rle_durations[rle_values == 1])):
+			instance_track_id[start:start + duration] = i
 		# Overwrite the existing data with a new axis
 		write_pose_v2_data(pose_file, pose_data, conf_data, config_str, model_str)
 		write_pose_v3_data(pose_file, instance_count, instance_embedding, instance_track_id)
@@ -59,16 +94,25 @@ def promote_pose_data(pose_file, current_version: int, new_version: int):
 		valid_idxs = np.repeat(np.reshape(instance_data, [-1, 1]), track_data.shape[1], axis=1)
 		masked_track_data = np.ma.array(track_data, mask=mouse_idxs > valid_idxs)
 		tracks, track_frame_counts = np.unique(masked_track_data, return_counts=True)
-		tracks_to_keep = tracks[np.argsort(track_frame_counts)[:num_mice]]
 		# Generate dummy data
 		masks = np.full(track_data.shape, True, dtype=bool)
 		embeds = np.full([track_data.shape[0], 1], 0, dtype=np.float32)
 		ids = np.full(track_data.shape, 0, dtype=np.uint32)
 		centers = np.full([1, num_mice], 0, dtype=np.float64)
-		for i, cur_track in enumerate(tracks_to_keep):
-			observations = track_data == cur_track
-			masks[observations] = False
-			ids[observations] = i + 1
+		# Special case where we can just flatten all tracklets into 1 id
+		if num_mice == 1:
+			for cur_track in tracks:
+				observations = track_data == cur_track
+				masks[observations] = False
+				ids[observations] = 1
+		# Non-trivial case where we simply select the longest tracks and keep them.
+		# We could potentially try and stitch tracklets, but that should be explicit.
+		else:
+			tracks_to_keep = tracks[np.argsort(track_frame_counts)[:num_mice]]
+			for i, cur_track in enumerate(tracks_to_keep):
+				observations = track_data == cur_track
+				masks[observations] = False
+				ids[observations] = i + 1
 		write_pose_v4_data(pose_file, masks, ids, centers, embeds)
 		current_version = 4
 
