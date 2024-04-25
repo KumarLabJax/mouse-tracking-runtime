@@ -88,6 +88,10 @@ class prediction_saver:
 			output_queue: queue that this thread places the final results
 
 		Notes:
+			Data sent should be a tuple of (num_predictions, prediction_data)
+				num_predictions: integer indicating the number of predictions contained within the first dimension of the data
+				prediction_data: np.ndarray of shape [batch, ...]. Number of dimensions must remain the same, but can change in length (e.g. axis can be [batch, n_animals_predicted, keypoint, 2] and n_animals_predicted can vary between batches).
+
 			Sending a None value into the results queue indicates the last prediction was made and the output queue should be finalized.
 		"""
 		prediction_matrix = None

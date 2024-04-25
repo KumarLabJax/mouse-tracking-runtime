@@ -53,11 +53,11 @@ def infer_multi_segmentation_tfs(args):
 			contours, flags = get_contours(panopt_pred == mouse_instance)
 			contour_matrix = pad_contours(contours)
 			if len(flags) > 0:
-				flag_matrix = np.asarray(flags[0][:, 3] == -1).reshape([1, 1, -1])
+				flag_matrix = np.asarray(flags[0][:, 3] == -1).reshape([-1])
 			else:
-				flag_matrix = np.zeros([0]).reshape([1, 1, -1])
+				flag_matrix = np.zeros([0])
 			frame_contours.append(contour_matrix)
-			frame_flags.append(flag_matrix[0, 0])
+			frame_flags.append(flag_matrix)
 		combined_contour_matrix, combined_flag_matrix = merge_multiple_seg_instances(frame_contours, frame_flags)
 
 		if vid_writer is not None:
@@ -66,8 +66,8 @@ def infer_multi_segmentation_tfs(args):
 				rendered_segmentation = render_segmentation_overlay(combined_contour_matrix[i], rendered_segmentation)
 			vid_writer.append_data(rendered_segmentation)
 		try:
-			segmentation_results.results_receiver_queue.put((1, np.expand_dims(contour_matrix, (0, 1))), timeout=500)
-			seg_flag_results.results_receiver_queue.put((1, flag_matrix), timeout=500)
+			segmentation_results.results_receiver_queue.put((1, np.expand_dims(combined_contour_matrix, (0))), timeout=500)
+			seg_flag_results.results_receiver_queue.put((1, np.expand_dims(combined_flag_matrix, (0))), timeout=500)
 		except queue.Full:
 			if not segmentation_results.is_healthy():
 				print('Writer thread died unexpectedly.', file=sys.stderr)

@@ -7,7 +7,7 @@ from .matching import hungarian_match_points_seg
 
 class InvalidPoseFileException(Exception):
 	"""Exception if pose data doesn't make sense."""
-	def __init__(self, message, errors):   
+	def __init__(self, message):   
 		"""Just a basic exception with a message."""         
 		super().__init__(message)
 
@@ -332,10 +332,10 @@ def write_seg_data(pose_file, seg_contours_matrix: np.ndarray, seg_external_flag
 		This function will automatically match segmentation data with pose data when `adjust_pose_version` is called.
 
 	Raises:
-		AssertionError if shapes don't match
+		InvalidPoseFileException if shapes don't match
 	"""
-	if np.all(seg_contours_matrix.shape[:3] != seg_external_flags.shape):
-		raise InvalidPoseFileException('Segmentation data shape does not match.')
+	if np.any(np.asarray(seg_contours_matrix.shape)[:3] != np.asarray(seg_external_flags.shape)):
+		raise InvalidPoseFileException(f'Segmentation data shape does not match. Contour Shape: {seg_contours_matrix.shape}, Flag Shape: {seg_external_flags.shape}')
 
 	with h5py.File(pose_file, 'a') as out_file:
 		if 'poseest/seg_data' in out_file:
