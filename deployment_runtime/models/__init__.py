@@ -1,1 +1,1 @@
-from .model_definitions import SINGLE_MOUSE_SEGMENTATION
+from .model_definitions import SINGLE_MOUSE_SEGMENTATION, MULTI_MOUSE_SEGMENTATION

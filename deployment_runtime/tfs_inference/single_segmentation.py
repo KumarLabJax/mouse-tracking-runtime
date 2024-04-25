@@ -54,8 +54,8 @@ def infer_single_segmentation_tfs(args):
 			else:
 				flag_matrix = np.zeros([0])
 			try:
-				segmentation_results.results_receiver_queue.put((1, np.expand_dims(contour_matrix, (0, 1))), timeout=5)
-				seg_flag_results.results_receiver_queue.put((1, flag_matrix), timeout=5)
+				segmentation_results.results_receiver_queue.put((1, np.expand_dims(contour_matrix, (0, 1))), timeout=500)
+				seg_flag_results.results_receiver_queue.put((1, flag_matrix), timeout=500)
 				if vid_writer is not None:
 					rendered_segmentation = render_segmentation_overlay(contour_matrix, frame)
 					vid_writer.append_data(rendered_segmentation)

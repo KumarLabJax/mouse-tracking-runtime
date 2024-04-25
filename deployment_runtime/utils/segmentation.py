@@ -52,6 +52,39 @@ def pad_contours(contours: List[np.ndarray], default_val: int = -1) -> np.ndarra
 	return padded_matrix
 
 
+def merge_multiple_seg_instances(matrix_list: List[np.ndarray], flag_list: List[np.ndarray], default_val: int = -1):
+	"""Merges multiple segmentation predictions together.
+
+	Args:
+		matrix_list: list of padded contour matrix
+		flag_list: list of external flags
+		default_val: value to pad full matrix with
+
+	Returns:
+		tuple of (segmentation_data, flag_data)
+		segmentation_data: padded contour matrix containing all instances
+		flag_data: padded flag matrix containing all flags
+
+	Raises:
+		AssertionError if the same number of predictions are not provided.
+	"""
+	assert len(matrix_list) == len(flag_list)
+
+	matrix_shapes = np.asarray([x.shape for x in matrix_list])
+	flag_shapes = np.asarray([x.shape for x in flag_list])
+	n_predictions = len(matrix_list)
+
+	padded_matrix = np.full([n_predictions] + np.max(matrix_shapes, axis=0).tolist(), default_val, dtype=np.int32)
+	padded_flags = np.full([n_predictions] + np.max(flag_shapes, axis=0).tolist(), default_val, dtype=np.int32)
+
+	for i in range(n_predictions):
+		dim1, dim2, dim3 = matrix_list[i].shape
+		padded_matrix[i, :dim1, :dim2, :dim3] = matrix_list[i]
+		padded_flags[i, :dim1] = flag_list[i]
+
+	return padded_matrix, padded_flags
+
+
 def get_trimmed_contour(padded_contour, default_val=-1):
 	"""Removes padding from contour data.
 

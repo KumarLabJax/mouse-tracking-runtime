@@ -9,6 +9,15 @@ SINGLE_MOUSE_SEGMENTATION = {
 	},
 }
 
+MULTI_MOUSE_SEGMENTATION = {
+	'social-paper': {
+		'model-name': 'panoptic-deeplab-res50_v2',
+		'model-checkpoint': 'ckpt-125000',
+		'ort-model': None,
+		'tfs-model': '/kumar_lab_models/models/tfs-models/multi-mouse-segmentation/panoptic-deeplab/',
+	},
+}
+
 SINGLE_MOUSE_POSE = {
 	'gait-paper': {
 		'model-name': 'gait-model',

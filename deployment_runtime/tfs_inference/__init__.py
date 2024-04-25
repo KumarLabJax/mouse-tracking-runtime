@@ -1,2 +1,3 @@
 from .single_segmentation import infer_single_segmentation_tfs
+from .multi_segmentation import infer_multi_segmentation_tfs
 from .arena_corners import infer_arena_corner_model

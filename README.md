@@ -78,9 +78,17 @@ Trained Models:
 
 ## Multi-Mouse Segmentation
 
-Original Training Code: In Progress
+Original Training Code: fork of https://github.com/google-research/deeplab2
 Trained Models:
-* Panoptic Segmentation: In Progress
+* Panoptic Deeplab: Not yet released
+
+### TFS Model
+
+deeplab2 provides `export_model.py`. This transforms the checkpoint into a tensorflow serving model.
+
+```
+python3 /deeplab2/deeplab2/export_model.py --checkpoint_path /deeplab2/trained_model/ckpt-125000 --experiment_option_path /deeplab2/trained_model/resnet50_os16.textproto --output_path tfs-models/multi-mouse-segmentation/panoptic-deeplab/
+```
 
 ## Static Objects
 
@@ -88,7 +96,7 @@ Trained Models:
 
 Original Training Code: In Progress
 Trained Models:
-* Object Detection API (2022): In Progress
+* Object Detection API (2022): Not yet released
 
 #### TFS Model
 

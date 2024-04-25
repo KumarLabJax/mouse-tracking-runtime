@@ -317,7 +317,7 @@ def write_identity_data(pose_file, embeddings: np.ndarray, config_str: str = 'MN
 	adjust_pose_version(pose_file, 4)
 
 
-def write_seg_data(pose_file, seg_contours_matrix: np.ndarray, seg_external_flags: np.ndarray, config_str: str = '', model_str: str = ''):
+def write_seg_data(pose_file, seg_contours_matrix: np.ndarray, seg_external_flags: np.ndarray, config_str: str = '', model_str: str = '', skip_matching: bool = False):
 	"""Writes segmentation data to a pose file.
 
 	Args:
@@ -326,6 +326,7 @@ def write_seg_data(pose_file, seg_contours_matrix: np.ndarray, seg_external_flag
 		seg_external_flags: external flags for each contour of shape [frame, n_animals, n_contours]
 		config_str: string defining the configuration of the model used
 		model_str: string defining the checkpoint used
+		skip_matching: boolean to skip matching (e.g. for topdown). Pose file will appear as though it does not contain segmentation data.
 
 	Note:
 		This function will automatically match segmentation data with pose data when `adjust_pose_version` is called.
@@ -346,7 +347,8 @@ def write_seg_data(pose_file, seg_contours_matrix: np.ndarray, seg_external_flag
 			del out_file['poseest/seg_external_flag']
 		out_file.create_dataset('poseest/seg_external_flag', data=seg_external_flags, compression="gzip", compression_opts=9)
 
-	adjust_pose_version(pose_file, 6)
+	if not skip_matching:
+		adjust_pose_version(pose_file, 6)
 
 
 def write_static_object_data(pose_file, object_data: np.ndarray, static_object: str, config_str: str = '', model_str: str = ''):
