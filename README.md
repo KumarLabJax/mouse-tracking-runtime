@@ -49,7 +49,7 @@ Trained Models:
 
 ### TSF Model
 
-
+The segmentation model was exported using code that resides in the obj-api codebase. This code was largely based on example code for optimizing and freezing a model.
 
 ### ORT Model
 
