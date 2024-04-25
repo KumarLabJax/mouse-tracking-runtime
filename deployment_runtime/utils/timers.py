@@ -49,14 +49,18 @@ class time_accumulator:
 		_ = [arr.append(new_val) for arr, new_val in zip(self.__time_arrs, deltas)]
 		self.__count_samples += 1
 
-	def print_performance(self, out_stream=sys.stdout):
+	def print_performance(self, skip_warmup: bool = False, out_stream=sys.stdout):
 		"""Prints performance.
 
 		Args:
+			skip_warmup: boolean to skip the first batch (typically longer)
 			out_stream: output stream to write performance
 		"""
-		if self.__count_samples >= 0:
-			avg_times = [np.mean(cur_timer) for cur_timer in self.__time_arrs]
+		if self.__count_samples >= 1:
+			if skip_warmup and self.__count_samples >= 2:
+				avg_times = [np.mean(cur_timer[1:]) for cur_timer in self.__time_arrs]
+			else:
+				avg_times = [np.mean(cur_timer) for cur_timer in self.__time_arrs]
 			total_time = np.sum(avg_times)
 			for timer_idx in np.arange(self.__n_breaks):
 				print(f'{self.__labels[timer_idx]}: {np.round(avg_times[timer_idx], 4)}s ({np.round(avg_times[timer_idx] / total_time, 4)*100}%)', file=out_stream)
