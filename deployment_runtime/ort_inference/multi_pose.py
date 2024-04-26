@@ -10,7 +10,7 @@ import sys
 from utils.pose import argmax_2d, render_pose_overlay
 from utils.segmentation import get_frame_masks
 from utils.prediction_saver import prediction_saver
-from utils.writers import write_pose_v3_data
+from utils.writers import write_pose_v2_data, write_pose_v3_data
 from utils.timers import time_accumulator
 from models.model_definitions import MULTI_MOUSE_POSE
 
@@ -99,5 +99,16 @@ def infer_multi_pose_ort(args):
 	confidence_results.results_receiver_queue.put((None, None))
 	pose_matrix = pose_results.get_results()
 	confidence_matrix = confidence_results.get_results()
-	write_pose_v3_data(args.out_file, pose_matrix, confidence_matrix, model_definition['model-name'], model_definition['model-checkpoint'])
+	write_pose_v2_data(args.out_file, pose_matrix, confidence_matrix, model_definition['model-name'], model_definition['model-checkpoint'])
+	# Make up fake data for v3 data...
+	instance_count = np.sum(np.any(confidence_matrix > 0, axis=2), axis=1).astype(np.uint8)
+	instance_embedding = np.full(confidence_matrix.shape, 0, dtype=np.float32)
+	# TODO: Make a better dummy (low cost) tracklet generation or allow user to pick one...
+	# This one essentially produces valid but horrible data (index means idenitity)
+	instance_track_id = np.tile([np.arange(confidence_matrix.shape[1])], confidence_matrix.shape[0]).reshape(confidence_matrix.shape[:2]).astype(np.uint32)
+	# instance_track_id = np.zeros(confidence_matrix.shape[:2], dtype=np.uint32)
+	for row in range(len(instance_track_id)):
+		valid_poses = instance_count[row]
+		instance_track_id[row, instance_track_id[row] >= valid_poses] = 0
+	write_pose_v3_data(args.out_file, instance_count, instance_embedding, instance_track_id)
 	performance_accumulator.print_performance()
