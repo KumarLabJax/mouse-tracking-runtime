@@ -27,6 +27,20 @@ SINGLE_MOUSE_POSE = {
 	},
 }
 
+MULTI_MOUSE_POSE = {
+	'social-paper-topdown': {
+		'model-name': 'topdown',
+		'model-checkpoint': 'multimouse_topdown_1.yaml',
+		'ort-model': '/kumar_lab_models/models/ort-models/multi-mouse-pose/2022_topdown.onnx',
+		'tfs-model': None,
+	},
+	'social-paper-bottomup': {
+		'model-name': 'bottomup',
+		'model-checkpoint': 'multimouse_cloudfactory.yaml',
+		'ort-model': '/kumar_lab_models/models/ort-models/multi-mouse-pose/2022_bottomup.onnx',
+		'tfs-model': None,
+	},
+}
 # Static Objects
 
 STATIC_ARENA_CORNERS = {
@@ -44,5 +58,14 @@ STATIC_FOOD_CORNERS = {
 		'model-checkpoint': '2022-11-28/ckpt-101',
 		'ort-model': '/kumar_lab_models/models/ort-models/static-objects/obj-api-food.onnx',
 		'tfs-model': '/kumar_lab_models/models/tfs-models/static-object-food/obj-api-2022/',
+	},
+}
+
+STATIC_LIXIT = {
+	'social-2022-pipeline': {
+		'model-name': 'dlc-lixit',
+		'model-checkpoint': 'iteration-0/final-aug-lixitJan3-trainset95shuffle1/train/snapshot-200000',
+		'ort-model': None,
+		'tfs-model': None,
 	},
 }

@@ -69,12 +69,20 @@ Original Training Code: https://github.com/KumarLabJax/deep-hrnet-mouse
 Trained Models:
 * Gait Paper Model: https://zenodo.org/records/6380163
 
+### ORT Model
+
+In the source repository, there is an `onnx` branch with example code under `tools/export-onnx.py`. Essentially, the model is loaded within the original environment followed by a call to `torch.onnx.export`.
+
 ## Multi-Mouse Pose
 
 Original Training Code: https://github.com/KumarLabJax/deep-hrnet-mouse
 Trained Models:
 * Top-down: In Progress
 * Bottom-up: (Not published)
+
+### ORT Model
+
+In the source repository, there is an `onnx` branch with example code under `tools/export-onnx.py`. Essentially, the model is loaded within the original environment followed by a call to `torch.onnx.export`.
 
 ## Multi-Mouse Segmentation
 
