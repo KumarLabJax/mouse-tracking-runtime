@@ -55,12 +55,15 @@ def infer_arena_corner_model(args):
 			scores, keypoints = session.run([det_score, det_keypoint], feed_dict={input_tensor: frame_scaled})
 			t3 = time.time()
 			try:
+				# Keypoints are predicted as [y, x] scaled from 0-1 based on image size
+				# Convert to [x, y] pixel units
+				predicted_keypoints = np.flip(keypoints[0][0], axis=-1) * np.max(frame.shape)
 				# Only add to the results if it was good quality
 				if scores[0][0] > 0.5:
-					corner_results.results_receiver_queue.put((1, np.expand_dims(keypoints[0][0] * np.max(frame.shape), axis=0)), timeout=5)
+					corner_results.results_receiver_queue.put((1, np.expand_dims(predicted_keypoints, axis=0)), timeout=5)
 				# Always write to the video
 				if vid_writer is not None:
-					render = plot_keypoints(keypoints[0][0] * np.max(frame.shape), frame)
+					render = plot_keypoints(predicted_keypoints, frame)
 					vid_writer.append_data(render)
 			except queue.Full:
 				if not corner_results.is_healthy():

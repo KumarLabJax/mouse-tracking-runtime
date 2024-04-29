@@ -93,7 +93,7 @@ def process_video(in_video_path, pose_h5_path, out_video_path, disable_id: bool 
 				# TODO: possibly use `sort_corners`?
 				if obj_key == 'corners':
 					obj_data = obj_data[[0, 1, 3, 2]]
-				image = plot_keypoints(obj_data, image, color=static_obj_colors[obj_key], is_yx=~static_obj_xy[obj_key], include_lines=obj_key != 'lixit')
+				image = plot_keypoints(obj_data, image, color=static_obj_colors[obj_key], is_yx=not static_obj_xy[obj_key], include_lines=obj_key != 'lixit')
 			for pose_idx, pose_id in enumerate(all_track_id[frame_index]):
 				image = render_pose_overlay(image, all_points[frame_index, pose_idx], color=mouse_colors[pose_id % len(mouse_colors)])
 			if all_seg_data is not None:

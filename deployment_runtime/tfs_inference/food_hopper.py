@@ -54,8 +54,10 @@ def infer_food_hopper_model(args):
 			scores, boxes, masks = session.run([det_score, det_boxes, det_mask], feed_dict={input_tensor:frame_scaled})
 			t3 = time.time()
 			try:
+				# Return value is sorted [y1, x1, y2, x2]. Change it to [x1, y1, x2, y2]
+				prediction_box = boxes[0][0][[1, 0, 3, 2]]
 				# Only add to the results if it was good quality
-				predicted_keypoints = get_mask_corners(boxes[0][0], masks[0][0], frame.shape[:2])
+				predicted_keypoints = get_mask_corners(prediction_box, masks[0][0], frame.shape[:2])
 				if scores[0][0] > 0.5:
 					food_hopper_results.results_receiver_queue.put((1, np.expand_dims(predicted_keypoints, axis=0)), timeout=5)
 				# Always write to the video
@@ -75,7 +77,7 @@ def infer_food_hopper_model(args):
 	food_hopper_matrix = food_hopper_results.get_results()
 	try:
 		filtered_keypoints = filter_static_keypoints(food_hopper_matrix)
-		# food hopper data is written out (y,x)
+		# food hopper data is written out [y, x]
 		filtered_keypoints = np.flip(filtered_keypoints, axis=-1)
 		if args.out_file is not None:
 			write_static_object_data(args.out_file, filtered_keypoints, 'food_hopper', model_definition['model-name'], model_definition['model-checkpoint'])

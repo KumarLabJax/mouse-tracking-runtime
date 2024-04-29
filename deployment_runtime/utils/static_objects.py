@@ -78,22 +78,15 @@ def filter_square_keypoints(predictions: np.ndarray, tolerance: float = 25.0):
 		dists = measure_pair_dists(predictions[i])
 		sorted_dists = np.sort(dists)
 		edges, diags = np.split(sorted_dists, [4], axis=0)
-		compare_edges = np.concatenate([np.sqrt(np.square(diags)/2), edges])
-		edge_err = np.abs(compare_edges-np.mean(compare_edges))
+		compare_edges = np.concatenate([np.sqrt(np.square(diags) / 2), edges])
+		edge_err = np.abs(compare_edges - np.mean(compare_edges))
 		if np.all(edge_err < tolerance):
 			filtered_predictions.append(predictions[i])
 
 	if len(filtered_predictions) == 0:
 		raise ValueError('No predictions were square.')
-	filtered_predictions = np.stack(filtered_predictions)
 
-	keypoint_motion = np.std(filtered_predictions, axis=0)
-	keypoint_motion = np.hypot(keypoint_motion[:, 0], keypoint_motion[:, 1])
-
-	if np.any(keypoint_motion > tolerance):
-		raise ValueError('Good predictions are moving!')
-
-	return np.mean(filtered_predictions, axis=0)
+	return filter_static_keypoints(np.stack(filtered_predictions), tolerance)
 
 
 def filter_static_keypoints(predictions: np.ndarray, tolerance: float = 25.0):
@@ -125,7 +118,7 @@ def get_affine_xform(bbox: np.ndarray, img_size: Tuple[int] = (512, 512), warp_s
 	"""Obtains an affine transform for reshaping mask predictins.
 
 	Args:
-		bbox: bounding box formatted [y1, x1, y2, x2]
+		bbox: bounding box formatted [x1, y1, x2, y2]
 		img_size: size of the image the warped image is going to be placed onto
 		warp_size: size of the image being warped
 
@@ -134,14 +127,14 @@ def get_affine_xform(bbox: np.ndarray, img_size: Tuple[int] = (512, 512), warp_s
 	"""
 	# Affine transform requires 3 points for projection
 	# Since we only have a box, just pick 3 corners
-	from_corners = np.array([[0, 0],[0, 1],[1, 1]], dtype=np.float32)
+	from_corners = np.array([[0, 0], [0, 1], [1, 1]], dtype=np.float32)
 	# bbox is y1, x1, y2, x2
-	to_corners = np.array([[bbox[1], bbox[0]], [bbox[1], bbox[2]], [bbox[3], bbox[2]]])
+	to_corners = np.array([[bbox[0], bbox[1]], [bbox[0], bbox[3]], [bbox[2], bbox[3]]])
 	# Here we multiply by the coordinate system scale
-	affine_mat = cv2.getAffineTransform(from_corners, to_corners)*[[img_size[0] / warp_size[0]],[img_size[1] / warp_size[1]]]
+	affine_mat = cv2.getAffineTransform(from_corners, to_corners) * [[img_size[0] / warp_size[0]],[img_size[1] / warp_size[1]]]
 	# Adjust the translation
 	# Note that since the scale is from 0-1, we can just force the TL corner to be translated
-	affine_mat[:, 2] = [bbox[1] * img_size[0], bbox[0] * img_size[1]]
+	affine_mat[:, 2] = [bbox[0] * img_size[0], bbox[1] * img_size[1]]
 	return affine_mat
 
 
@@ -170,7 +163,7 @@ def sort_corners(corners: np.ndarray, img_size: Tuple[int]):
 	"""Sort the corners to be [TL, TR, BR, BL] from the frame the mouses egocentric viewpoint.
 
 	Args:
-		corners: corner data to sort of shape [4, 2]
+		corners: corner data to sort of shape [4, 2] sorted [x, y]
 		img_size: Size of the image to detect nearest wall
 
 	Notes:
@@ -181,31 +174,31 @@ def sort_corners(corners: np.ndarray, img_size: Tuple[int]):
 		May have issues if the rectangle is not aligned well with the image.
 	"""
 	# Use point-polygon test to find the points that are closer to the edge of the image
-	dists_to_wall = [cv2.pointPolygonTest(np.array([[0,0],[0,img_size[1]],[img_size[0],img_size[1]],[img_size[0],0]]), corners[i,:], measureDist=1) for i in np.arange(4)]
+	dists_to_wall = [cv2.pointPolygonTest(np.array([[0, 0], [0, img_size[1]], [img_size[0], img_size[1]], [img_size[0], 0]]), corners[i, :], measureDist=1) for i in np.arange(4)]
 	top_points, bottom_points = np.split(np.argsort(dists_to_wall), 2)
 	# Figure out which wall they are close to so that we can sort the L/R ordering
 	# Use the center of the box for this
 	box_center = np.mean(corners, axis=0)
 	# Ordering of walls is Top, Right, Bottom, Left
-	center_to_walls = [box_center[1], img_size[0]-box_center[0], img_size[1]-box_center[1], box_center[0]]
+	center_to_walls = [box_center[0], img_size[0] - box_center[1], img_size[1] - box_center[0], box_center[1]]
 	closest_wall = np.argmin(center_to_walls)
 	# Return the sorted values based on which LR sorting we need
 	if closest_wall == 0:
 		# Sort x-values. Top = ascending, bottom = descending
-		top_points = top_points[np.argsort(corners[top_points][:,0])]
-		bottom_points = bottom_points[np.argsort(corners[bottom_points][:,0])[::-1]]
+		top_points = top_points[np.argsort(corners[top_points][:, 0])]
+		bottom_points = bottom_points[np.argsort(corners[bottom_points][:, 0])[::-1]]
 	elif closest_wall == 1:
 		# Sort y-values. Top = ascending, bottom = descending
-		top_points = top_points[np.argsort(corners[top_points][:,1])]
-		bottom_points = bottom_points[np.argsort(corners[bottom_points][:,1])[::-1]]
+		top_points = top_points[np.argsort(corners[top_points][:, 1])]
+		bottom_points = bottom_points[np.argsort(corners[bottom_points][:, 1])[::-1]]
 	elif closest_wall == 2:
 		# Sort x-values. Top = descending, bottom = ascending
-		top_points = top_points[np.argsort(corners[top_points][:,0])[::-1]]
-		bottom_points = bottom_points[np.argsort(corners[bottom_points][:,0])]
+		top_points = top_points[np.argsort(corners[top_points][:, 0])[::-1]]
+		bottom_points = bottom_points[np.argsort(corners[bottom_points][:, 0])]
 	else:
 		# Sort y-values. Top = descending, bottom = ascending
-		top_points = top_points[np.argsort(corners[top_points][:,1])[::-1]]
-		bottom_points = bottom_points[np.argsort(corners[bottom_points][:,1])]
+		top_points = top_points[np.argsort(corners[top_points][:, 1])[::-1]]
+		bottom_points = bottom_points[np.argsort(corners[bottom_points][:, 1])]
 	return corners[np.concatenate([top_points, bottom_points])]
 
 
@@ -213,7 +206,7 @@ def get_mask_corners(box: np.ndarray, mask: np.ndarray, img_size: Tuple[int]):
 	"""Finds corners of a mask proposed in a bounding box.
 
 	Args:
-		box: bounding box formatted [y1, x1, y2, x2]
+		box: bounding box formatted [x1, y1, x2, y2]
 		mask: image data containing the object. Values < 0.5 indicate background while >= 0.5 indicate foreground.
 		img_size: size of the image where the bounding box resides
 
