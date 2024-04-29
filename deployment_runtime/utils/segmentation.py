@@ -223,6 +223,8 @@ def render_segmentation_overlay(contour, image, color: Tuple[int] = (0, 0, 255))
 	Returns:
 		copy of the image with the contour rendered
 	"""
+	if np.all(contour == -1):
+		return image
 	outline = render_outline(contour, frame_size=image.shape[:2])
 	new_image = image.copy()
 	if new_image.shape[2] == 1:

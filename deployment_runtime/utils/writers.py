@@ -3,6 +3,7 @@
 import h5py
 import numpy as np
 from .matching import hungarian_match_points_seg
+from .pose import convert_v2_to_v3
 
 
 class InvalidPoseFileException(Exception):
@@ -10,30 +11,6 @@ class InvalidPoseFileException(Exception):
 	def __init__(self, message):   
 		"""Just a basic exception with a message."""         
 		super().__init__(message)
-
-
-def rle(inarray: np.ndarray):
-	"""Run length encoding, implemented using numpy.
-
-	Args:
-		inarray: 1d vector
-
-	Returns:
-		tuple of (starts, durations, values)
-		starts: start index of run
-		durations: duration of run
-		values: value of run
-	"""
-	ia = np.asarray(inarray)
-	n = len(ia)
-	if n == 0: 
-		return (None, None, None)
-	else:
-		y = ia[1:] != ia[:-1]
-		i = np.append(np.where(y), n - 1)
-		z = np.diff(np.append(-1, i))
-		p = np.cumsum(np.append(0, z))[:-1]
-		return (p, z, ia[i])
 
 
 def promote_pose_data(pose_file, current_version: int, new_version: int):
@@ -64,20 +41,7 @@ def promote_pose_data(pose_file, current_version: int, new_version: int):
 			conf_data = np.reshape(f['poseest/confidence'][:], [-1, 1, 12])
 			config_str = f['poseest/points'].attrs['config']
 			model_str = f['poseest/points'].attrs['model']
-		# 0.3 is used in JABS
-		# 0.4 is used for multi-mouse predictions
-		# 0.5 is a typical default
-		bad_pose_data = conf_data < 0.3
-		pose_data[np.repeat(np.expand_dims(bad_pose_data, -1), 2, axis=-1)] = 0
-		conf_data[bad_pose_data] = 0
-		instance_count = np.full([pose_data.shape[0]], 1, dtype=np.uint8)
-		instance_count[np.all(bad_pose_data, axis=-1).reshape(-1)] = 0
-		instance_embedding = np.full(conf_data.shape, 0, dtype=np.float32)
-		# Tracks can only be continuous blocks
-		instance_track_id = np.full(pose_data.shape[:2], 0, dtype=np.uint32)
-		rle_starts, rle_durations, rle_values = rle(instance_count)
-		for i, (start, duration) in enumerate(zip(rle_starts[rle_values == 1], rle_durations[rle_values == 1])):
-			instance_track_id[start:start + duration] = i
+		pose_data, conf_data, instance_count, instance_embedding, instance_track_id = convert_v2_to_v3(pose_data, conf_data)
 		# Overwrite the existing data with a new axis
 		write_pose_v2_data(pose_file, pose_data, conf_data, config_str, model_str)
 		write_pose_v3_data(pose_file, instance_count, instance_embedding, instance_track_id)

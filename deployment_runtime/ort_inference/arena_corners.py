@@ -82,9 +82,11 @@ def infer_arena_corner_model(args):
 	corner_matrix = corner_results.get_results()
 	try:
 		filtered_corners = filter_square_keypoints(corner_matrix)
-		write_static_object_data(args.out_file, filtered_corners, 'corners', model_definition['model-name'], model_definition['model-checkpoint'])
+		if args.out_file is not None:
+			write_static_object_data(args.out_file, filtered_corners, 'corners', model_definition['model-name'], model_definition['model-checkpoint'])
 		px_per_cm = get_px_per_cm(filtered_corners)
-		write_pixel_per_cm_attr(args.out_file, px_per_cm, 'corner_detection')
+		if args.out_file is not None:
+			write_pixel_per_cm_attr(args.out_file, px_per_cm, 'corner_detection')
 		if args.out_image is not None:
 			render = plot_keypoints(filtered_corners, frame)
 			imageio.imwrite(args.out_image, render)
@@ -92,7 +94,8 @@ def infer_arena_corner_model(args):
 		if frame.shape[0] in ARENA_IMAGING_RESOLUTION.keys():
 			print('Corners not successfully detected, writing default px per cm...')
 			px_per_cm = DEFAULT_CM_PER_PX[ARENA_IMAGING_RESOLUTION[frame.shape[0]]]
-			write_pixel_per_cm_attr(args.out_file, px_per_cm, 'default_alignment')
+			if args.out_file is not None:
+				write_pixel_per_cm_attr(args.out_file, px_per_cm, 'default_alignment')
 		else:
 			print('Corners not successfully detected, arena size not correctly detected from imaging size...')
 
