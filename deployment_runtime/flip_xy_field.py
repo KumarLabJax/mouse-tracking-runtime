@@ -1,4 +1,4 @@
-# Script to patch [y, x] to [x, y] sorting of static object data.
+"""Script to patch [y, x] to [x, y] sorting of static object data."""
 
 import h5py
 import numpy as np
@@ -13,6 +13,9 @@ def swap_static_obj_xy(pose_file, object_key):
 		object_key: dataset key to swap x and y data
 	"""
 	with h5py.File(pose_file, 'a') as f:
+		if object_key not in f:
+			print(f'{object_key} not in {pose_file}.')
+			return
 		object_data = np.flip(f[object_key][:], axis=-1)
 		if len(f[object_key].attrs.keys()) > 0:
 			object_attrs = dict(f[object_key].attrs.items())
