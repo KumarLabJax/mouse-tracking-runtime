@@ -41,6 +41,22 @@ MULTI_MOUSE_POSE = {
 		'tfs-model': None,
 	},
 }
+
+MULTI_MOUSE_IDENTITY = {
+	'social-paper': {
+		'model-name': 'TrackIDTrain_MNAS_latent16',
+		'model-checkpoint': 'model.ckpt-183819',
+		'ort-model': None,
+		'tfs-model': '/kumar_lab_models/models/tfs-models/multi-mouse-identity/mnas_2021/',
+	},
+	'2023': {
+		'model-name': 'TrackIDTrain_MNAS_latent16',
+		'model-checkpoint': 'model.ckpt-290566',
+		'ort-model': None,
+		'tfs-model': '/kumar_lab_models/models/tfs-models/multi-mouse-identity/mnas_2023/',
+	}
+}
+
 # Static Objects
 
 STATIC_ARENA_CORNERS = {
