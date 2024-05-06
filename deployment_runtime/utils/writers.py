@@ -257,7 +257,7 @@ def write_v6_tracklets(pose_file, segmentation_tracks: np.ndarray, segmentation_
 		out_file.create_dataset('poseest/longterm_seg_id', data=segmentation_ids.astype(np.uint32))
 
 
-def write_identity_data(pose_file, embeddings: np.ndarray, config_str: str = 'MNAS_latent16', model_str: str = '2022-04-28_model.ckpt-183819'):
+def write_identity_data(pose_file, embeddings: np.ndarray, config_str: str = '', model_str: str = ''):
 	"""Writes identity prediction data to a pose file.
 
 	Args:
