@@ -5,6 +5,8 @@ import numpy as np
 import argparse
 from utils.matching import VideoObservations
 from utils.writers import write_pose_v3_data, write_pose_v4_data, write_v6_tracklets
+import time
+from utils.timers import time_accumulator
 
 
 def match_predictions(pose_file):
@@ -16,7 +18,10 @@ def match_predictions(pose_file):
 	Notes:
 		This function only applies the optimal settings from identity repository.
 	"""
+	performance_accumulator = time_accumulator(3, ['Matching Poses', 'Tracklet Generation', 'Tracklet Stitching'])
+	t1 = time.time()
 	video_observations = VideoObservations.from_pose_file(pose_file, 0.0)
+	t2 = time.time()
 	video_observations.generate_greedy_tracklets(rotate_pose=True, num_threads=2)
 	with h5py.File(pose_file, 'r') as f:
 		pose_shape = f['poseest/points'].shape[:2]
@@ -24,13 +29,16 @@ def match_predictions(pose_file):
 	new_pose_ids, new_seg_ids = video_observations.get_id_mat(pose_shape, seg_shape)
 
 	# Stitch the tracklets together
+	t3 = time.time()
 	video_observations.stitch_greedy_tracklets(num_tracks=None, prioritize_long=True)
 	translated_tracks = video_observations.stitch_translation
 	stitched_pose = np.vectorize(lambda x: translated_tracks.get(x, 0))(new_pose_ids)
 	stitched_seg = np.vectorize(lambda x: translated_tracks.get(x, 0))(new_seg_ids)
 	centers = video_observations.get_embed_centers()
-	# Write data out
+	t4 = time.time()
+	performance_accumulator.add_batch_times([t1, t2, t3, t4])
 
+	# Write data out
 	# We need to overwrite original tracklet data
 	write_pose_v3_data(pose_file, instance_track=new_pose_ids)
 	# Also overwrite stitched tracklet data
@@ -38,6 +46,7 @@ def match_predictions(pose_file):
 	write_pose_v4_data(pose_file, mask, stitched_pose, centers)
 	# Finally, overwrite segmentation data
 	write_v6_tracklets(pose_file, new_seg_ids, stitched_seg)
+	performance_accumulator.print_performance()
 
 
 def main():
