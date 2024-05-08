@@ -79,6 +79,9 @@ def merge_multiple_seg_instances(matrix_list: List[np.ndarray], flag_list: List[
 
 	for i in range(n_predictions):
 		dim1, dim2, dim3 = matrix_list[i].shape
+		# No segmentation data, just skip it
+		if dim2 == 0:
+			continue
 		padded_matrix[i, :dim1, :dim2, :dim3] = matrix_list[i]
 		padded_flags[i, :dim1] = flag_list[i]
 
