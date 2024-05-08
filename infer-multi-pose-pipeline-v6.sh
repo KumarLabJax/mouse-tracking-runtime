@@ -65,9 +65,11 @@ if [[ -n "${SLURM_JOB_ID}" ]]; then
 		FAIL_STATE=$?
 
 		# Topdown Multi-mouse Pose Inference step
-		echo "Running topdown multi mouse pose step:"
-		retry singularity exec --nv "${SINGULARITY_RUNTIME}" python3 /kumar_lab_models/deployment_runtime/infer_multi_pose.py --runtime ort --video "${FULL_VIDEO_FILE}" --out-file "${H5_V6_OUT_FILE}"
-		FAIL_STATE=$?
+		if [[ $FAIL_STATE == 0 ]]; then
+			echo "Running topdown multi mouse pose step:"
+			retry singularity exec --nv "${SINGULARITY_RUNTIME}" python3 /kumar_lab_models/deployment_runtime/infer_multi_pose.py --runtime ort --video "${FULL_VIDEO_FILE}" --out-file "${H5_V6_OUT_FILE}"
+			FAIL_STATE=$?
+		fi
 
 		# Identity Inference Step
 		if [[ $FAIL_STATE == 0 ]]; then
