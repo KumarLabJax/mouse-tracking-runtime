@@ -12,7 +12,7 @@
 #SBATCH --output=/projects/kumar-lab/multimouse-pipeline/logs/slurm-%x-%A_%a.out
 
 # Permanent locations of the singularity images
-SINGULARITY_RUNTIME=/projects/kumar-lab/multimouse-pipeline/deployment-runtime-RHEL9.sif
+SINGULARITY_RUNTIME=/projects/kumar-lab/multimouse-pipeline/deployment-runtime-RHEL9-current.sif
 
 # Basic function that retries a command up to 5 times
 function retry {

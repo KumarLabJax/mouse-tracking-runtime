@@ -2,17 +2,17 @@
 #
 #SBATCH --job-name=infer-multimouse-pipeline
 #
-#SBATCH --time=6:00:00
+#SBATCH --time=24:00:00
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=2
 #SBATCH --gres=gpu:1
 #SBATCH --qos=inference
-#SBATCH --mem=16G
+#SBATCH --mem=32G
 #SBATCH --nice
 #SBATCH --output=/projects/kumar-lab/multimouse-pipeline/logs/slurm-%x-%A_%a.out
 
 # Permanent locations of the singularity images
-SINGULARITY_RUNTIME=/projects/kumar-lab/multimouse-pipeline/deployment-runtime-RHEL9.sif
+SINGULARITY_RUNTIME=/projects/kumar-lab/multimouse-pipeline/deployment-runtime-RHEL9-current.sif
 
 # Basic function that retries a command up to 5 times
 function retry {
