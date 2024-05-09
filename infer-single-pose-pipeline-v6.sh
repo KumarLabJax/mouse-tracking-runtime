@@ -43,7 +43,7 @@ if [[ -n "${SLURM_JOB_ID}" ]]; then
 	echo "Using the following images:"
 	ls -l ${SINGULARITY_RUNTIME}
 	echo "Slurm job info: "
-	scontrol show job -d ${SLURM_JOB_ID}
+	scontrol show job -d ${SLURM_JOB_ID}_${SLURM_ARRAY_TASK_ID}
 	# Force group permissions if default log file used
 	LOG_FILE=/projects/kumar-lab/multimouse-pipeline/logs/slurm-${SLURM_JOB_NAME}-${SLURM_JOB_ID}_${SLURM_ARRAY_TASK_ID}.out
 	if [[ -f "${LOG_FILE}" ]]; then

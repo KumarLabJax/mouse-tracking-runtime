@@ -43,7 +43,7 @@ if [[ -n "${SLURM_JOB_ID}" ]]; then
 	echo "Using the following images:"
 	ls -l ${SINGULARITY_RUNTIME}
 	echo "Slurm job info: "
-	scontrol show job -d ${SLURM_JOB_ID}
+	scontrol show job -d ${SLURM_JOB_ID}_${SLURM_ARRAY_TASK_ID}
 	# Force group permissions if default log file used
 	LOG_FILE=/projects/kumar-lab/multimouse-pipeline/logs/slurm-${SLURM_JOB_NAME}-${SLURM_JOB_ID}_${SLURM_ARRAY_TASK_ID}.out
 	if [[ -f "${LOG_FILE}" ]]; then
@@ -74,7 +74,7 @@ if [[ -n "${SLURM_JOB_ID}" ]]; then
 		# Identity Inference Step
 		if [[ $FAIL_STATE == 0 ]]; then
 			echo "Running identity step:"
-			retry singularity exec --nv "${SINGULARITY_RUNTIME}" python3 /kumar_lab_models/deployment_runtime/infer_identity.py --model 2023 --video "${FULL_VIDEO_FILE}" --out-file "${H5_V6_OUT_FILE}"
+			retry singularity exec --nv "${SINGULARITY_RUNTIME}" python3 /kumar_lab_models/deployment_runtime/infer_multi_identity.py --model 2023 --video "${FULL_VIDEO_FILE}" --out-file "${H5_V6_OUT_FILE}"
 			FAIL_STATE=$?
 		fi
 
