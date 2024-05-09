@@ -70,45 +70,6 @@ def argmax_2d(arr):
 	return max_vals, np.stack([max_rows, max_cols], -1).squeeze(0)
 
 
-def localmax_2d(arr, threshold, radius):
-	"""Obtains the multiple peaks with non-max suppression.
-
-	Args:
-		arr: np.ndarray of shape [img_width, img_height]
-		threshold: threshold required for a positive to be found
-		radius: square radius (rectangle, not circle) peaks must be apart to be considered a peak. Largest peaks will cause all other potential peaks in this radius to be omitted.
-
-	Returns:
-		tuple of (values, coordinates)
-		values: array of shape [n_peaks] containing the maximal values per-peak
-		coordinates: array of shape [n_peaks, 2] containing the coordinates
-	"""
-	assert radius >= 1
-	assert np.squeeze(arr).ndim == 2
-
-	point_heatmap = np.expand_dims(np.squeeze(arr), axis=-1)
-	kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (radius * 2 + 1, radius * 2 + 1))
-	# Non-max suppression
-	dilated = cv2.dilate(point_heatmap, kernel)
-	mask = arr >= dilated
-	eroded = cv2.erode(point_heatmap, kernel)
-	mask_2 = arr > eroded
-	mask = np.logical_and(mask, mask_2)
-	# Peakfinding via Threshold
-	mask = np.logical_and(mask, arr > threshold)
-	bool_arr = np.full(dilated.shape, False, dtype=bool)
-	bool_arr[mask] = True
-	peak_locations = np.argwhere(bool_arr)
-	if len(peak_locations) == 0:
-		return np.zeros([0], dtype=np.float32), np.zeros([0, 2], dtype=np.int16)
-
-	max_vals = []
-	for coord in peak_locations:
-		max_vals.append(arr[coord.tolist()])
-
-	return np.stack(max_vals), peak_locations
-
-
 def convert_v2_to_v3(pose_data, conf_data, threshold: float = 0.3):
 	"""Converts single mouse pose data into multimouse.
 
