@@ -93,7 +93,6 @@ STATIC_LIXIT = {
 		'model-name': 'dlc-lixit',
 		'model-checkpoint': 'iteration-0/final-aug-lixitJan3-trainset95shuffle1/train/snapshot-200000',
 		'ort-model': None,
-		# 'tfs-model': '/kumar_lab_models/models/tfs-models/static-object-lixit/dlc-2022/',
-		'tfs-model': '/media/bgeuther/Storage/TempStorage/onnx/onnx-pipelines/models/tfs-models/static-object-lixit/dlc-2022/'
+		'tfs-model': '/kumar_lab_models/models/tfs-models/static-object-lixit/dlc-2022/',
 	},
 }
