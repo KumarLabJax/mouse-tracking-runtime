@@ -57,6 +57,17 @@ MULTI_MOUSE_IDENTITY = {
 	}
 }
 
+# Fecal Boli
+
+FECAL_BOLI = {
+	'fecal-boli': {
+		'model-name': 'fecal-boli',
+		'model-checkpoint': 'fecalboli/fecalboli_2020-06-19_02.yaml',
+		'ort-model': '/kumar_lab_models/models/ort-models/fecal-boli/fecal-boli.onnx',
+		'tfs-model': None,
+	}
+}
+
 # Static Objects
 
 STATIC_ARENA_CORNERS = {

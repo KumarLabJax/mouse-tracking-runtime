@@ -346,3 +346,24 @@ def write_pixel_per_cm_attr(pose_file, px_per_cm: float, source: str):
 	with h5py.File(pose_file, 'a') as out_file:
 		out_file['poseest'].attrs['cm_per_pixel'] = px_per_cm
 		out_file['poseest'].attrs['cm_per_pixel_source'] = source
+
+
+def write_fecal_boli_data(pose_file, detections: np.ndarray, count_detections: np.ndarray, sample_frequency: int, config_str: str = '', model_str: str = ''):
+	"""Writes fecal boli data to a pose file.
+
+	Args:
+		pose_file: file to write the data to
+		detections: fecal boli detection array of shape [n_samples, max_detections, 2]
+		count_detections: fecal boli detection counts of shape [n_camples] describing the number of valid detections in `detections`
+		sample_frequency: frequency of predictions
+		config_str: string defining the configuration of the model used
+		model_str: string defining the checkpoint used
+	"""
+	with h5py.File(pose_file, 'a') as out_file:
+		if 'dynamic_objects' in out_file and 'fecal_boli' in out_file['dynamic_objects']:
+			del out_file['dynamic_objects/fecal_boli']
+		out_file.create_dataset('dynamic_objects/fecal_boli/points', data=detections)
+		out_file.create_dataset('dynamic_objects/fecal_boli/counts', data=count_detections)
+		out_file.create_dataset('dynamic_objects/fecal_boli/sample_indices', data=(np.arange(len(detections)) * sample_frequency).astype(np.uint32))
+		out_file['dynamic_objects/fecal_boli'].attrs['config'] = config_str
+		out_file['dynamic_objects/fecal_boli'].attrs['model'] = model_str

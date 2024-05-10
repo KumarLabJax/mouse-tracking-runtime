@@ -2,3 +2,4 @@ from .single_segmentation import infer_single_segmentation_ort
 from .single_pose import infer_single_pose_ort
 from .multi_pose import infer_multi_pose_ort
 from .arena_corners import infer_arena_corner_model
+from .fecal_boli import infer_fecal_boli_model
