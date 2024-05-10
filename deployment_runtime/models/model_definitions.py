@@ -63,8 +63,7 @@ FECAL_BOLI = {
 	'fecal-boli': {
 		'model-name': 'fecal-boli',
 		'model-checkpoint': 'fecalboli/fecalboli_2020-06-19_02.yaml',
-		# 'ort-model': '/kumar_lab_models/models/ort-models/fecal-boli/fecal-boli.onnx',
-		'ort-model': '/media/bgeuther/Storage/TempStorage/onnx/onnx-pipelines/models/ort-models/fecal-boli/fecal-boli.onnx',
+		'ort-model': '/kumar_lab_models/models/ort-models/fecal-boli/fecal-boli.onnx',
 		'tfs-model': None,
 	}
 }

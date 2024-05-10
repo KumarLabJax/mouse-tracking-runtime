@@ -3,15 +3,14 @@ import onnx
 import onnxruntime
 import imageio
 import numpy as np
-import cv2
 import queue
 import time
 import sys
-import itertools
 from utils.pose import localmax_2d
 from utils.static_objects import plot_keypoints
 from utils.prediction_saver import prediction_saver
 from utils.timers import time_accumulator
+from utils.writers import write_fecal_boli_data
 from models.model_definitions import FECAL_BOLI
 
 
@@ -40,15 +39,15 @@ def infer_fecal_boli_model(args):
 		frame_iter = [single_frame]
 
 	fecal_boli_results = prediction_saver(dtype=np.uint16)
+	fecal_boli_counts = prediction_saver(dtype=np.uint16)
 	vid_writer = None
 	if args.out_video is not None:
 		vid_writer = imageio.get_writer(args.out_video, fps=30)
 	performance_accumulator = time_accumulator(3, ['Preprocess', 'GPU Compute', 'Postprocess'])
 	# Main loop for inference
-	for frame_idx, frame in enumerate(itertools.islice(frame_iter, 0, None, args.frame_interval)):
-	# for frame_idx, frame in enumerate(frame_iter):
-	# 	if frame_idx % args.frame_interval != 0:
-	# 		continue
+	for frame_idx, frame in enumerate(frame_iter):
+		if frame_idx % args.frame_interval != 0:
+			continue
 		t1 = time.time()
 		input_frame = np.expand_dims(frame.astype(np.float32), [0])
 		input_frame = np.transpose((input_frame / 255. - 0.45) / 0.225, [0, 3, 1, 2])
@@ -62,7 +61,8 @@ def infer_fecal_boli_model(args):
 			render = plot_keypoints(locations, frame, is_yx=True)
 			vid_writer.append_data(render)
 		try:
-			fecal_boli_results.results_receiver_queue.put((1, np.asarray([[len(peaks)]])), timeout=5)
+			fecal_boli_results.results_receiver_queue.put((1, np.expand_dims(locations, axis=0)), timeout=5)
+			fecal_boli_counts.results_receiver_queue.put((1, np.asarray([[len(peaks)]])), timeout=5)
 		except queue.Full:
 			if not fecal_boli_results.is_healthy():
 				print('Writer thread died unexpectedly.', file=sys.stderr)
@@ -72,8 +72,10 @@ def infer_fecal_boli_model(args):
 		t4 = time.time()
 		performance_accumulator.add_batch_times([t1, t2, t3, t4])
 	fecal_boli_results.results_receiver_queue.put((None, None))
-	fecal_boli_counts = fecal_boli_results.get_results()
-	print(fecal_boli_counts)
+	fecal_boli_counts.results_receiver_queue.put((None, None))
+	final_fecal_boli_detections = fecal_boli_results.get_results()
+	final_fecal_boli_counts = fecal_boli_counts.get_results()
+	write_fecal_boli_data(args.out_file, final_fecal_boli_detections, final_fecal_boli_counts, args.frame_interval, model_definition['model-name'], model_definition['model-checkpoint'])
 	if args.out_image is not None:
 		render = plot_keypoints(locations, frame, is_yx=True)
 		imageio.imwrite(args.out_image, render)
