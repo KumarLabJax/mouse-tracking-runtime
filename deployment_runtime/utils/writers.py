@@ -71,6 +71,7 @@ def promote_pose_data(pose_file, current_version: int, new_version: int):
 				ids[observations] = 1
 		# Non-trivial case where we simply select the longest tracks and keep them.
 		# We could potentially try and stitch tracklets, but that should be explicit.
+		# TODO: If track 0 is among the longest, "padding" and "mask" data will look wrong. Generally, this shouldn't be relied upon and should be overwritten with actually generated tracklets.
 		else:
 			tracks_to_keep = tracks[np.argsort(track_frame_counts)[:num_mice]]
 			for i, cur_track in enumerate(tracks_to_keep):
@@ -98,12 +99,13 @@ def promote_pose_data(pose_file, current_version: int, new_version: int):
 		current_version = 6
 
 
-def adjust_pose_version(pose_file, version: int):
+def adjust_pose_version(pose_file, version: int, promote_data: bool = True):
 	"""Safely adjusts the pose version.
 
 	Args:
 		pose_file: file to change the stored pose version
 		version: new version to use
+		promote_data: indicator if data should be promoted or not. If false, promote_pose_data will not be called and the pose file may not be the correct format.
 
 	Raises:
 		ValueError if version is not within a valid range
@@ -125,7 +127,8 @@ def adjust_pose_version(pose_file, version: int):
 		# `promote_pose_data` will call this function again, but will skip this because the version has already been promoted
 		with h5py.File(pose_file, 'a') as out_file:
 			out_file['poseest'].attrs['version'] = np.asarray([version, 0], dtype=np.uint16)
-		promote_pose_data(pose_file, current_version, version)
+		if promote_data:
+			promote_pose_data(pose_file, current_version, version)
 
 
 def write_pose_v2_data(pose_file, pose_matrix: np.ndarray, confidence_matrix: np.ndarray, config_str: str = '', model_str: str = ''):
@@ -142,7 +145,14 @@ def write_pose_v2_data(pose_file, pose_matrix: np.ndarray, confidence_matrix: np
 		InvalidPoseFileException if pose and confidence matrices don't have the same number of frames
 	"""
 	if pose_matrix.shape[0] != confidence_matrix.shape[0]:
-		raise InvalidPoseFileException('Pose data does not match confidence data.')
+		raise InvalidPoseFileException(f'Pose data does not match confidence data. Pose shape: {pose_matrix.shape[0]}, Confidence shape: {confidence_matrix.shape[0]}')
+	# Detect if multi-animal is being used
+	if pose_matrix.ndim == 3 and confidence_matrix.ndim == 2:
+		is_multi_animal = False
+	elif pose_matrix.ndim == 4 and confidence_matrix.ndim == 3:
+		is_multi_animal = True
+	else:
+		raise InvalidPoseFileException(f'Pose dimensions are mixed between single and multi animal formats. Pose dim: {pose_matrix.ndim}, Confidence dim: {confidence_matrix.ndim}')
 
 	with h5py.File(pose_file, 'a') as out_file:
 		if 'poseest/points' in out_file:
@@ -154,7 +164,11 @@ def write_pose_v2_data(pose_file, pose_matrix: np.ndarray, confidence_matrix: np
 			del out_file['poseest/confidence']
 		out_file.create_dataset('poseest/confidence', data=confidence_matrix.astype(np.float32))
 
-	adjust_pose_version(pose_file, 2)
+	# Multi-animal needs to skip promoting, since it will incorrectly reshape data to [frame * animal, 1, 12, 2] instead of the desired [frame, animal, 12, 2]
+	if is_multi_animal:
+		adjust_pose_version(pose_file, 3, False)
+	else:
+		adjust_pose_version(pose_file, 2)
 
 
 def write_pose_v3_data(pose_file, instance_count: np.ndarray = None, instance_embedding: np.ndarray = None, instance_track: np.ndarray = None):
@@ -271,7 +285,7 @@ def write_identity_data(pose_file, embeddings: np.ndarray, config_str: str = '',
 	"""
 	with h5py.File(pose_file, 'a') as out_file:
 		if out_file['poseest/points'].shape[:2] != embeddings.shape[:2]:
-			raise InvalidPoseFileException('Keypoint data does not match embedding data shape.')
+			raise InvalidPoseFileException(f'Keypoint data does not match embedding data shape. Keypoints: {out_file["poseest/points"].shape[:2]}, Embeddings: {embeddings.shape[:2]}')
 		if 'poseest/identity_embeds' in out_file:
 			del out_file['poseest/identity_embeds']
 		out_file.create_dataset('poseest/identity_embeds', data=embeddings.astype(np.float32))

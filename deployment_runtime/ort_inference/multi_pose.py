@@ -57,7 +57,7 @@ def infer_multi_pose_ort(args):
 				# Skip if no mask
 				if not np.any(masks[current_mask_idx]):
 					continue
-				batch = (np.repeat(255 - masks[current_mask_idx], 3).reshape(frame.shape)+(np.repeat(masks[current_mask_idx], 3).reshape(frame.shape)*frame)).astype(np.float32)
+				batch = (np.repeat(255 - masks[current_mask_idx], 3).reshape(frame.shape) + (np.repeat(masks[current_mask_idx], 3).reshape(frame.shape) * frame)).astype(np.float32)
 				batch = np.transpose((np.expand_dims(batch, 0) / 255. - 0.45) / 0.225, [0, 3, 1, 2])
 				frame_batches.append(batch)
 			t2 = time.time()
