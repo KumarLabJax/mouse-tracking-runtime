@@ -144,6 +144,46 @@ def convert_v2_to_v3(pose_data, conf_data, threshold: float = 0.3):
 	return pose_data_v3, conf_data_v3, instance_count, instance_embedding, instance_track_id
 
 
+def convert_multi_to_v2(pose_data, conf_data, identity_data):
+	"""Converts multi mouse pose data (v3+) into multiple single mouse (v2).
+
+	Args:
+		pose_data: multi mouse pose data of shape [frame, max_animals, 12, 2]
+		conf_data: keypoint confidence data of shape [frame, max_animals, 12]
+		identity_data: identity data which indicates animal indices of shape [frame, max_animals]
+	
+	Returns:
+		list of tuples containing (id, pose_data_v2, conf_data_v2)
+		id: tracklet id
+		pose_data_v2: pose_data reformatted to v2
+		conf_data_v2: conf_data reformatted to v2
+
+	Raises:
+		ValueError if an identity has 2 pose predictions in a single frame.
+	"""
+	invalid_poses = np.all(conf_data == 0, axis=-1)
+	id_values = np.unique(identity_data[~invalid_poses])
+	masked_id_data = identity_data.copy().astype(np.int32)
+	# This is to handle id 0 (with 0-padding). -1 is an invalid id.
+	masked_id_data[invalid_poses] = -1
+
+	return_list = []
+	for cur_id in id_values:
+		id_frames, id_idxs = np.where(masked_id_data == cur_id)
+		if len(id_frames) != len(set(id_frames)):
+			sorted_frames = np.sort(id_frames)
+			duplicated_frames = sorted_frames[:-1][sorted_frames[1:] == sorted_frames[:-1]]
+			raise ValueError(f'Identity {cur_id} contained multiple poses assigned on frames {duplicated_frames}.')
+		single_pose = np.zeros([len(pose_data), 12, 2], dtype=pose_data.dtype)
+		single_conf = np.zeros([len(pose_data), 12], dtype=conf_data.dtype)
+		single_pose[id_frames] = pose_data[id_frames, id_idxs]
+		single_conf[id_frames] = conf_data[id_frames, id_idxs]
+
+		return_list.append((cur_id, single_pose, single_conf))
+
+	return return_list
+
+
 def render_pose_overlay(image: np.ndarray, frame_points: np.ndarray, exclude_points: List = [], color: Tuple = (255, 255, 255)) -> np.ndarray:
 	"""Renders a single pose on an image.
 
