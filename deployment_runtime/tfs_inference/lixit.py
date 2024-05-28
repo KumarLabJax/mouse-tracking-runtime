@@ -32,8 +32,7 @@ def infer_lixit_model(args):
 		vid_writer = imageio.get_writer(args.out_video, fps=30)
 	performance_accumulator = time_accumulator(3, ['Preprocess', 'GPU Compute', 'Postprocess'])
 
-	model = tf.saved_model.load('/media/bgeuther/Storage/TempStorage/onnx/onnx-pipelines/models/tfs-models/static-object-lixit/dlc-2022/', tags=['serve'])
-	model = tf.saved_model.load(model_definition['tfs-model'])
+	model = tf.saved_model.load(model_definition['tfs-model'], tags=['serve'])
 
 	# Main loop for inference
 	for frame_idx, frame in enumerate(frame_iter):
