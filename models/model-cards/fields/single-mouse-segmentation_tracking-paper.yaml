@@ -1,0 +1,54 @@
+model_id: "full-model-tracking-paper"
+model_summary: "Single mouse segmentation predictions in a square open field."
+model_description: ""
+developers:
+  - "Brian Geuther"
+funded_by: ""
+model_type: "Encoder-decoder"
+license: "CC BY-NC-SA 4.0"
+base_model: "None"
+repo: "https://github.com/KumarLabJax/MouseTracking"
+paper: "https://www.nature.com/articles/s42003-019-0362-1"
+demo: ""
+direct_use: "See [infer_single_segmentation.py](../../deployment_runtime/infer_single_segmentation.py"
+downstream_use: "See original repo for fine-tuning on other datasets. This unfortunately is an older model and may be difficult to fine-tune at this time."
+out_of_scope_use: "NA"
+bias_risks_limitations: "Bias: Coat color influences performance. Black colored mice have the best performance, while albino tend to have slightly poorer performance. Less common coat colors, such as piebald, may have even worse performance.
+
+Limitation: There are some examples of urination and defication in the open field assay, but not all situations may be handled correctly by the network. In the supplemental section of the paper, some objects were added into the training data, but these do not account for full diversity of not-mouse objects."
+bias_recommendations: "Make sure you use this model in an observible method, which means you should either render and spot-check data or define a set of rules to determine if the data makes sense. An example rule could be the segmentation area should always be within a certain range."
+get_started_code: ""
+training_data: "See https://github.com/KumarLabJax/MouseTracking"
+preprocessing: "Input frames should be of size 480x480. The network was trained on data with a white-balance target of 190 (not the typical 128)."
+training_regime: ""
+speeds_sizes_times: ""
+testing_data: ""
+testing_factors: ""
+testing_metrics: ""
+results: ""
+results_summary: ""
+model_examination: ""
+hardware_type: "Nvidia V100"
+hours_used: ""
+cloud_provider: "Local Infrastructure"
+clour_region: ""
+co2_emitted: ""
+model_specs: ""
+compute_infrastructure: "See restrictions on using tensorflow-serving models."
+hardware_requirements: "If using a GPU, available VRAM must be > 1GB."
+software: ""
+citation_bibtex: "@article{geuther2019robust,
+  title={Robust mouse tracking in complex environments using neural networks},
+  author={Geuther, Brian Q and Deats, Sean P and Fox, Kai J and Murray, Steve A and Braun, Robert E and White, Jacqueline K and Chesler, Elissa J and Lutz, Cathleen M and Kumar, Vivek},
+  journal={Communications biology},
+  volume={2},
+  number={1},
+  pages={124},
+  year={2019},
+  publisher={Nature Publishing Group UK London}
+}"
+citation_apa: "Geuther, B. Q., Deats, S. P., Fox, K. J., Murray, S. A., Braun, R. E., White, J. K., ... & Kumar, V. (2019). Robust mouse tracking in complex environments using neural networks. Communications biology, 2(1), 124."
+glossary: ""
+more_information: ""
+model_card_authors: "Brian Geuther"
+model_card_contact: ""
