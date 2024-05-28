@@ -60,7 +60,7 @@ def promote_pose_data(pose_file, current_version: int, new_version: int):
 		tracks, track_frame_counts = np.unique(masked_track_data, return_counts=True)
 		# Generate dummy data
 		masks = np.full(track_data.shape, True, dtype=bool)
-		embeds = np.full([track_data.shape[0], 1], 0, dtype=np.float32)
+		embeds = np.full([track_data.shape[0], track_data.shape[1], 1], 0, dtype=np.float32)
 		ids = np.full(track_data.shape, 0, dtype=np.uint32)
 		centers = np.full([1, num_mice], 0, dtype=np.float64)
 		# Special case where we can just flatten all tracklets into 1 id
@@ -283,6 +283,9 @@ def write_identity_data(pose_file, embeddings: np.ndarray, config_str: str = '',
 	Raises:
 		InvalidPoseFileException if embedding shapes don't match pose in file.
 	"""
+	# Promote data before writing the field, so that if tracklets need to be generated, they are
+	adjust_pose_version(pose_file, 4)
+
 	with h5py.File(pose_file, 'a') as out_file:
 		if out_file['poseest/points'].shape[:2] != embeddings.shape[:2]:
 			raise InvalidPoseFileException(f'Keypoint data does not match embedding data shape. Keypoints: {out_file["poseest/points"].shape[:2]}, Embeddings: {embeddings.shape[:2]}')
@@ -291,8 +294,6 @@ def write_identity_data(pose_file, embeddings: np.ndarray, config_str: str = '',
 		out_file.create_dataset('poseest/identity_embeds', data=embeddings.astype(np.float32))
 		out_file['poseest/identity_embeds'].attrs['config'] = config_str
 		out_file['poseest/identity_embeds'].attrs['model'] = model_str
-
-	adjust_pose_version(pose_file, 4)
 
 
 def write_seg_data(pose_file, seg_contours_matrix: np.ndarray, seg_external_flags: np.ndarray, config_str: str = '', model_str: str = '', skip_matching: bool = False):
