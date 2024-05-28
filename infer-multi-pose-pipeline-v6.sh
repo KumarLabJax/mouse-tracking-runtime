@@ -95,14 +95,14 @@ if [[ -n "${SLURM_JOB_ID}" ]]; then
 		# Food Hopper Inference Step
 		if [[ $FAIL_STATE == 0 ]]; then
 			echo "Running food hopper step:"
-			retry singularity exec --nv "${SINGULARITY_RUNTIME}" python3 /kumar_lab_models/deployment_runtime/infer_food_hopper.py --runtime ort --video "${FULL_VIDEO_FILE}" --out-file "${H5_V6_OUT_FILE}"
+			retry singularity exec --nv "${SINGULARITY_RUNTIME}" python3 /kumar_lab_models/deployment_runtime/infer_food_hopper.py --runtime tfs --video "${FULL_VIDEO_FILE}" --out-file "${H5_V6_OUT_FILE}"
 			FAIL_STATE=$?
 		fi
 
 		# Lixit Inference Step
 		if [[ $FAIL_STATE == 0 ]]; then
 			echo "Running lixit step:"
-			retry singularity exec --nv "${SINGULARITY_RUNTIME}" python3 /kumar_lab_models/deployment_runtime/infer_lixit.py --runtime ort --video "${FULL_VIDEO_FILE}" --out-file "${H5_V6_OUT_FILE}"
+			retry singularity exec --nv "${SINGULARITY_RUNTIME}" python3 /kumar_lab_models/deployment_runtime/infer_lixit.py --runtime tfs --video "${FULL_VIDEO_FILE}" --out-file "${H5_V6_OUT_FILE}"
 			FAIL_STATE=$?
 		fi
 
