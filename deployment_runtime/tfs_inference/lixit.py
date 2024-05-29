@@ -2,11 +2,10 @@
 import tensorflow as tf
 import imageio
 import numpy as np
-import cv2
 import queue
 import time
 import sys
-from utils.static_objects import filter_static_keypoints, plot_keypoints, get_mask_corners
+from utils.static_objects import plot_keypoints
 from utils.prediction_saver import prediction_saver
 from utils.writers import write_static_object_data
 from utils.timers import time_accumulator
