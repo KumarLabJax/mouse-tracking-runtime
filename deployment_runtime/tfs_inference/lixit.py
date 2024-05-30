@@ -2,11 +2,10 @@
 import tensorflow as tf
 import imageio
 import numpy as np
-import cv2
 import queue
 import time
 import sys
-from utils.static_objects import filter_static_keypoints, plot_keypoints, get_mask_corners
+from utils.static_objects import plot_keypoints
 from utils.prediction_saver import prediction_saver
 from utils.writers import write_static_object_data
 from utils.timers import time_accumulator
@@ -32,8 +31,7 @@ def infer_lixit_model(args):
 		vid_writer = imageio.get_writer(args.out_video, fps=30)
 	performance_accumulator = time_accumulator(3, ['Preprocess', 'GPU Compute', 'Postprocess'])
 
-	model = tf.saved_model.load('/media/bgeuther/Storage/TempStorage/onnx/onnx-pipelines/models/tfs-models/static-object-lixit/dlc-2022/', tags=['serve'])
-	model = tf.saved_model.load(model_definition['tfs-model'])
+	model = tf.saved_model.load(model_definition['tfs-model'], tags=['serve'])
 
 	# Main loop for inference
 	for frame_idx, frame in enumerate(frame_iter):
