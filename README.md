@@ -37,31 +37,47 @@ Tensorflow GPU runtime: https://www.tensorflow.org/install/source#gpu
 Container runtime: (Check using `nvcc --version` inside container)
 Pytorch runtime: https://pytorch.org/get-started/locally/
 
-# Models
+# Running Pipelines
+
+There are currently 2 pipelines available. Single mouse open field assays and multi mouse longterm monitoring assays.
+
+## Single Mouse Open Field Pipeline
+
+These models were designed to operate with our open field assay recorded at JAX. We release this dataset at https://doi.org/10.7910/DVN/SAPNJG
+
+For general usage, see [infer-single-pose-pipeline-v6.sh](infer-single-pose-pipeline.sh).
+
+This pipeline consists of 4 model predictions:
+1. Single Mouse Pose (gait paper)
+2. Arena Corners (unpublished update from gait paper)
+3. Single Mouse Segmentation (tracking paper)
+4. Fecal Boli detection (unpublished)
+
+TODO: Add link to Jake's star protocols.
+
+## Multi Mouse Longterm Monitoring Pipeline
+
+These models were designed to operate with our JABS data acquisition hardware. For specifications on data collection, see https://www.biorxiv.org/content/10.1101/2022.01.13.476229v2. For specifications on reproducing the hardware, see https://github.com/KumarLabJax/JABS-data-pipeline
+
+For general usage, see [infer-multi-pose-pipeline-v6.sh](infer-multi-pose-pipeline.sh).
+
+This pipeline consists of 6 model predictions and 1 algorithmic step:
+1. Multi Mouse Segmentation (unpublished)
+2. Multi Mouse Pose (unpublished)
+3. Multi Mouse Identity Embedding (unpublished)
+4. Tracklet Generation and Stitching (unpublished)
+5. Arena Corners (unpublished update from gait paper)
+6. Food Hopper (unpublished)
+7. Lixit Spout (unpublished)
+
+# Available Models
 
 ## Single Mouse Segmentation
 
 Original Training Code: https://github.com/KumarLabJax/MouseTracking
 Trained Models:
 * Tracking Paper Model: https://zenodo.org/records/5806397
-* High Quality Segmenter: (Not published)
-
-
-### TSF Model
-
-The segmentation model was exported using code that resides in the obj-api codebase. This code was largely based on example code for optimizing and freezing a model.
-
-### ORT Model
-
-You can convert the tensorflow model into onnx format using the following command:
-
-```
-python -m tf2onnx.convert --saved-model tfs-models/single-mouse-segmentation/tracking-paper/ --output onnx-models/single-mouse-segmentation/tracking-paper.onnx --opset 18
-```
-
-There is a known issue related to the ConvTranspose op not being supported by ONNX-runtime on their CUDA provider, so it needs to run on the CPU. Why? It's apparently not popular enough of a layer. See https://github.com/microsoft/onnxruntime/issues/11312
-
-As such, in the ONNX-runtime, this model will run between the GPU and CPU and as such will perform poorly.
+* High Quality Segmenter: Not yet published.
 
 ## Single Mouse Pose
 
@@ -69,96 +85,38 @@ Original Training Code: https://github.com/KumarLabJax/deep-hrnet-mouse
 Trained Models:
 * Gait Paper Model: https://zenodo.org/records/6380163
 
-### ORT Model
-
-In the source repository, there is an `onnx` branch with example code under `tools/export-onnx.py`. Essentially, the model is loaded within the original environment followed by a call to `torch.onnx.export`.
-
 ## Multi-Mouse Pose
 
 Original Training Code: https://github.com/KumarLabJax/deep-hrnet-mouse
 Trained Models:
-* Top-down: In Progress
-* Bottom-up: (Not published)
-
-### ORT Model
-
-In the source repository, there is an `onnx` branch with example code under `tools/export-onnx.py`. Essentially, the model is loaded within the original environment followed by a call to `torch.onnx.export`.
+* Top-down: Not yet published.
+* Bottom-up: Not yet published.
 
 ## Multi-Mouse Segmentation
 
-Original Training Code: fork of https://github.com/google-research/deeplab2
+Original Training Code: Fork of https://github.com/google-research/deeplab2
 Trained Models:
-* Panoptic Deeplab: Not yet released
-
-### TFS Model
-
-deeplab2 provides `export_model.py`. This transforms the checkpoint into a tensorflow serving model.
-
-```
-python3 /deeplab2/deeplab2/export_model.py --checkpoint_path /deeplab2/trained_model/ckpt-125000 --experiment_option_path /deeplab2/trained_model/resnet50_os16.textproto --output_path tfs-models/multi-mouse-segmentation/panoptic-deeplab/
-```
+* Panoptic Deeplab: Not yet published.
 
 ## Static Objects
 
 ### Arena Corners
 
-Original Training Code: In Progress
+Original Training Code: Fork of https://github.com/tensorflow/models/tree/master/research/object_detection
 Trained Models:
-* Object Detection API (2022): Not yet released
-
-#### TFS Model
-
-Export the model using the tf-obj-api exporter (in obj-api environment):
-```
-python /object_detection/models/research/object_detection/exporter_main_v2.py --input_type image_tensor --pipeline_config_path /object_detection/code/tf-obj-api/corner-detection/single-object-testing/pipeline.config --trained_checkpoint_dir /media/bgeuther/Storage/TempStorage/pose-validation/movenet/arena_corner/output_models/ --output_directory /media/bgeuther/Storage/TempStorage/trained-models/static-objects/obj-api-corner/
-```
-Note that this needs to be run in the folder with annotations if the config points to label_map.pbtxt locally.
-`/media/bgeuther/Storage/TempStorage/pose-validation/movenet/arena_corner/` is the location of these annotations.
-
-#### ORT Model
-
-Convert the model over to onnx:
-```
-python -m tf2onnx.convert --saved-model /media/bgeuther/Storage/TempStorage/trained-models/static-objects/obj-api-corner/saved_model/ --output onnx-models/static-objects/obj-api-corners.onnx --opset 13
-```
-
-```
-2024-04-01 09:55:41,353 - INFO - Model inputs: ['input_tensor']
-2024-04-01 09:55:41,353 - INFO - Model outputs: ['detection_boxes', 'detection_boxes_strided', 'detection_classes', 'detection_keypoint_scores', 'detection_keypoints', 'detection_multiclass_scores', 'detection_scores', 'num_detections']
-```
+* Object Detection API (2022): Not yet published.
 
 ### Food Hopper
 
-Original Training Code: In Progress
+Original Training Code: Fork of https://github.com/tensorflow/models/tree/master/research/object_detection
 Trained Models:
-* Object Detection API (2022): In Progress
-
-#### TFS Model
-
-Export the model using the tf-obj-api exporter (in obj-api environment):
-```
-python /object_detection/models/research/object_detection/exporter_main_v2.py --input_type image_tensor --pipeline_config_path /object_detection/code/tf-obj-api/food-detection/segmentation/pipeline.config --trained_checkpoint_dir /media/bgeuther/Storage/TempStorage/pose-validation/movenet/food_hopper/output_models/ --output_directory /media/bgeuther/Storage/TempStorage/trained-models/static-objects/obj-api-food/
-```
-Note that this needs to be run in the folder with annotations if the config points to label_map.pbtxt locally.
-`/media/bgeuther/Storage/TempStorage/pose-validation/movenet/food_hopper/` is the location of these annotations.
-
-#### ORT Model
-
-Convert the model over to onnx:
-```
-python -m tf2onnx.convert --saved-model /media/bgeuther/Storage/TempStorage/trained-models/static-objects/obj-api-food/saved_model/ --output onnx-models/static-objects/obj-api-food.onnx --opset 13
-```
-
-```
-2024-04-01 09:56:32,297 - INFO - Model inputs: ['input_tensor']
-2024-04-01 09:56:32,297 - INFO - Model outputs: ['detection_boxes', 'detection_boxes_strided', 'detection_classes', 'detection_masks', 'detection_multiclass_scores', 'detection_scores', 'num_detections']
-```
+* Object Detection API (2022): Not yet published.
 
 ### Lixit
 
-Original Training Code: In Progress
+Original Training Code: https://github.com/DeepLabCut/DeepLabCut
 Trained Models:
-* DeepLabCut: In Progress
+* DeepLabCut (2023): Not yet published.
 
 ## Dynamic Objects
 
