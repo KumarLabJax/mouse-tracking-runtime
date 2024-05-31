@@ -78,6 +78,13 @@ if [[ -n "${SLURM_JOB_ID}" ]]; then
 			FAIL_STATE=$?
 		fi
 
+		# Fecal Boli Inference step
+		if [[ $FAIL_STATE == 0 ]]; then
+			echo "Running fecal boli inference step:"
+			retry singularity exec --nv "${SINGULARITY_RUNTIME}" python3 /kumar_lab_models/deployment_runtime/infer_fecal_boli.py --video "${FULL_VIDEO_FILE}" --out-file "${H5_V6_OUT_FILE}"
+			FAIL_STATE=$?
+		fi
+
 		# Cleanup if successful
 		if [[ $FAIL_STATE == 0 ]]; then
 			# rm ${FULL_VIDEO_FILE}
