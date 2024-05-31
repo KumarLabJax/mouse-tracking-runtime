@@ -75,6 +75,7 @@ This pipeline consists of 6 model predictions and 1 algorithmic step:
 ## Single Mouse Segmentation
 
 Original Training Code: https://github.com/KumarLabJax/MouseTracking
+
 Trained Models:
 * Tracking Paper Model: https://zenodo.org/records/5806397
 * High Quality Segmenter: Not yet published.
@@ -82,12 +83,14 @@ Trained Models:
 ## Single Mouse Pose
 
 Original Training Code: https://github.com/KumarLabJax/deep-hrnet-mouse
+
 Trained Models:
 * Gait Paper Model: https://zenodo.org/records/6380163
 
 ## Multi-Mouse Pose
 
 Original Training Code: https://github.com/KumarLabJax/deep-hrnet-mouse
+
 Trained Models:
 * Top-down: Not yet published.
 * Bottom-up: Not yet published.
@@ -95,6 +98,7 @@ Trained Models:
 ## Multi-Mouse Segmentation
 
 Original Training Code: Fork of https://github.com/google-research/deeplab2
+
 Trained Models:
 * Panoptic Deeplab: Not yet published.
 
@@ -103,18 +107,21 @@ Trained Models:
 ### Arena Corners
 
 Original Training Code: Fork of https://github.com/tensorflow/models/tree/master/research/object_detection
+
 Trained Models:
 * Object Detection API (2022): Not yet published.
 
 ### Food Hopper
 
 Original Training Code: Fork of https://github.com/tensorflow/models/tree/master/research/object_detection
+
 Trained Models:
 * Object Detection API (2022): Not yet published.
 
 ### Lixit
 
 Original Training Code: https://github.com/DeepLabCut/DeepLabCut
+
 Trained Models:
 * DeepLabCut (2023): Not yet published.
 
@@ -123,5 +130,6 @@ Trained Models:
 ### Fecal Boli
 
 Original Training Code: https://github.com/KumarLabJax/deep-hrnet-mouse
+
 Trained Models:
 * fecal-boli (2020): Not yet published.
