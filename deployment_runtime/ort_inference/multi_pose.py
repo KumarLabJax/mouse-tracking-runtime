@@ -10,7 +10,7 @@ import sys
 from utils.pose import argmax_2d, render_pose_overlay
 from utils.segmentation import get_frame_masks
 from utils.prediction_saver import prediction_saver
-from utils.writers import write_pose_v2_data, write_pose_v3_data
+from utils.writers import write_pose_v2_data, write_pose_v3_data, adjust_pose_version
 from utils.timers import time_accumulator
 from models.model_definitions import MULTI_MOUSE_POSE
 
@@ -111,4 +111,6 @@ def infer_multi_pose_ort(args):
 		valid_poses = instance_count[row]
 		instance_track_id[row, instance_track_id[row] >= valid_poses] = 0
 	write_pose_v3_data(args.out_file, instance_count, instance_embedding, instance_track_id)
+	# Since this is topdown, segmentation is present and we can instruct it that it's there
+	adjust_pose_version(args.out_file, 6)
 	performance_accumulator.print_performance()
