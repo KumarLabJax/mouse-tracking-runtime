@@ -84,17 +84,31 @@ def promote_pose_data(pose_file, current_version: int, new_version: int):
 	# Match segmentation data with pose data
 	if current_version < 6 and new_version >= 6:
 		with h5py.File(pose_file, 'r') as f:
-			pose_data = f['poseest/points'][:]
-			pose_tracks = f['poseest/instance_track_id'][:]
-			pose_ids = f['poseest/instance_embed_id'][:]
-			seg_data = f['poseest/seg_data'][:]
-		seg_tracks = np.full(pose_tracks.shape, 0, dtype=np.uint32)
-		seg_ids = np.full(pose_tracks.shape, 0, dtype=np.uint32)
-		for frame in np.arange(pose_tracks.shape[0]):
-			matches = hungarian_match_points_seg(pose_data[frame], seg_data[frame])
-			for current_match in matches:
-				seg_tracks[frame, current_match[1]] = pose_tracks[frame, current_match[0]]
-				seg_ids[frame, current_match[1]] = pose_ids[frame, current_match[0]]
+			# If segmentation data is present, we can promote id-matching
+			if 'poseest/seg_data' in f:
+				found_seg_data = True
+				pose_data = f['poseest/points'][:]
+				pose_tracks = f['poseest/instance_track_id'][:]
+				pose_ids = f['poseest/instance_embed_id'][:]
+				seg_data = f['poseest/seg_data'][:]
+			else:
+				pose_shape = f['poseest/points'].shape
+				seg_data = np.full([pose_shape[0], 1, 1, 1, 2], -1, dtype=np.int32)
+				found_seg_data = False
+		seg_tracks = np.full(seg_data.shape[:2], 0, dtype=np.uint32)
+		seg_ids = np.full(seg_data.shape[:2], 0, dtype=np.uint32)
+
+		# Attempt to match the pose and segmentation data
+		if found_seg_data:
+			for frame in np.arange(seg_data.shape[0]):
+				matches = hungarian_match_points_seg(pose_data[frame], seg_data[frame])
+				for current_match in matches:
+					seg_tracks[frame, current_match[1]] = pose_tracks[frame, current_match[0]]
+					seg_ids[frame, current_match[1]] = pose_ids[frame, current_match[0]]
+		# Nothing to match, write some default segmentation data
+		else:
+			seg_external_flags = np.full(seg_data.shape[:3], -1, dtype=np.int32)
+			write_seg_data(pose_file, seg_data, seg_external_flags, 'None', 'None', True)
 		write_v6_tracklets(pose_file, seg_tracks, seg_ids)
 		current_version = 6
 
