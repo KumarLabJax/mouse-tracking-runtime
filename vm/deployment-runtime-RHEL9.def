@@ -24,3 +24,6 @@ From: nvcr.io/nvidia/tensorrt:24.01-py3
     pip3 install --upgrade pip
     pip3 install -r /kumar_lab_models/requirements.txt
     pip install --upgrade onnxruntime-gpu==1.17.1 --extra-index-url https://aiinfra.pkgs.visualstudio.com/PublicPackages/_packaging/onnxruntime-cuda-12/pypi/simple/
+
+%environment
+    export PYTHONPATH=$PYTHONPATH:/kumar_lab_models/deployment_runtime/
