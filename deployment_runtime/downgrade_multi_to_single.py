@@ -32,8 +32,12 @@ def downgrade_pose_file(pose_h5_path, disable_id: bool = False):
 			all_track_id = pose_h5['poseest/instance_embed_id'][:]
 		elif major_version >= 3:
 			all_track_id = pose_h5['poseest/instance_track_id'][:]
-		config_str = pose_h5['poseest/points'].attrs['config']
-		model_str = pose_h5['poseest/points'].attrs['model']
+		try:
+			config_str = pose_h5['poseest/points'].attrs['config']
+			model_str = pose_h5['poseest/points'].attrs['model']
+		except (KeyError, AttributeError):
+			config_str = 'unknown'
+			model_str = 'unknown'
 		pose_attrs = pose_h5['poseest'].attrs
 		if 'cm_per_pixel' in pose_attrs and 'cm_per_pixel_source' in pose_attrs:
 			pixel_scaling = True
