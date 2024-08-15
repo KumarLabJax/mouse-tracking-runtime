@@ -39,8 +39,12 @@ def promote_pose_data(pose_file, current_version: int, new_version: int):
 		with h5py.File(pose_file, 'r') as f:
 			pose_data = np.reshape(f['poseest/points'][:], [-1, 1, 12, 2])
 			conf_data = np.reshape(f['poseest/confidence'][:], [-1, 1, 12])
-			config_str = f['poseest/points'].attrs['config']
-			model_str = f['poseest/points'].attrs['model']
+			try:
+				config_str = f['poseest/points'].attrs['config']
+				model_str = f['poseest/points'].attrs['model']
+			except (KeyError, AttributeError):
+				config_str = 'unknown'
+				model_str = 'unknown'
 		pose_data, conf_data, instance_count, instance_embedding, instance_track_id = convert_v2_to_v3(pose_data, conf_data)
 		# Overwrite the existing data with a new axis
 		write_pose_v2_data(pose_file, pose_data, conf_data, config_str, model_str)
