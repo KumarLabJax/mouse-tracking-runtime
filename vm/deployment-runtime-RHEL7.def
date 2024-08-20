@@ -14,3 +14,6 @@ From: nvcr.io/nvidia/tensorrt:22.05-py3
     # Upgrade pip
     pip3 install --upgrade pip
     pip3 install -r ../requirements.txt
+
+%environment
+    export PYTHONPATH=$PYTHONPATH:/kumar_lab_models/deployment_runtime/
