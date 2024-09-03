@@ -111,7 +111,7 @@ else
 			# should we also output v2?
 			if [[ -z "${2}" ]]; then
 				INCLUDE_V2="false"
-			elif [[ "${2}" == "--include-v2" ]]
+			elif [[ "${2}" == "--include-v2" ]]; then
 				INCLUDE_V2="true"
 			else
 				echo "${ERROR_STR}" >&2
