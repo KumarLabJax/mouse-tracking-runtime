@@ -57,10 +57,11 @@ def downgrade_pose_file(pose_h5_path, disable_id: bool = False):
 
 def main():
 	"""Command line interaction."""
-	parser = argparse.ArgumentParser()
+	parser = argparse.ArgumentParser(description='Downgrades multi-animal pose v3+ into multiple single pose v2 files.')
 	parser.add_argument('--in-pose', help='input HDF5 pose file', required=True)
 	parser.add_argument('--disable-id', help='forces tracklet ids (v3) to be exported instead of longterm ids (v4)', default=False, action='store_true')
 	args = parser.parse_args()
+	warnings.warn(r'Warning: Not all pipelines may be 100% compatible using downgraded pose files. Files produced from this script will contain 0s in data where low confidence predictions were made instead of the original values which may affect performance.')
 	downgrade_pose_file(args.in_pose, args.disable_id)
 
 

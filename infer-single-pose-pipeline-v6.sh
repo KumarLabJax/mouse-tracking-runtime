@@ -14,6 +14,8 @@
 # Permanent locations of the singularity images
 SINGULARITY_RUNTIME=/projects/kumar-lab/multimouse-pipeline/deployment-runtime-RHEL9-current.sif
 
+ERROR_STR="ERROR: you need to provide a video file to process. Eg: ./infer-single-pose-pipeline-v6.sh /full/path/movie_list.txt [--include-v2]"
+
 # Basic function that retries a command up to 5 times
 function retry {
 	local n=1
@@ -56,6 +58,7 @@ if [[ -n "${SLURM_JOB_ID}" ]]; then
 		module load apptainer
 
 		# Setup some useful variables
+		H5_V2_OUT_FILE="${FULL_VIDEO_FILE%.*}_pose_est_v2.h5"
 		H5_V6_OUT_FILE="${FULL_VIDEO_FILE%.*}_pose_est_v6.h5"
 		FAIL_STATE=false
 
@@ -63,6 +66,10 @@ if [[ -n "${SLURM_JOB_ID}" ]]; then
 		echo "Running single mouse pose step:"
 		retry singularity exec --nv "${SINGULARITY_RUNTIME}" python3 /kumar_lab_models/deployment_runtime/infer_single_pose.py --runtime ort --video "${FULL_VIDEO_FILE}" --out-file "${H5_V6_OUT_FILE}"
 		FAIL_STATE=$?
+
+		if [[ ! -z "${INCLUDE_V2}" && "${INCLUDE_V2}" == "true" ]]; then
+			cp "${H5_V6_OUT_FILE}" "${H5_V2_OUT_FILE}"
+		fi
 
 		# Corner Inference step
 		if [[ $FAIL_STATE == 0 ]]; then
@@ -101,11 +108,20 @@ else
 	if [[ -f "${1}" ]]; then
 			# echo "${1} is set and not empty"
 			NUM_VIDEOS=`wc -l < ${1}`
+			# should we also output v2?
+			if [[ -z "${2}" ]]; then
+				INCLUDE_V2="false"
+			elif [[ "${2}" == "--include-v2" ]]
+				INCLUDE_V2="true"
+			else
+				echo "${ERROR_STR}" >&2
+				exit 1
+			fi
 			# Here we perform a self-submit
-			echo "Submitting ${NUM_VIDEOS} Videos with detected number of animals in: ${1}"
-			sbatch --export=FULL_VIDEO_FILE_LIST="${1}" --array=1-"$NUM_VIDEOS"%56 "${0}"
+			echo "Submitting ${NUM_VIDEOS} videos for single mouse pose in: ${1}"
+			sbatch --export=FULL_VIDEO_FILE_LIST="${1}",INCLUDE_V2="${INCLUDE_V2}" --array=1-"$NUM_VIDEOS"%56 "${0}"
 	else
-			echo "ERROR: you need to provide a video file to process. Eg: ./infer-single-pose-pipeline-v6.sh /full/path/movie_list.txt" >&2
+			echo "${ERROR_STR}" >&2
 			exit 1
 	fi
 fi
