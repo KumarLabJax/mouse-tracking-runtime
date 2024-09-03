@@ -159,3 +159,11 @@ python -m tf2onnx.convert --saved-model /media/bgeuther/Storage/TempStorage/trai
 Original Training Code: In Progress
 Trained Models:
 * DeepLabCut: In Progress
+
+## Dynamic Objects
+
+### Fecal Boli
+
+Original Training Code: https://github.com/KumarLabJax/deep-hrnet-mouse
+Trained Models:
+* fecal-boli (2020): Not yet published.
