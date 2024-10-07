@@ -29,7 +29,7 @@ def aggregate_folder_data(folder: str, depth: int = 2):
 			_pose_est_v6 is searched, but this is currently a proposed v7 feature
 			no error handling is present...
 	"""
-	pose_files = glob.glob(folder + '*/*/*_pose_est_v6.h5')
+	pose_files = glob.glob(folder + '/' + '*/' * depth + '*_pose_est_v6.h5')
 
 	read_data = []
 	for cur_file in pose_files:
