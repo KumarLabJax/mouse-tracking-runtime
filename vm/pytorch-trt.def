@@ -1,0 +1,29 @@
+# build like:
+#   singularity build --fakeroot pytorch-trt.sif pytorch-trt.def
+# This image is compliant with RHEL 9 host OS.
+
+Bootstrap: docker
+From: nvcr.io/nvidia/pytorch:24.10-py3
+
+%setup
+    mkdir -p ${SINGULARITY_ROOTFS}/kumar_lab_models/deployment_runtime/
+    mkdir -p ${SINGULARITY_ROOTFS}/kumar_lab_models/models/
+
+%files
+    ../requirements.txt /kumar_lab_models/.
+    ../README.md /kumar_lab_models/.
+    ../deployment_runtime /kumar_lab_models/
+    ../models /kumar_lab_models/
+    ../hrnet /kumar_lab_models/
+
+%post
+    apt-get -y update
+    apt-get -y install less ffmpeg python3-pip libsm6 libxext6 libxrender-dev libjpeg8-dev zlib1g-dev
+    apt-get -y clean
+
+    # Upgrade pip
+    pip3 install --upgrade pip
+    pip3 install -r /kumar_lab_models/requirements.txt
+
+%environment
+    export PYTHONPATH=$PYTHONPATH:/kumar_lab_models/deployment_runtime/
