@@ -5,7 +5,8 @@ import queue
 import time
 import sys
 import os
-from utils.pose import argmax_2d, render_pose_overlay
+from utils.pose import render_pose_overlay
+from utils.hrnet import argmax_2d_torch, preprocess_hrnet
 from utils.prediction_saver import prediction_saver
 from utils.writers import write_pose_v2_data
 from utils.timers import time_accumulator
@@ -51,7 +52,7 @@ def predict_pose(input_iter, model, render: str = None, batch_size: int = 1):
 		batch_count = 0
 		for _ in np.arange(batch_size):
 			try:
-				input_frame = np.expand_dims(next(input_iter).astype(np.float32), [0])
+				input_frame = next(input_iter)
 				batch.append(input_frame)
 				batch_count += 1
 			except StopIteration:
@@ -62,17 +63,18 @@ def predict_pose(input_iter, model, render: str = None, batch_size: int = 1):
 			break
 		# concatenate will squeeze batch dim if it is of size 1, so only concat if > 1
 		elif batch_count == 1:
-			batch = batch[0]
+			batch_tensor = preprocess_hrnet()(batch[0]).unsqueeze(0)
 		elif batch_count > 1:
-			batch = np.concatenate(batch)
-		batch_tensor = torch.tensor(np.transpose((batch / 255. - 0.45) / 0.225, [0, 3, 1, 2]))
+			batch_tensor = torch.stack([preprocess_hrnet()(x) for x in batch])
 		batch_num += 1
 
 		t2 = time.time()
 		with torch.no_grad():
-			output = model(batch_tensor.to('cuda')).cpu().detach().numpy()
+			output = model(batch_tensor.cuda())
 		t3 = time.time()
-		confidence, pose = argmax_2d(output)
+		confidence_cuda, pose_cuda = argmax_2d_torch(output)
+		confidence = confidence_cuda.cpu().numpy()
+		pose = pose_cuda.cpu().numpy()
 		try:
 			pose_results.results_receiver_queue.put((batch_count, pose), timeout=5)
 			confidence_results.results_receiver_queue.put((batch_count, confidence), timeout=5)
@@ -107,7 +109,7 @@ def infer_single_pose_lightning(args):
 	# allow tensor cores
 	torch.backends.cuda.matmul.allow_tf32 = True
 	model = eval('hrnet_models.' + cfg.MODEL.NAME + '.get_pose_net')(cfg, is_train=False)
-	model.load_state_dict(torch.load(cfg.TEST.MODEL_FILE), strict=False)
+	model.load_state_dict(torch.load(cfg.TEST.MODEL_FILE, weights_only=True), strict=False)
 	model.eval()
 	model = model.cuda()
 

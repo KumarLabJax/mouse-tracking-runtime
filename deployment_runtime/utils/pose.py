@@ -51,7 +51,7 @@ def rle(inarray: np.ndarray):
 
 
 def argmax_2d(arr):
-	"""Obtains the peaks for all keypoints in a pose for a single pose.
+	"""Obtains the peaks for all keypoints in a pose.
 
 	Args:
 		arr: np.ndarray of shape [batch, 12, img_width, img_height]
