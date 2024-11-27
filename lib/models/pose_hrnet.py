@@ -13,6 +13,7 @@ import logging
 
 import torch
 import torch.nn as nn
+import lightning as L
 
 
 BN_MOMENTUM = 0.1
@@ -25,7 +26,7 @@ def conv3x3(in_planes, out_planes, stride=1, padding_mode='zeros'):
                      padding=1, bias=False, padding_mode=padding_mode)
 
 
-class BasicBlock(nn.Module):
+class BasicBlock(L.LightningModule):
     expansion = 1
 
     def __init__(self, inplanes, planes, stride=1, downsample=None, padding_mode='zeros'):
@@ -57,7 +58,7 @@ class BasicBlock(nn.Module):
         return out
 
 
-class Bottleneck(nn.Module):
+class Bottleneck(L.LightningModule):
     expansion = 4
 
     def __init__(self, inplanes, planes, stride=1, downsample=None, padding_mode='zeros'):
@@ -98,7 +99,7 @@ class Bottleneck(nn.Module):
         return out
 
 
-class HighResolutionModule(nn.Module):
+class HighResolutionModule(L.LightningModule):
     def __init__(self, num_branches, blocks, num_blocks, num_inchannels,
                  num_channels, fuse_method, multi_scale_output=True, padding_mode='zeros'):
         super(HighResolutionModule, self).__init__()
@@ -275,7 +276,7 @@ blocks_dict = {
 }
 
 
-class PoseHighResolutionNet(nn.Module):
+class PoseHighResolutionNet(L.LightningModule):
 
     def __init__(self, cfg, **kwargs):
         # self.in_out_ratio = cfg['MODEL']['IMAGE_SIZE'][0] // cfg['MODEL']['HEATMAP_SIZE'][0]
