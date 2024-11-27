@@ -82,7 +82,7 @@ def predict_pose(input_iter, model, render: str = None, batch_size: int = 1):
 				sys.exit(1)
 			print(f'WARNING: Skipping inference on batch: {batch_num}, frame: {batch_num * batch_size}')
 			continue
-		if vid_writer is not None:
+		if render is not None:
 			for idx in np.arange(batch_count):
 				rendered_pose = render_pose_overlay(batch[idx].astype(np.uint8), pose[idx], [])
 				vid_writer.append_data(rendered_pose)
