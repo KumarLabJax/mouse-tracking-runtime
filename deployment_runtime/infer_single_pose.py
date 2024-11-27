@@ -17,6 +17,7 @@ def main(argv):
 	vid_or_img.add_argument('--frame', help='Image file for processing')
 	parser.add_argument('--out-file', help='Pose file to write out.', required=True)
 	parser.add_argument('--out-video', help='Render the results to a video.', default=None)
+	parser.add_argument('--batch-size', help='Batch size to use while making predictions.', default=1, type=int)
 	#
 	args = parser.parse_args()
 	if args.video:

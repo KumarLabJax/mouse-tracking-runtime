@@ -7,17 +7,19 @@ from typing import List
 
 class time_accumulator:
 	"""An accumulator object that collects performance timings."""
-	def __init__(self, n_breaks: int, labels: List[str] = None):
+	def __init__(self, n_breaks: int, labels: List[str] = None, frame_per_batch: int = 1):
 		"""Initializes an accumulator.
 
 		Args:
 			n_breaks: number of breaks that constitute a "loop"
 			labels: labels of each breakpoint
+			frame_per_batch: count of frames per batch
 		"""
 		self.__labels = labels
 		self.__n_breaks = n_breaks
 		self.__time_arrs = [[] for x in range(n_breaks)]
 		self.__count_samples = 0
+		self.__fpb = frame_per_batch
 
 	def add_batch_times(self, timings: List[float]):
 		"""Adds timings of a batch.
@@ -64,4 +66,4 @@ class time_accumulator:
 			total_time = np.sum(avg_times)
 			for timer_idx in np.arange(self.__n_breaks):
 				print(f'{self.__labels[timer_idx]}: {np.round(avg_times[timer_idx], 4)}s ({np.round(avg_times[timer_idx] / total_time, 4)*100}%)', file=out_stream)
-			print(f'Overall: {np.round(total_time, 4)}s/batch ({np.round(1/total_time, 4)} FPS)', file=out_stream)
+			print(f'Overall: {np.round(total_time, 4)}s/batch ({np.round(1/total_time * self.__fpb, 4)} FPS)', file=out_stream)

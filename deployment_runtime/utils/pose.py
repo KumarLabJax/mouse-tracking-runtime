@@ -54,20 +54,23 @@ def argmax_2d(arr):
 	"""Obtains the peaks for all keypoints in a pose for a single pose.
 
 	Args:
-		arr: np.ndarray of shape [1, 12, img_width, img_height]
+		arr: np.ndarray of shape [batch, 12, img_width, img_height]
 
 	Returns:
 		tuple of (values, coordinates)
-		values: array of shape [12] containing the maximal values per-keypoint
-		coordinates: array of shape [12, 2] containing the coordinates
+		values: array of shape [batch, 12] containing the maximal values per-keypoint
+		coordinates: array of shape [batch, 12, 2] containing the coordinates
 	"""
-	flatten_shape = list(arr.shape[:-2]) + [arr.shape[-1] * arr.shape[-2]]
+	full_max_cols = np.argmax(arr, axis=-1, keepdims=True)
+	max_col_vals = np.take_along_axis(arr, full_max_cols, axis=-1)
+	max_rows = np.argmax(max_col_vals, axis=-2, keepdims=True)
+	max_row_vals = np.take_along_axis(max_col_vals, max_rows, axis=-2)
+	max_cols = np.take_along_axis(full_max_cols, max_rows, axis=-2)
 
-	frame_idxs, _, max_rows, max_cols = np.unravel_index(np.argmax(arr.reshape(flatten_shape), axis=-1), arr.shape)
-	keypoint_idxs = np.repeat([range(12)], repeats=len(frame_idxs), axis=-1)
-	max_vals = arr[frame_idxs, keypoint_idxs, max_rows, max_cols]
+	max_vals = max_row_vals.squeeze(-1).squeeze(-1)
+	max_idxs = np.stack([max_rows.squeeze(-1).squeeze(-1), max_cols.squeeze(-1).squeeze(-1)], axis=-1)
 
-	return max_vals, np.stack([max_rows, max_cols], -1).squeeze(0)
+	return max_vals, max_idxs
 
 
 def localmax_2d(arr, threshold, radius):
