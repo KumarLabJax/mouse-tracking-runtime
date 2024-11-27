@@ -25,7 +25,7 @@ From: nvcr.io/nvidia/pytorch:24.11-py3
     pip3 install --upgrade pip
     # this container includes a broken version of opencv that needs to be manually uninstalled
     # some files are not correctly removed
-    pip uninstall $(pip list --format=freeze | grep opencv)
+    pip uninstall -y $(pip list --format=freeze | grep opencv)
     rm -rf /usr/local/lib/python3.10/dist-packages/cv2/
     pip3 install -r /kumar_lab_models/requirements.txt
 

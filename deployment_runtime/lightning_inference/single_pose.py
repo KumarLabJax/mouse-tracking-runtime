@@ -29,6 +29,8 @@ def infer_single_pose_lightning(args):
 	cudnn.benchmark = False
 	torch.backends.cudnn.deterministic = cfg.CUDNN.DETERMINISTIC
 	torch.backends.cudnn.enabled = cfg.CUDNN.ENABLED
+	# allow tensor cores
+	torch.backends.cuda.matmul.allow_tf32 = True
 	model = eval('hrnet_models.' + cfg.MODEL.NAME + '.get_pose_net')(cfg, is_train=False)
 	model.load_state_dict(torch.load(cfg.TEST.MODEL_FILE), strict=False)
 	model.eval()
@@ -53,7 +55,8 @@ def infer_single_pose_lightning(args):
 		input_frame = np.expand_dims(frame.astype(np.float32), [0])
 		input_frame = torch.tensor(np.transpose((input_frame / 255. - 0.45) / 0.225, [0, 3, 1, 2]))
 		t2 = time.time()
-		output = model(input_frame.to('cuda')).cpu().detach().numpy()
+		with torch.no_grad():
+			output = model(input_frame.to('cuda')).cpu().detach().numpy()
 		t3 = time.time()
 		confidence, pose = argmax_2d(output)
 		try:
