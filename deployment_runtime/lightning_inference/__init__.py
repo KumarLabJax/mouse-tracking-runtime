@@ -1,0 +1,1 @@
+from .single_pose import infer_single_pose_lightning

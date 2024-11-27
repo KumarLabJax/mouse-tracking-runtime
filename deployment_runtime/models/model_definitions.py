@@ -23,7 +23,12 @@ SINGLE_MOUSE_POSE = {
 		'model-name': 'gait-model',
 		'model-checkpoint': '2019-06-26-param-search/mp-conf4.yaml',
 		'ort-model': '/kumar_lab_models/models/ort-models/single-mouse-pose/gait-model.onnx',
+		# 'ort-model': '/media/bgeuther/Storage/TempStorage/onnx/onnx-pipelines/models/ort-models/single-mouse-pose/gait-model.onnx',
 		'tfs-model': None,
+		'lightning-config': '/kumar_lab_models/models/lightning-models/single-mouse-pose/gait-model.yaml',
+		'lightning-model': '/kumar_lab_models/models/lightning-models/single-mouse-pose/gait-model.pth',
+		# 'lightning-config': '/media/bgeuther/Storage/TempStorage/onnx/onnx-pipelines/models/lightning-models/single-mouse-pose/gait-model.yaml',
+		# 'lightning-model': '/media/bgeuther/Storage/TempStorage/onnx/onnx-pipelines/models/lightning-models/single-mouse-pose/gait-model.pth',
 	},
 }
 
