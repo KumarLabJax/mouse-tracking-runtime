@@ -1,1 +1,2 @@
 from .single_pose import infer_single_pose_lightning
+from .multi_pose import infer_multi_pose_lightning

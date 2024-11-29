@@ -3,7 +3,6 @@
 import argparse
 import sys
 import os
-# from ort_inference import infer_single_pose_ort
 from lightning_inference import infer_single_pose_lightning
 
 
@@ -24,8 +23,6 @@ def main(argv):
 		assert os.path.exists(args.video)
 	else:
 		assert os.path.exists(args.frame)
-	# if args.runtime == 'ort':
-	# 	infer_single_pose_ort(args)
 	if args.runtime == 'lightning':
 		infer_single_pose_lightning(args)
 
