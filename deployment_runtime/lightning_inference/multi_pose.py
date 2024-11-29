@@ -100,11 +100,7 @@ def predict_pose_topdown(input_iter, mask_file, model, render: str = None, batch
 			performance_accumulator.add_batch_times([t1, t2, t2, t4])
 			continue
 
-		# concatenate will squeeze batch dim if it is of size 1, so only concat if > 1
-		if batch_count == 1:
-			batch_tensor = torch.stack(mouse_batch).unsqueeze(0)
-		elif batch_count > 1:
-			batch_tensor = torch.stack(mouse_batch)
+		batch_tensor = torch.stack(mouse_batch)
 		batch_num += 1
 
 		t2 = time.time()
