@@ -33,8 +33,6 @@ MULTI_MOUSE_POSE = {
 		'tfs-model': None,
 		'lightning-config': '/kumar_lab_models/models/lightning-models/multi-mouse-pose/social-topdown.yaml',
 		'lightning-model': '/kumar_lab_models/models/lightning-models/multi-mouse-pose/social-topdown.pth',
-		# 'lightning-config': '/media/bgeuther/Storage/TempStorage/onnx/onnx-pipelines/models/lightning-models/multi-mouse-pose/social-topdown.yaml',
-		# 'lightning-model': '/media/bgeuther/Storage/TempStorage/onnx/onnx-pipelines/models/lightning-models/multi-mouse-pose/social-topdown.pth',
 	},
 	'social-paper-bottomup': {
 		'model-name': 'bottomup',
