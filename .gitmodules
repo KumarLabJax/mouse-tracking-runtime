@@ -1,3 +1,0 @@
-[submodule "hrnet"]
-	path = hrnet
-	url = git@bitbucket.org:jacksonlaboratory/deep-hres-net.git

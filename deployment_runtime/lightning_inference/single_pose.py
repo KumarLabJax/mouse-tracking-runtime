@@ -13,11 +13,8 @@ from utils.timers import time_accumulator
 from models.model_definitions import SINGLE_MOUSE_POSE
 import torch
 import torch.backends.cudnn as cudnn
-# Hacky solution to support hrnets relative path of an identically named module
-this_dir = os.path.dirname(__file__)
-sys.path.insert(0, os.path.join(this_dir, '..', '..'))
-import hrnet.lib.models as hrnet_models
-from hrnet.lib.config import cfg
+from .hrnet.models import pose_hrnet
+from .hrnet.config import cfg
 
 
 def predict_pose(input_iter, model, render: str = None, batch_size: int = 1):
@@ -108,7 +105,7 @@ def infer_single_pose_lightning(args):
 	torch.backends.cudnn.enabled = cfg.CUDNN.ENABLED
 	# allow tensor cores
 	torch.backends.cuda.matmul.allow_tf32 = True
-	model = eval('hrnet_models.' + cfg.MODEL.NAME + '.get_pose_net')(cfg, is_train=False)
+	model = pose_hrnet.get_pose_net(cfg, is_train=False)
 	model.load_state_dict(torch.load(cfg.TEST.MODEL_FILE, weights_only=True), strict=False)
 	model.eval()
 	model = model.cuda()

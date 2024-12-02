@@ -15,11 +15,8 @@ from utils.timers import time_accumulator
 from models.model_definitions import MULTI_MOUSE_POSE
 import torch
 import torch.backends.cudnn as cudnn
-# Hacky solution to support hrnets relative path of an identically named module
-this_dir = os.path.dirname(__file__)
-sys.path.insert(0, os.path.join(this_dir, '..', '..'))
-import hrnet.lib.models as hrnet_models
-from hrnet.lib.config import cfg
+from .hrnet.models import pose_hrnet
+from .hrnet.config import cfg
 
 
 def predict_pose_topdown(input_iter, mask_file, model, render: str = None, batch_size: int = 1):
@@ -156,7 +153,7 @@ def infer_multi_pose_lightning(args):
 	cudnn.benchmark = False
 	torch.backends.cudnn.deterministic = cfg.CUDNN.DETERMINISTIC
 	torch.backends.cudnn.enabled = cfg.CUDNN.ENABLED
-	model = eval('hrnet_models.' + cfg.MODEL.NAME + '.get_pose_net')(cfg, is_train=False)
+	model =pose_hrnet.get_pose_net(cfg, is_train=False)
 	model.load_state_dict(torch.load(cfg.TEST.MODEL_FILE, weights_only=True), strict=False)
 	model.eval()
 	model = model.cuda()
