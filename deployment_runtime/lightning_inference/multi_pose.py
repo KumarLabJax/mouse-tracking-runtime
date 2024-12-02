@@ -5,7 +5,6 @@ import numpy as np
 import queue
 import time
 import sys
-import os
 from utils.pose import render_pose_overlay
 from utils.hrnet import argmax_2d_torch, preprocess_hrnet
 from utils.segmentation import get_frame_masks
@@ -153,7 +152,7 @@ def infer_multi_pose_lightning(args):
 	cudnn.benchmark = False
 	torch.backends.cudnn.deterministic = cfg.CUDNN.DETERMINISTIC
 	torch.backends.cudnn.enabled = cfg.CUDNN.ENABLED
-	model =pose_hrnet.get_pose_net(cfg, is_train=False)
+	model = pose_hrnet.get_pose_net(cfg, is_train=False)
 	model.load_state_dict(torch.load(cfg.TEST.MODEL_FILE, weights_only=True), strict=False)
 	model.eval()
 	model = model.cuda()

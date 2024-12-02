@@ -4,7 +4,6 @@ import numpy as np
 import queue
 import time
 import sys
-import os
 from utils.pose import render_pose_overlay
 from utils.hrnet import argmax_2d_torch, preprocess_hrnet
 from utils.prediction_saver import prediction_saver
