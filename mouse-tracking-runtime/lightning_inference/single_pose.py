@@ -59,9 +59,9 @@ def predict_pose(input_iter, model, render: str = None, batch_size: int = 1):
 			break
 		# concatenate will squeeze batch dim if it is of size 1, so only concat if > 1
 		elif batch_count == 1:
-			batch_tensor = preprocess_hrnet()(batch[0]).unsqueeze(0)
+			batch_tensor = preprocess_hrnet(batch[0])
 		elif batch_count > 1:
-			batch_tensor = torch.stack([preprocess_hrnet()(x) for x in batch])
+			batch_tensor = torch.stack([preprocess_hrnet(x) for x in batch])
 		batch_num += 1
 
 		t2 = time.time()

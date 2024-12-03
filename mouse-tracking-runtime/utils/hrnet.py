@@ -1,5 +1,4 @@
 import torch
-import torchvision.transforms as transforms
 
 
 def argmax_2d_torch(tensor):
@@ -60,17 +59,30 @@ def localmax_2d_torch(tensor, min_thresh, min_dist):
 	return bool_arr
 
 
-def preprocess_hrnet():
+def preprocess_hrnet(arr):
 	"""Preprocess transformation for hrnet.
 
+	Args:
+		arr: numpy array of shape [img_w, img_h, img_d]
+
 	Retuns:
-		transform function which can be called on batch data
+		pytorch tensor with hrnet transformations applied
 	"""
-	xform = transforms.Compose([
-		transforms.ToTensor(),
-		transforms.Normalize(
-			mean=[0.45, 0.45, 0.45],
-			std=[0.225, 0.225, 0.225],
-		),
-	])
-	return xform
+	# Original function was this:
+	# xform = transforms.Compose([
+	# 	transforms.ToTensor(),
+	# 	transforms.Normalize(
+	# 		mean=[0.45, 0.45, 0.45],
+	# 		std=[0.225, 0.225, 0.225],
+	# 	),
+	# ])
+	# ToTensor transform includes channel re-ordering and 0-255 to 0-1 scaling
+	img_tensor = torch.tensor(arr)
+	img_tensor = img_tensor / 255.0
+	img_tensor = img_tensor.unsqueeze(0).permute((0, 3, 1, 2))
+
+	# Normalize transform
+	mean = torch.tensor([0.45, 0.45, 0.45]).view(1, 3, 1, 1)
+	std = torch.tensor([0.225, 0.225, 0.225]).view(1, 3, 1, 1)
+	img_tensor = (img_tensor - mean) / std
+	return img_tensor

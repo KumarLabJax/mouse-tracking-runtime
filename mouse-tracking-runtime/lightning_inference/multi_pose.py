@@ -74,7 +74,7 @@ def predict_pose_topdown(input_iter, mask_file, model, render: str = None, batch
 					if not np.any(masks_batch[current_mask_idx]):
 						continue
 					batch = (np.repeat(255 - masks_batch[current_mask_idx], 3).reshape(input_frame.shape) + (np.repeat(masks_batch[current_mask_idx], 3).reshape(input_frame.shape) * input_frame)).astype(np.uint8)
-					mouse_batch.append(preprocess_hrnet()(batch))
+					mouse_batch.append(preprocess_hrnet(batch))
 					batch_count += 1
 					masks_in_frame += 1
 				frame_idx += 1
