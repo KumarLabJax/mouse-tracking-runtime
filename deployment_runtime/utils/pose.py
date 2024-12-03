@@ -73,6 +73,28 @@ def argmax_2d(arr):
 	return max_vals, max_idxs
 
 
+def get_peak_coords(arr):
+	"""Converts a boolean array of peaks into locations.
+
+	Args:
+		arr: array of shape [w, h] to search for peaks
+
+	Returns:
+		tuple of (values, coordinates)
+		values: array of shape [n_peaks] containing the maximal values per-peak
+		coordinates: array of shape [n_peaks, 2] containing the coordinates
+	"""
+	peak_locations = np.argwhere(arr)
+	if len(peak_locations) == 0:
+		return np.zeros([0], dtype=np.float32), np.zeros([0, 2], dtype=np.int16)
+
+	max_vals = []
+	for coord in peak_locations:
+		max_vals.append(arr[coord.tolist()])
+
+	return np.stack(max_vals), peak_locations
+
+
 def localmax_2d(arr, threshold, radius):
 	"""Obtains the multiple peaks with non-max suppression.
 
@@ -101,15 +123,7 @@ def localmax_2d(arr, threshold, radius):
 	mask = np.logical_and(mask, arr > threshold)
 	bool_arr = np.full(dilated.shape, False, dtype=bool)
 	bool_arr[mask] = True
-	peak_locations = np.argwhere(bool_arr)
-	if len(peak_locations) == 0:
-		return np.zeros([0], dtype=np.float32), np.zeros([0, 2], dtype=np.int16)
-
-	max_vals = []
-	for coord in peak_locations:
-		max_vals.append(arr[coord.tolist()])
-
-	return np.stack(max_vals), peak_locations
+	return get_peak_coords(bool_arr)
 
 
 def convert_v2_to_v3(pose_data, conf_data, threshold: float = 0.3):

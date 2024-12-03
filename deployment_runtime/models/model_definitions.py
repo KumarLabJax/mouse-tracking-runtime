@@ -61,8 +61,8 @@ FECAL_BOLI = {
 		'model-name': 'fecal-boli',
 		'model-checkpoint': 'fecalboli/fecalboli_2020-06-19_02.yaml',
 		'tfs-model': None,
-		'lightning-config': '/kumar_lab_models/models/lightning-models/fecal-boli/fecal-boli.yaml',
-		'lightning-model': '/kumar_lab_models/models/lightning-models/fecal-boli/fecal-boli.pth',
+		'lightning-config': '/kumar_lab_models/models/lightning-models/fecal-boli/fecalboli-2020-06-19.yaml',
+		'lightning-model': '/kumar_lab_models/models/lightning-models/fecal-boli/fecalboli-2020-06-19.pth',
 	}
 }
 

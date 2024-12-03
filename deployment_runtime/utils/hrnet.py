@@ -3,7 +3,7 @@ import torchvision.transforms as transforms
 
 
 def argmax_2d_torch(tensor):
-	"""Obtains the beaks for all keypoints in a pose.
+	"""Obtains the peaks for all keypoints in a pose.
 
 	Args:
 		tensor: pytorch tensor of shape [batch, 12, img_width, img_height]
@@ -23,6 +23,41 @@ def argmax_2d_torch(tensor):
 	max_cols = max_cols.squeeze(-1).squeeze(-1)
 	
 	return max_vals, torch.stack([max_rows, max_cols], -1)
+
+
+def localmax_2d_torch(tensor, min_thresh, min_dist):
+	"""Obtains local peaks in a tensor.
+
+	Args:
+		tensor: pytorch tensor of shape [1, img_width, img_height] or [batch, 1, img_width, img_height]
+		min_thresh: minimum value to be considered a peak
+		min_dist: minimum distance away from another peak to still be considered a peak
+
+	Returns:
+		A boolean tensor where Trues indicate where a local maxima was detected.
+	"""
+	assert min_dist >= 1
+	# Make sure the data is the correct shape
+	# Allow 3 (single image) or 4 (batched images)
+	orig_dim = tensor.dim()
+	if tensor.dim() == 3:
+		tensor = torch.unsqueeze(tensor, 0)
+	assert tensor.dim() == 4
+
+	# Peakfinding
+	dilated = torch.nn.MaxPool2d(kernel_size=min_dist * 2 + 1, stride=1, padding=min_dist)(tensor)
+	mask = tensor >= dilated
+	# Non-max suppression
+	eroded = -torch.nn.MaxPool2d(kernel_size=min_dist * 2 + 1, stride=1, padding=min_dist)(-tensor)
+	mask_2 = tensor > eroded
+	mask = torch.logical_and(mask, mask_2)
+	# Threshold
+	mask = torch.logical_and(mask, tensor > min_thresh)
+	bool_arr = torch.zeros_like(dilated, dtype=bool) + 1
+	bool_arr[~mask] = 0
+	if orig_dim == 3:
+		bool_arr = torch.squeeze(bool_arr, 0)
+	return bool_arr
 
 
 def preprocess_hrnet():
