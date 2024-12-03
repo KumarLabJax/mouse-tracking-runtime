@@ -97,7 +97,7 @@ def predict_fecal_boli(input_iter, model, render: str = None, batch_size: int = 
 	return (fecal_boli_results, fecal_boli_counts, performance_accumulator)
 
 
-def infer_single_pose_lightning(args):
+def infer_fecal_boli_lightning(args):
 	"""Main function to run a single mouse pose model."""
 	model_definition = FECAL_BOLI[args.model]
 	cfg.defrost()
