@@ -17,13 +17,14 @@ from .hrnet.models import pose_hrnet
 from .hrnet.config import cfg
 
 
-def predict_fecal_boli(input_iter, model, render: str = None, batch_size: int = 1):
+def predict_fecal_boli(input_iter, model, render: str = None, frame_interval: int = 1, batch_size: int = 1):
 	"""Main function that processes an iterator.
 
 	Args:
 		input_iter: an iterator that will produce frame inputs
 		model: pytorch lightning loaded model
 		render: optional output file for rendering a prediction video
+		frame_interval: interval of frames to make predictions on
 		batch_size: number of frames to predict per-batch
 
 	Returns:
@@ -43,15 +44,21 @@ def predict_fecal_boli(input_iter, model, render: str = None, batch_size: int = 
 	# Main loop for inference
 	video_done = False
 	batch_num = 0
+	frame_idx = 0
 	while not video_done:
 		t1 = time.time()
 		batch = []
 		batch_count = 0
 		for _ in np.arange(batch_size):
 			try:
-				input_frame = next(input_iter)
+				while True:
+					input_frame = next(input_iter)
+					frame_idx += 1
+					if frame_idx % frame_interval == 0:
+						break
 				batch.append(input_frame)
 				batch_count += 1
+				frame_idx += 1
 			except StopIteration:
 				video_done = True
 				break
@@ -60,9 +67,9 @@ def predict_fecal_boli(input_iter, model, render: str = None, batch_size: int = 
 			break
 		# concatenate will squeeze batch dim if it is of size 1, so only concat if > 1
 		elif batch_count == 1:
-			batch_tensor = preprocess_hrnet()(batch[0]).unsqueeze(0)
+			batch_tensor = preprocess_hrnet(batch[0])
 		elif batch_count > 1:
-			batch_tensor = torch.stack([preprocess_hrnet()(x) for x in batch])
+			batch_tensor = torch.concatenate([preprocess_hrnet(x) for x in batch])
 		batch_num += 1
 
 		t2 = time.time()
@@ -75,11 +82,17 @@ def predict_fecal_boli(input_iter, model, render: str = None, batch_size: int = 
 		peaks_cuda = localmax_2d_torch(output, 0.75, 5)
 		peaks = peaks_cuda.cpu().numpy()
 		for batch_idx in np.arange(batch_count):
-			_, new_coordinates = get_peak_coords(peaks[batch_idx])
+			_, new_coordinates = get_peak_coords(peaks[batch_idx][0])
+			if len(new_coordinates) == 0:
+				boli_coordinates = np.zeros([1, 0, 2], dtype=np.uint16)
+				num_boli = np.array(0, dtype=np.uint16).reshape([1, -1])
+			else:
+				boli_coordinates = np.expand_dims(np.asarray(new_coordinates), axis=0)
+				num_boli = np.array(boli_coordinates.shape[1], dtype=np.uint16).reshape([1, -1])
 
 			try:
-				fecal_boli_results.results_receiver_queue.put((batch_count, new_coordinates), timeout=5)
-				fecal_boli_counts.results_receiver_queue.put((batch_count, len(new_coordinates)), timeout=5)
+				fecal_boli_results.results_receiver_queue.put((1, boli_coordinates), timeout=5)
+				fecal_boli_counts.results_receiver_queue.put((1, num_boli), timeout=5)
 			except queue.Full:
 				if not fecal_boli_results.is_healthy() or not fecal_boli_counts.is_healthy():
 					print('Writer thread died unexpectedly.', file=sys.stderr)
@@ -121,7 +134,7 @@ def infer_fecal_boli_lightning(args):
 		single_frame = imageio.imread(args.frame)
 		frame_iter = iter([single_frame])
 
-	fecal_boli_results, fecal_boli_counts, performance_accumulator = predict_fecal_boli(frame_iter, model, args.out_video, args.batch_size)
+	fecal_boli_results, fecal_boli_counts, performance_accumulator = predict_fecal_boli(frame_iter, model, args.out_video, args.frame_interval, args.batch_size)
 	final_fecal_boli_detections = fecal_boli_results.get_results()
 	final_fecal_boli_counts = fecal_boli_counts.get_results()
 	write_fecal_boli_data(args.out_file, final_fecal_boli_detections, final_fecal_boli_counts, args.frame_interval, model_definition['model-name'], model_definition['model-checkpoint'])

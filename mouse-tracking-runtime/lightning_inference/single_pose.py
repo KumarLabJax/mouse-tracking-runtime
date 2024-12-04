@@ -61,7 +61,7 @@ def predict_pose(input_iter, model, render: str = None, batch_size: int = 1):
 		elif batch_count == 1:
 			batch_tensor = preprocess_hrnet(batch[0])
 		elif batch_count > 1:
-			batch_tensor = torch.stack([preprocess_hrnet(x) for x in batch])
+			batch_tensor = torch.concatenate([preprocess_hrnet(x) for x in batch])
 		batch_num += 1
 
 		t2 = time.time()

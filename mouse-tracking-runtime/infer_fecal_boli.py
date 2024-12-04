@@ -3,7 +3,7 @@
 import argparse
 import sys
 import os
-# from ort_inference import infer_fecal_boli_model as infer_ort
+from lightning_inference import infer_fecal_boli_lightning as infer_lightning
 
 
 def main(argv):
@@ -18,6 +18,7 @@ def main(argv):
 	parser.add_argument('--out-image', help='Render the final prediction to an image.', default=None)
 	parser.add_argument('--out-video', help='Render all predictions to a video.', default=None)
 	parser.add_argument('--frame-interval', help='Interval of frames to predict on.', default=1800, type=int)
+	parser.add_argument('--batch-size', help='atch size to use while making predictions.', default=1, type=int)
 	#
 	args = parser.parse_args()
 	if args.video:
@@ -25,7 +26,7 @@ def main(argv):
 	else:
 		assert os.path.exists(args.frame)
 	if args.runtime == 'lightning':
-		# infer_ort(args)
+		infer_lightning(args)
 
 
 if __name__ == '__main__':
