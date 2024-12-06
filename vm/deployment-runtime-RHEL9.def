@@ -10,7 +10,6 @@ From: us-docker.pkg.dev/colab-images/public/runtime:release-colab_20240626-06013
     mkdir -p ${SINGULARITY_ROOTFS}/kumar_lab_models/models/
 
 %files
-    ../requirements.txt /kumar_lab_models/.
     ../README.md /kumar_lab_models/.
     ../mouse-tracking-runtime /kumar_lab_models/
     ../models /kumar_lab_models/
