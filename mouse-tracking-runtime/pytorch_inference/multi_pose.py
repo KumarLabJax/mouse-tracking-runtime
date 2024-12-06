@@ -1,4 +1,4 @@
-"""Inference function for executing lightning for a multi mouse pose model."""
+"""Inference function for executing pytorch for a multi mouse pose model."""
 import imageio
 import h5py
 import numpy as np
@@ -24,7 +24,7 @@ def predict_pose_topdown(input_iter, mask_file, model, render: str = None, batch
 	Args:
 		input_iter: an iterator that will produce frame inputs
 		mask_file: kumar lab pose file containing segmentation data
-		model: pytorch lightning loaded model
+		model: pytorch loaded model
 		render: optional output file for rendering a prediction video
 		batch_size: number of frames to predict per-batch
 
@@ -142,12 +142,12 @@ def predict_pose_topdown(input_iter, mask_file, model, render: str = None, batch
 	return (pose_results, confidence_results, performance_accumulator)
 
 
-def infer_multi_pose_lightning(args):
+def infer_multi_pose_pytorch(args):
 	"""Main function to run a single mouse pose model."""
 	model_definition = MULTI_MOUSE_POSE[args.model]
 	cfg.defrost()
-	cfg.merge_from_file(model_definition['lightning-config'])
-	cfg.TEST.MODEL_FILE = model_definition['lightning-model']
+	cfg.merge_from_file(model_definition['pytorch-config'])
+	cfg.TEST.MODEL_FILE = model_definition['pytorch-model']
 	cfg.freeze()
 	cudnn.benchmark = False
 	torch.backends.cudnn.deterministic = cfg.CUDNN.DETERMINISTIC

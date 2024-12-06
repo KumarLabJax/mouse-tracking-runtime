@@ -23,8 +23,8 @@ SINGLE_MOUSE_POSE = {
 		'model-name': 'gait-model',
 		'model-checkpoint': '2019-06-26-param-search/mp-conf4.yaml',
 		'tfs-model': None,
-		'lightning-config': model_folder + 'lightning-models/single-mouse-pose/gait-model.yaml',
-		'lightning-model': model_folder + 'lightning-models/single-mouse-pose/gait-model.pth',
+		'pytorch-config': model_folder + 'pytorch-models/single-mouse-pose/gait-model.yaml',
+		'pytorch-model': model_folder + 'pytorch-models/single-mouse-pose/gait-model.pth',
 	},
 }
 
@@ -33,8 +33,8 @@ MULTI_MOUSE_POSE = {
 		'model-name': 'topdown',
 		'model-checkpoint': 'multimouse_topdown_1.yaml',
 		'tfs-model': None,
-		'lightning-config': model_folder + 'lightning-models/multi-mouse-pose/social-topdown.yaml',
-		'lightning-model': model_folder + 'lightning-models/multi-mouse-pose/social-topdown.pth',
+		'pytorch-config': model_folder + 'pytorch-models/multi-mouse-pose/social-topdown.yaml',
+		'pytorch-model': model_folder + 'pytorch-models/multi-mouse-pose/social-topdown.pth',
 	},
 	'social-paper-bottomup': {
 		'model-name': 'bottomup',
@@ -63,8 +63,8 @@ FECAL_BOLI = {
 		'model-name': 'fecal-boli',
 		'model-checkpoint': 'fecalboli/fecalboli_2020-06-19_02.yaml',
 		'tfs-model': None,
-		'lightning-config': model_folder + 'lightning-models/fecal-boli/fecalboli-2020-06-19.yaml',
-		'lightning-model': model_folder + 'lightning-models/fecal-boli/fecalboli-2020-06-19.pth',
+		'pytorch-config': model_folder + 'pytorch-models/fecal-boli/fecalboli-2020-06-19.yaml',
+		'pytorch-model': model_folder + 'pytorch-models/fecal-boli/fecalboli-2020-06-19.pth',
 	}
 }
 

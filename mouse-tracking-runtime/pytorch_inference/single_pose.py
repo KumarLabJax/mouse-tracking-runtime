@@ -1,4 +1,4 @@
-"""Inference function for executing lightning for a single mouse pose model."""
+"""Inference function for executing pytorch for a single mouse pose model."""
 import imageio
 import numpy as np
 import queue
@@ -21,7 +21,7 @@ def predict_pose(input_iter, model, render: str = None, batch_size: int = 1):
 
 	Args:
 		input_iter: an iterator that will produce frame inputs
-		model: pytorch lightning loaded model
+		model: pytorch loaded model
 		render: optional output file for rendering a prediction video
 		batch_size: number of frames to predict per-batch
 
@@ -92,12 +92,12 @@ def predict_pose(input_iter, model, render: str = None, batch_size: int = 1):
 	return (pose_results, confidence_results, performance_accumulator)
 
 
-def infer_single_pose_lightning(args):
+def infer_single_pose_pytorch(args):
 	"""Main function to run a single mouse pose model."""
 	model_definition = SINGLE_MOUSE_POSE[args.model]
 	cfg.defrost()
-	cfg.merge_from_file(model_definition['lightning-config'])
-	cfg.TEST.MODEL_FILE = model_definition['lightning-model']
+	cfg.merge_from_file(model_definition['pytorch-config'])
+	cfg.TEST.MODEL_FILE = model_definition['pytorch-model']
 	cfg.freeze()
 	cudnn.benchmark = False
 	torch.backends.cudnn.deterministic = cfg.CUDNN.DETERMINISTIC

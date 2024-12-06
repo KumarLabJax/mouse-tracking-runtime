@@ -3,14 +3,14 @@
 import argparse
 import sys
 import os
-from lightning_inference import infer_fecal_boli_lightning as infer_lightning
+from pytorch_inference import infer_fecal_boli_pytorch as infer_pytorch
 
 
 def main(argv):
 	"""Parse command line arguments."""
 	parser = argparse.ArgumentParser(description='Script that infers a lixit water spout model.')
 	parser.add_argument('--model', help='Trained model to infer.', default='fecal-boli', choices=['fecal-boli'])
-	parser.add_argument('--runtime', help='Runtime to execute the model.', default='lightning', choices=['lightning'])
+	parser.add_argument('--runtime', help='Runtime to execute the model.', default='pytorch', choices=['pytorch'])
 	vid_or_img = parser.add_mutually_exclusive_group(required=True)
 	vid_or_img.add_argument('--video', help='Video file for processing')
 	vid_or_img.add_argument('--frame', help='Image file for processing')
@@ -25,8 +25,8 @@ def main(argv):
 		assert os.path.exists(args.video)
 	else:
 		assert os.path.exists(args.frame)
-	if args.runtime == 'lightning':
-		infer_lightning(args)
+	if args.runtime == 'pytorch':
+		infer_pytorch(args)
 
 
 if __name__ == '__main__':
