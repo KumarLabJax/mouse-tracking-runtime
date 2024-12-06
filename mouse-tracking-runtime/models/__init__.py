@@ -1,0 +1,4 @@
+from .model_definitions import SINGLE_MOUSE_SEGMENTATION, MULTI_MOUSE_SEGMENTATION
+from .model_definitions import SINGLE_MOUSE_POSE, MULTI_MOUSE_POSE
+from .model_definitions import FECAL_BOLI
+from .model_definitions import STATIC_ARENA_CORNERS, STATIC_FOOD_CORNERS, STATIC_LIXIT

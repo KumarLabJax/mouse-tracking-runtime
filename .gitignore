@@ -6,6 +6,5 @@
 *.h5
 *.onnx
 __pycache__
-onnx-runtime-venv
 models
-!deployment_runtime/models
+!mouse-tracking-runtime/models

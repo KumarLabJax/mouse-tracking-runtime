@@ -168,10 +168,6 @@ def sort_corners(corners: np.ndarray, img_size: Tuple[int]):
 
 	Notes:
 		This reference fram is NOT the same as the imaging reference. Predictions at the bottom will appear rotated by 180deg.
-
-	TODO:
-		Algorithm relies on CW sorting instead of rules based.
-		May have issues if the rectangle is not aligned well with the image.
 	"""
 	# Sort the points clockwise
 	sorted_corners = sort_points_clockwise(corners)
