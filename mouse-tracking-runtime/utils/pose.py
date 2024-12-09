@@ -1,5 +1,6 @@
 import numpy as np
 import cv2
+import h5py
 from typing import List, Tuple
 
 
@@ -250,3 +251,48 @@ def render_pose_overlay(image: np.ndarray, frame_points: np.ndarray, exclude_poi
 		cv2.circle(new_image, (point_x, point_y), 2, color, -1, cv2.LINE_AA)
 
 	return new_image
+
+
+def find_first_pose(confidence, confidence_threshold: float = 0.3, num_keypoints: int = 12):
+	"""Detects the first pose with all the keypoints.
+
+	Args:
+		confidence: confidence matrix
+		confidence_threshold: minimum confidence to be considered a valid keypoint. See `convert_v2_to_v3` for additional notes on confidences
+		num_keypoints: number of keypoints
+
+	Returns:
+		integer indicating the first frame when the pose was observed.
+		In the case of multi-animal, the first frame when any full pose was found
+
+	Raises:
+		ValueError if no pose meets the criteria
+	"""
+	valid_keypoints = np.all(confidence > confidence_threshold, axis=-1)
+	num_keypoints_in_pose = np.sum(valid_keypoints, axis=-1)
+	# Multi-mouse
+	if num_keypoints_in_pose.ndim == 2:
+		num_keypoints_in_pose = np.max(num_keypoints_in_pose, axis=-1)
+	
+	completed_pose_frames = np.argwhere(num_keypoints_in_pose)
+	if len(completed_pose_frames) == 0:
+		raise ValueError("No poses detected")
+
+	return completed_pose_frames[0][0]
+
+
+def find_first_pose_file(pose_file, confidence_threshold: float = 0.3, num_keypoints: int = 12):
+	"""Lazy wrapper for `find_first_pose` that reads in file data.
+
+	Args:
+		pose_file: pose file to read confidence matrix from
+		confidence_threshold: see `find_first_pose`
+		num_keypoints: see `find_first_pose`
+
+	Returns:
+		see `find_first_pose`
+	"""
+	with h5py.File(pose_file, 'r') as f:
+		confidences = f['poseest/confidence'][...]
+
+	return find_first_pose(confidences, confidence_threshold, num_keypoints)
