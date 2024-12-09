@@ -6,9 +6,9 @@
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=2
 #SBATCH --gres=gpu:1
-#SBATCH --qos=inference
+#SBATCH --qos=gpu_inference
+#SBATCH --partition=gpu_a100_mig
 #SBATCH --mem=16G
-#SBATCH --nice
 #SBATCH --output=/projects/kumar-lab/multimouse-pipeline/logs/slurm-%x-%A_%a.out
 
 # Permanent locations of the singularity images
@@ -64,7 +64,7 @@ if [[ -n "${SLURM_JOB_ID}" ]]; then
 
 		# Pose V2 Inference step
 		echo "Running single mouse pose step:"
-		retry singularity exec --nv "${SINGULARITY_RUNTIME}" python3 /kumar_lab_models/deployment_runtime/infer_single_pose.py --runtime ort --video "${FULL_VIDEO_FILE}" --out-file "${H5_V6_OUT_FILE}"
+		retry singularity exec --nv "${SINGULARITY_RUNTIME}" python3 /kumar_lab_models/mouse-tracking-runtime/infer_single_pose.py --video "${FULL_VIDEO_FILE}" --out-file "${H5_V6_OUT_FILE}" --batch-size 10
 		FAIL_STATE=$?
 
 		if [[ ! -z "${INCLUDE_V2}" && "${INCLUDE_V2}" == "true" ]]; then
@@ -74,21 +74,21 @@ if [[ -n "${SLURM_JOB_ID}" ]]; then
 		# Corner Inference step
 		if [[ $FAIL_STATE == 0 ]]; then
 			echo "Running arena corner step:"
-			retry singularity exec --nv "${SINGULARITY_RUNTIME}" python3 /kumar_lab_models/deployment_runtime/infer_arena_corner.py --runtime ort --video "${FULL_VIDEO_FILE}" --out-file "${H5_V6_OUT_FILE}"
+			retry singularity exec --nv "${SINGULARITY_RUNTIME}" python3 /kumar_lab_models/mouse-tracking-runtime/infer_arena_corner.py --video "${FULL_VIDEO_FILE}" --out-file "${H5_V6_OUT_FILE}"
 			FAIL_STATE=$?
 		fi
 
 		# Segmentation Inference step
 		if [[ $FAIL_STATE == 0 ]]; then
 			echo "Running segmentation step:"
-			retry singularity exec --nv "${SINGULARITY_RUNTIME}" python3 /kumar_lab_models/deployment_runtime/infer_single_segmentation.py --runtime tfs --video "${FULL_VIDEO_FILE}" --out-file "${H5_V6_OUT_FILE}"
+			retry singularity exec --nv "${SINGULARITY_RUNTIME}" python3 /kumar_lab_models/mouse-tracking-runtime/infer_single_segmentation.py --video "${FULL_VIDEO_FILE}" --out-file "${H5_V6_OUT_FILE}"
 			FAIL_STATE=$?
 		fi
 
 		# Fecal Boli Inference step
 		if [[ $FAIL_STATE == 0 ]]; then
 			echo "Running fecal boli inference step:"
-			retry singularity exec --nv "${SINGULARITY_RUNTIME}" python3 /kumar_lab_models/deployment_runtime/infer_fecal_boli.py --video "${FULL_VIDEO_FILE}" --out-file "${H5_V6_OUT_FILE}"
+			retry singularity exec --nv "${SINGULARITY_RUNTIME}" python3 /kumar_lab_models/mouse-tracking-runtime/infer_fecal_boli.py --video "${FULL_VIDEO_FILE}" --out-file "${H5_V6_OUT_FILE}"
 			FAIL_STATE=$?
 		fi
 
