@@ -411,6 +411,9 @@ def write_pose_clip(in_pose_f: Union[str, Path], out_pose_f: Union[str, Path], c
 		in_pose_f: Input video filename
 		out_pose_f: Output video filename
 		clip_idxs: List or array of frame indices to place in the clipped video. Frames not present in the video will be ignored without warnings. Must be castable to int.
+
+	Todo:
+		This function excludes items in dynamic_objects.
 	"""
 	# Extract the data that may have frames as the first dimension
 	all_data = {}
