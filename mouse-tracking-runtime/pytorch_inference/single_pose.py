@@ -61,7 +61,11 @@ def predict_pose(input_iter, model, render: str = None, batch_size: int = 1):
 		elif batch_count == 1:
 			batch_tensor = preprocess_hrnet(batch[0])
 		elif batch_count > 1:
-			batch_tensor = torch.concatenate([preprocess_hrnet(x) for x in batch])
+			# Note the odd shape because preprocessing changes it to CHW
+			batch_shape = [batch_count, batch[0].shape[2], batch[0].shape[0], batch[0].shape[1]]
+			batch_tensor = torch.empty(batch_shape, dtype=torch.float32)
+			for i, frame in enumerate(batch):
+				batch_tensor[i] = preprocess_hrnet(frame)
 		batch_num += 1
 
 		t2 = time.time()

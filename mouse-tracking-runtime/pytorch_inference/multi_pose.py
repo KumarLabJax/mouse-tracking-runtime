@@ -96,7 +96,10 @@ def predict_pose_topdown(input_iter, mask_file, model, render: str = None, batch
 			performance_accumulator.add_batch_times([t1, t2, t2, t4])
 			continue
 
-		batch_tensor = torch.concatenate(mouse_batch)
+		batch_shape = [batch_count, 3, input_frame.shape[0], input_frame.shape[1]]
+		batch_tensor = torch.empty(batch_shape, dtype=torch.float32)
+		for i, frame in enumerate(mouse_batch):
+			batch_tensor[i] = frame
 		batch_num += 1
 
 		t2 = time.time()
