@@ -6,9 +6,9 @@
 #SBATCH --ntasks=1
 #SBATCH --cpus-per-task=2
 #SBATCH --gres=gpu:1
-#SBATCH --qos=inference
-#SBATCH --mem=32G
-#SBATCH --nice
+#SBATCH --qos=gpu_inference
+#SBATCH --partition=gpu_a100_mig
+#SBATCH --mem=64G
 #SBATCH --output=/projects/kumar-lab/multimouse-pipeline/logs/slurm-%x-%A_%a.out
 
 # Permanent locations of the singularity images
@@ -61,48 +61,48 @@ if [[ -n "${SLURM_JOB_ID}" ]]; then
 
 		# Panoptic Segmentation Inference step
 		echo "Running multi mouse segmentation step:"
-		retry singularity exec --nv "${SINGULARITY_RUNTIME}" python3 /kumar_lab_models/deployment_runtime/infer_multi_segmentation.py --runtime tfs --video "${FULL_VIDEO_FILE}" --out-file "${H5_V6_OUT_FILE}"
+		retry singularity exec --nv "${SINGULARITY_RUNTIME}" python3 /kumar_lab_models/mouse-tracking-runtime/infer_multi_segmentation.py --video "${FULL_VIDEO_FILE}" --out-file "${H5_V6_OUT_FILE}"
 		FAIL_STATE=$?
 
 		# Topdown Multi-mouse Pose Inference step
 		if [[ $FAIL_STATE == 0 ]]; then
 			echo "Running topdown multi mouse pose step:"
-			retry singularity exec --nv "${SINGULARITY_RUNTIME}" python3 /kumar_lab_models/deployment_runtime/infer_multi_pose.py --runtime ort --video "${FULL_VIDEO_FILE}" --out-file "${H5_V6_OUT_FILE}"
+			retry singularity exec --nv "${SINGULARITY_RUNTIME}" python3 /kumar_lab_models/mouse-tracking-runtime/infer_multi_pose.py --video "${FULL_VIDEO_FILE}" --out-file "${H5_V6_OUT_FILE}" --batch-size 3
 			FAIL_STATE=$?
 		fi
 
 		# Identity Inference Step
 		if [[ $FAIL_STATE == 0 ]]; then
 			echo "Running identity step:"
-			retry singularity exec --nv "${SINGULARITY_RUNTIME}" python3 /kumar_lab_models/deployment_runtime/infer_multi_identity.py --model 2023 --video "${FULL_VIDEO_FILE}" --out-file "${H5_V6_OUT_FILE}"
+			retry singularity exec --nv "${SINGULARITY_RUNTIME}" python3 /kumar_lab_models/mouse-tracking-runtime/infer_multi_identity.py --model 2023 --video "${FULL_VIDEO_FILE}" --out-file "${H5_V6_OUT_FILE}"
 			FAIL_STATE=$?
 		fi
 
 		# Tracklet Generation and Stitching Step
 		if [[ $FAIL_STATE == 0 ]]; then
 			echo "Generating and stitching tracklet step:"
-			singularity exec ${SINGULARITY_RUNTIME} python3 /kumar_lab_models/deployment_runtime/stitch_tracklets.py --in-pose "${H5_V6_OUT_FILE}"
+			singularity exec ${SINGULARITY_RUNTIME} python3 /kumar_lab_models/mouse-tracking-runtime/stitch_tracklets.py --in-pose "${H5_V6_OUT_FILE}"
 			FAIL_STATE=$?
 		fi
 
 		# Corner Inference Step
 		if [[ $FAIL_STATE == 0 ]]; then
 			echo "Running arena corner step:"
-			retry singularity exec --nv "${SINGULARITY_RUNTIME}" python3 /kumar_lab_models/deployment_runtime/infer_arena_corner.py --runtime ort --video "${FULL_VIDEO_FILE}" --out-file "${H5_V6_OUT_FILE}"
+			retry singularity exec --nv "${SINGULARITY_RUNTIME}" python3 /kumar_lab_models/mouse-tracking-runtime/infer_arena_corner.py --video "${FULL_VIDEO_FILE}" --out-file "${H5_V6_OUT_FILE}"
 			FAIL_STATE=$?
 		fi
 
 		# Food Hopper Inference Step
 		if [[ $FAIL_STATE == 0 ]]; then
 			echo "Running food hopper step:"
-			retry singularity exec --nv "${SINGULARITY_RUNTIME}" python3 /kumar_lab_models/deployment_runtime/infer_food_hopper.py --runtime tfs --video "${FULL_VIDEO_FILE}" --out-file "${H5_V6_OUT_FILE}"
+			retry singularity exec --nv "${SINGULARITY_RUNTIME}" python3 /kumar_lab_models/mouse-tracking-runtime/infer_food_hopper.py --video "${FULL_VIDEO_FILE}" --out-file "${H5_V6_OUT_FILE}"
 			FAIL_STATE=$?
 		fi
 
 		# Lixit Inference Step
 		if [[ $FAIL_STATE == 0 ]]; then
 			echo "Running lixit step:"
-			retry singularity exec --nv "${SINGULARITY_RUNTIME}" python3 /kumar_lab_models/deployment_runtime/infer_lixit.py --runtime tfs --video "${FULL_VIDEO_FILE}" --out-file "${H5_V6_OUT_FILE}"
+			retry singularity exec --nv "${SINGULARITY_RUNTIME}" python3 /kumar_lab_models/mouse-tracking-runtime/infer_lixit.py --video "${FULL_VIDEO_FILE}" --out-file "${H5_V6_OUT_FILE}"
 			FAIL_STATE=$?
 		fi
 

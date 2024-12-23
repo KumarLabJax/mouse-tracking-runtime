@@ -1,5 +1,6 @@
 import numpy as np
 import cv2
+import h5py
 from typing import List, Tuple
 
 
@@ -51,23 +52,48 @@ def rle(inarray: np.ndarray):
 
 
 def argmax_2d(arr):
-	"""Obtains the peaks for all keypoints in a pose for a single pose.
+	"""Obtains the peaks for all keypoints in a pose.
 
 	Args:
-		arr: np.ndarray of shape [1, 12, img_width, img_height]
+		arr: np.ndarray of shape [batch, 12, img_width, img_height]
 
 	Returns:
 		tuple of (values, coordinates)
-		values: array of shape [12] containing the maximal values per-keypoint
-		coordinates: array of shape [12, 2] containing the coordinates
+		values: array of shape [batch, 12] containing the maximal values per-keypoint
+		coordinates: array of shape [batch, 12, 2] containing the coordinates
 	"""
-	flatten_shape = list(arr.shape[:-2]) + [arr.shape[-1] * arr.shape[-2]]
+	full_max_cols = np.argmax(arr, axis=-1, keepdims=True)
+	max_col_vals = np.take_along_axis(arr, full_max_cols, axis=-1)
+	max_rows = np.argmax(max_col_vals, axis=-2, keepdims=True)
+	max_row_vals = np.take_along_axis(max_col_vals, max_rows, axis=-2)
+	max_cols = np.take_along_axis(full_max_cols, max_rows, axis=-2)
 
-	frame_idxs, _, max_rows, max_cols = np.unravel_index(np.argmax(arr.reshape(flatten_shape), axis=-1), arr.shape)
-	keypoint_idxs = np.repeat([range(12)], repeats=len(frame_idxs), axis=-1)
-	max_vals = arr[frame_idxs, keypoint_idxs, max_rows, max_cols]
+	max_vals = max_row_vals.squeeze(-1).squeeze(-1)
+	max_idxs = np.stack([max_rows.squeeze(-1).squeeze(-1), max_cols.squeeze(-1).squeeze(-1)], axis=-1)
 
-	return max_vals, np.stack([max_rows, max_cols], -1).squeeze(0)
+	return max_vals, max_idxs
+
+
+def get_peak_coords(arr):
+	"""Converts a boolean array of peaks into locations.
+
+	Args:
+		arr: array of shape [w, h] to search for peaks
+
+	Returns:
+		tuple of (values, coordinates)
+		values: array of shape [n_peaks] containing the maximal values per-peak
+		coordinates: array of shape [n_peaks, 2] containing the coordinates
+	"""
+	peak_locations = np.argwhere(arr)
+	if len(peak_locations) == 0:
+		return np.zeros([0], dtype=np.float32), np.zeros([0, 2], dtype=np.int16)
+
+	max_vals = []
+	for coord in peak_locations:
+		max_vals.append(arr[coord.tolist()])
+
+	return np.stack(max_vals), peak_locations
 
 
 def localmax_2d(arr, threshold, radius):
@@ -98,15 +124,7 @@ def localmax_2d(arr, threshold, radius):
 	mask = np.logical_and(mask, arr > threshold)
 	bool_arr = np.full(dilated.shape, False, dtype=bool)
 	bool_arr[mask] = True
-	peak_locations = np.argwhere(bool_arr)
-	if len(peak_locations) == 0:
-		return np.zeros([0], dtype=np.float32), np.zeros([0, 2], dtype=np.int16)
-
-	max_vals = []
-	for coord in peak_locations:
-		max_vals.append(arr[coord.tolist()])
-
-	return np.stack(max_vals), peak_locations
+	return get_peak_coords(bool_arr)
 
 
 def convert_v2_to_v3(pose_data, conf_data, threshold: float = 0.3):
@@ -233,3 +251,48 @@ def render_pose_overlay(image: np.ndarray, frame_points: np.ndarray, exclude_poi
 		cv2.circle(new_image, (point_x, point_y), 2, color, -1, cv2.LINE_AA)
 
 	return new_image
+
+
+def find_first_pose(confidence, confidence_threshold: float = 0.3, num_keypoints: int = 12):
+	"""Detects the first pose with all the keypoints.
+
+	Args:
+		confidence: confidence matrix
+		confidence_threshold: minimum confidence to be considered a valid keypoint. See `convert_v2_to_v3` for additional notes on confidences
+		num_keypoints: number of keypoints
+
+	Returns:
+		integer indicating the first frame when the pose was observed.
+		In the case of multi-animal, the first frame when any full pose was found
+
+	Raises:
+		ValueError if no pose meets the criteria
+	"""
+	valid_keypoints = np.all(confidence > confidence_threshold, axis=-1)
+	num_keypoints_in_pose = np.sum(valid_keypoints, axis=-1)
+	# Multi-mouse
+	if num_keypoints_in_pose.ndim == 2:
+		num_keypoints_in_pose = np.max(num_keypoints_in_pose, axis=-1)
+	
+	completed_pose_frames = np.argwhere(num_keypoints_in_pose)
+	if len(completed_pose_frames) == 0:
+		raise ValueError("No poses detected")
+
+	return completed_pose_frames[0][0]
+
+
+def find_first_pose_file(pose_file, confidence_threshold: float = 0.3, num_keypoints: int = 12):
+	"""Lazy wrapper for `find_first_pose` that reads in file data.
+
+	Args:
+		pose_file: pose file to read confidence matrix from
+		confidence_threshold: see `find_first_pose`
+		num_keypoints: see `find_first_pose`
+
+	Returns:
+		see `find_first_pose`
+	"""
+	with h5py.File(pose_file, 'r') as f:
+		confidences = f['poseest/confidence'][...]
+
+	return find_first_pose(confidences, confidence_threshold, num_keypoints)

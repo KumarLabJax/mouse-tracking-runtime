@@ -168,38 +168,36 @@ def sort_corners(corners: np.ndarray, img_size: Tuple[int]):
 
 	Notes:
 		This reference fram is NOT the same as the imaging reference. Predictions at the bottom will appear rotated by 180deg.
-
-	TODO:
-		Algorithm relies on CW sorting instead of rules based.
-		May have issues if the rectangle is not aligned well with the image.
 	"""
-	# Use point-polygon test to find the points that are closer to the edge of the image
-	dists_to_wall = [cv2.pointPolygonTest(np.array([[0, 0], [0, img_size[1]], [img_size[0], img_size[1]], [img_size[0], 0]]), corners[i, :], measureDist=1) for i in np.arange(4)]
-	top_points, bottom_points = np.split(np.argsort(dists_to_wall), 2)
-	# Figure out which wall they are close to so that we can sort the L/R ordering
-	# Use the center of the box for this
-	box_center = np.mean(corners, axis=0)
-	# Ordering of walls is Top, Right, Bottom, Left
-	center_to_walls = [box_center[0], img_size[0] - box_center[1], img_size[1] - box_center[0], box_center[1]]
-	closest_wall = np.argmin(center_to_walls)
-	# Return the sorted values based on which LR sorting we need
-	if closest_wall == 0:
-		# Sort x-values. Top = ascending, bottom = descending
-		top_points = top_points[np.argsort(corners[top_points][:, 0])]
-		bottom_points = bottom_points[np.argsort(corners[bottom_points][:, 0])[::-1]]
-	elif closest_wall == 1:
-		# Sort y-values. Top = ascending, bottom = descending
-		top_points = top_points[np.argsort(corners[top_points][:, 1])]
-		bottom_points = bottom_points[np.argsort(corners[bottom_points][:, 1])[::-1]]
-	elif closest_wall == 2:
-		# Sort x-values. Top = descending, bottom = ascending
-		top_points = top_points[np.argsort(corners[top_points][:, 0])[::-1]]
-		bottom_points = bottom_points[np.argsort(corners[bottom_points][:, 0])]
+	# Sort the points clockwise
+	sorted_corners = sort_points_clockwise(corners)
+	# TL corner will be the first of the 2 corners closest to the wall
+	dists_to_wall = [cv2.pointPolygonTest(np.array([[0, 0], [0, img_size[1]], [img_size[0], img_size[1]], [img_size[0], 0]]), sorted_corners[i, :], measureDist=1) for i in np.arange(4)]
+	closer_corners = np.where(dists_to_wall < np.mean(dists_to_wall))
+	# This is a circular index so first and last needs to be handled differently
+	if np.all(closer_corners[0] == [0, 3]):
+		sorted_corners = np.roll(sorted_corners, -3, axis=0)
 	else:
-		# Sort y-values. Top = descending, bottom = ascending
-		top_points = top_points[np.argsort(corners[top_points][:, 1])[::-1]]
-		bottom_points = bottom_points[np.argsort(corners[bottom_points][:, 1])]
-	return corners[np.concatenate([top_points, bottom_points])]
+		sorted_corners = np.roll(sorted_corners, -np.min(closer_corners), axis=0)
+	return sorted_corners
+
+
+def sort_points_clockwise(points):
+	"""Sorts a list of points to be clockwise relative to the first point.
+	
+	Args:
+		points: points to sort of shape [n_points, 2]
+	
+	Returns:
+		points sorted clockwise
+	"""
+	origin_point = np.mean(points, axis=0)
+	vectors = points - origin_point
+	vec_angles = np.arctan2(vectors[:, 0], vectors[:, 1])
+	sorted_points = points[np.argsort(vec_angles)[::-1], :]
+	# Roll the points to have the first point still be first
+	first_point_idx = np.where(np.all(sorted_points == points[0], axis=1))[0][0]
+	return np.roll(sorted_points, -first_point_idx, axis=0)
 
 
 def get_mask_corners(box: np.ndarray, mask: np.ndarray, img_size: Tuple[int]):

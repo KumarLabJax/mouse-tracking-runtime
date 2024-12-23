@@ -3,39 +3,15 @@
 This is a collection of Kumar Lab pipelines converted over to a flexible deployment runtime.
 This is specifically NOT designed for training new models, but rather takes exported/frozen models and runs inference on videos using them.
 
-This repository uses both ONNX-runtime (ORT) and Tensorflow Serving (TFS).
+This repository uses both Pytorch and Tensorflow Serving (TFS).
 
 # Installation
 
-Both virtual environments and singularity containers are supported.
-
-## Virtual Environment
-
-Python 3.10 venv tested
-
-```
-python3 -m venv runtime-venv
-source runtime-venv/bin/activate
-pip install -r requirements.txt
-```
-
-If you are running on a system with CUDA 12, you need to use a different onnxruntime-gpu wheel (instructions from https://onnxruntime.ai/docs/install/)
-
-```
-pip install --upgrade onnxruntime-gpu --extra-index-url https://aiinfra.pkgs.visualstudio.com/PublicPackages/_packaging/onnxruntime-cuda-12/pypi/simple/
-```
+Both Google Colab and singularity environments are supported
 
 ## Singularity Containers
 
-See containers in vm folder.
-
-### Notes
-
-This container is a bit hacky, because we match "system" installed cuda runtime for tensorflow and allow pytorch to use pypi libraries. Only the major version needs to match.
-
-Tensorflow GPU runtime: https://www.tensorflow.org/install/source#gpu
-Container runtime: (Check using `nvcc --version` inside container)
-Pytorch runtime: https://pytorch.org/get-started/locally/
+See the container definition file in the vm folder. This container is based off a google colab public docker.
 
 # Models
 
@@ -49,19 +25,7 @@ Trained Models:
 
 ### TSF Model
 
-The segmentation model was exported using code that resides in the obj-api codebase. This code was largely based on example code for optimizing and freezing a model.
-
-### ORT Model
-
-You can convert the tensorflow model into onnx format using the following command:
-
-```
-python -m tf2onnx.convert --saved-model tfs-models/single-mouse-segmentation/tracking-paper/ --output onnx-models/single-mouse-segmentation/tracking-paper.onnx --opset 18
-```
-
-There is a known issue related to the ConvTranspose op not being supported by ONNX-runtime on their CUDA provider, so it needs to run on the CPU. Why? It's apparently not popular enough of a layer. See https://github.com/microsoft/onnxruntime/issues/11312
-
-As such, in the ONNX-runtime, this model will run between the GPU and CPU and as such will perform poorly.
+The segmentation model was exported using code that resides in the obj-api codebase. This code was largely based on tensorflow example code for optimizing and freezing a model.
 
 ## Single Mouse Pose
 
@@ -69,9 +33,9 @@ Original Training Code: https://github.com/KumarLabJax/deep-hrnet-mouse
 Trained Models:
 * Gait Paper Model: https://zenodo.org/records/6380163
 
-### ORT Model
+### Pytorch Model
 
-In the source repository, there is an `onnx` branch with example code under `tools/export-onnx.py`. Essentially, the model is loaded within the original environment followed by a call to `torch.onnx.export`.
+The pytorch model is the released model.
 
 ## Multi-Mouse Pose
 
@@ -80,9 +44,9 @@ Trained Models:
 * Top-down: In Progress
 * Bottom-up: (Not published)
 
-### ORT Model
+### Pytorch Model
 
-In the source repository, there is an `onnx` branch with example code under `tools/export-onnx.py`. Essentially, the model is loaded within the original environment followed by a call to `torch.onnx.export`.
+The pytorch model is the model saved by the original hrnet code.
 
 ## Multi-Mouse Segmentation
 
@@ -115,18 +79,6 @@ python /object_detection/models/research/object_detection/exporter_main_v2.py --
 Note that this needs to be run in the folder with annotations if the config points to label_map.pbtxt locally.
 `/media/bgeuther/Storage/TempStorage/pose-validation/movenet/arena_corner/` is the location of these annotations.
 
-#### ORT Model
-
-Convert the model over to onnx:
-```
-python -m tf2onnx.convert --saved-model /media/bgeuther/Storage/TempStorage/trained-models/static-objects/obj-api-corner/saved_model/ --output onnx-models/static-objects/obj-api-corners.onnx --opset 13
-```
-
-```
-2024-04-01 09:55:41,353 - INFO - Model inputs: ['input_tensor']
-2024-04-01 09:55:41,353 - INFO - Model outputs: ['detection_boxes', 'detection_boxes_strided', 'detection_classes', 'detection_keypoint_scores', 'detection_keypoints', 'detection_multiclass_scores', 'detection_scores', 'num_detections']
-```
-
 ### Food Hopper
 
 Original Training Code: In Progress
@@ -142,18 +94,6 @@ python /object_detection/models/research/object_detection/exporter_main_v2.py --
 Note that this needs to be run in the folder with annotations if the config points to label_map.pbtxt locally.
 `/media/bgeuther/Storage/TempStorage/pose-validation/movenet/food_hopper/` is the location of these annotations.
 
-#### ORT Model
-
-Convert the model over to onnx:
-```
-python -m tf2onnx.convert --saved-model /media/bgeuther/Storage/TempStorage/trained-models/static-objects/obj-api-food/saved_model/ --output onnx-models/static-objects/obj-api-food.onnx --opset 13
-```
-
-```
-2024-04-01 09:56:32,297 - INFO - Model inputs: ['input_tensor']
-2024-04-01 09:56:32,297 - INFO - Model outputs: ['detection_boxes', 'detection_boxes_strided', 'detection_classes', 'detection_masks', 'detection_multiclass_scores', 'detection_scores', 'num_detections']
-```
-
 ### Lixit
 
 Original Training Code: In Progress
@@ -167,3 +107,7 @@ Trained Models:
 Original Training Code: https://github.com/KumarLabJax/deep-hrnet-mouse
 Trained Models:
 * fecal-boli (2020): Not yet published.
+
+#### Pytorch Model
+
+The pytorch model is the model saved by the original hrnet code.

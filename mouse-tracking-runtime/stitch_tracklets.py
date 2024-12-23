@@ -42,7 +42,7 @@ def match_predictions(pose_file):
 	# We need to overwrite original tracklet data
 	write_pose_v3_data(pose_file, instance_track=new_pose_ids)
 	# Also overwrite stitched tracklet data
-	mask = new_pose_ids == 0
+	mask = stitched_pose == 0
 	write_pose_v4_data(pose_file, mask, stitched_pose, centers)
 	# Finally, overwrite segmentation data
 	write_v6_tracklets(pose_file, new_seg_ids, stitched_seg)

@@ -72,7 +72,7 @@ def process_video(in_video_path, pose_h5_path, out_video_path, disable_id: bool 
 			all_seg_id = None
 		# v5 stores optional static object data.
 		all_static_object_data = {}
-		if major_version >= 5:
+		if major_version >= 5 and 'static_objects' in pose_h5:
 			for key in pose_h5['static_objects'].keys():
 				all_static_object_data[key] = pose_h5[f'static_objects/{key}'][:]
 		# v4 stores identity/tracklet merging data
