@@ -73,12 +73,17 @@ def main():
 	parser.add_argument('--out-video', help='output video file', required=True)
 	parser.add_argument('--out-pose', help='output HDF5 pose file', required=True)
 	parser.add_argument('--allow-overwrite', help='Allows existing files to be overwritten (default error)', default=False, action='store_true')
-	# Settings related to auto-detection
-	parser.add_argument('--frame-offset', help='Number of frames to offset from the first detected pose. Positive values indicate adding time before. (Default 150)', type=int, default=150)
-	parser.add_argument('--num-keypoints', help='Number of keypoints to consider a detected pose. (Default 12)', type=int, default=12)
-	parser.add_argument('--confidence-threshold', help='Minimum confidence of a keypoint to be considered valid. (Default 0.3)', type=float, default=0.3)
 	# Settings for clipping
 	parser.add_argument('--observation-duration', help='Duration of the observation to clip. (Default 1hr)', type=int, default=30 * 60 * 60)
+	detection_grp = parser.add_subparsers(help='Settings related to time alignment', dest='detection')
+	# Settings related to auto-detection
+	auto_parser = detection_grp.add_parser('auto', help='Automatically detect the first frame based on pose')
+	auto_parser.add_argument('--frame-offset', help='Number of frames to offset from the first detected pose. Positive values indicate adding time before. (Default 150)', type=int, default=150)
+	auto_parser.add_argument('--num-keypoints', help='Number of keypoints to consider a detected pose. (Default 12)', type=int, default=12)
+	auto_parser.add_argument('--confidence-threshold', help='Minimum confidence of a keypoint to be considered valid. (Default 0.3)', type=float, default=0.3)
+	# Settings for manual detection
+	manual_parser = detection_grp.add_parser('manual', help='Manually set the first frame')
+	manual_parser.add_argument('--frame-start', help='Frame to start the clip at', type=int, required=True)
 
 	args = parser.parse_args()
 	if not args.allow_overwrite:
@@ -89,11 +94,17 @@ def main():
 			msg = f'{args.out_pose} exists. If you wish to overwrite, please include --allow-overwrite'
 			raise FileExistsError(msg)
 
-	first_frame = find_first_pose_file(args.in_pose, args.confidence_threshold, args.num_keypoints)
-	output_start_frame = first_frame - args.frame_offset
-	output_end_frame = output_start_frame + args.frame_offset + args.observation_duration
-	print(f'Clipping video from frames {output_start_frame} ({print_time(output_start_frame)}) to {output_end_frame} ({print_time(output_end_frame)})')
-	clip_video(args.in_video, args.in_pose, args.out_video, args.out_pose, output_start_frame, output_end_frame)
+	if args.detection == 'auto':
+		first_frame = find_first_pose_file(args.in_pose, args.confidence_threshold, args.num_keypoints)
+		output_start_frame = first_frame - args.frame_offset
+		output_end_frame = output_start_frame + args.frame_offset + args.observation_duration
+		print(f'Clipping video from frames {output_start_frame} ({print_time(output_start_frame)}) to {output_end_frame} ({print_time(output_end_frame)})')
+		clip_video(args.in_video, args.in_pose, args.out_video, args.out_pose, output_start_frame, output_end_frame)
+	elif args.detection == 'manual':
+		first_frame = args.frame_start
+		output_end_frame = first_frame + args.observation_duration
+		print(f'Clipping video from frames {first_frame} ({print_time(first_frame)}) to {output_end_frame} ({print_time(output_end_frame)})')
+		clip_video(args.in_video, args.in_pose, args.out_video, args.out_pose, first_frame, output_end_frame)
 
 
 if __name__ == '__main__':
