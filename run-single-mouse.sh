@@ -76,6 +76,9 @@ H5_V6_OUT_FILE="${VIDEO_FILE%.*}_pose_est_v6.h5"
 
 function fail_cleanup() {
 	rm ${H5_V6_OUT_FILE}
+    if [[ ! -z "${H5_V2_OUT_FILE}" ]]; then
+        rm ${H5_V2_OUT_FILE}
+    fi
 	echo "Error on line $1"
     echo $( head -n $1 ${0} | tail -n 1 )
 	echo "Pipeline failed for Video ${VIDEO_FILE}, Please Rerun."
@@ -93,7 +96,15 @@ echo "Running single mouse pose step:"
 retry singularity exec --nv "${SINGULARITY_RUNTIME}" python3 /kumar_lab_models/mouse-tracking-runtime/infer_single_pose.py --video "${FULL_VIDEO_FILE}" --out-file "${H5_V6_OUT_FILE}" --batch-size 10
 
 # Clip the video file if requested
-singularity exec "${SINGULARITY_RUNTIME}" python3 /kumar_lab_models/mouse-tracking-runtime/clip_video_to_start.py --in-video "${FULL_VIDEO_FILE}" --in-pose "${H5_V6_OUT_FILE}" --out-video "${VIDEO_FILE%.*}_trimmed.${VIDEO_FILE##*.}" --out-pose "${H5_V6_OUT_FILE%.*}_trimmed.h5" auto
+if [[ ! -z "${AUTO_CLIP}" && "${AUTO_CLIP}" -eq 1 ]]; then
+    echo "Auto-clipping video file"
+    singularity exec "${SINGULARITY_RUNTIME}" python3 /kumar_lab_models/mouse-tracking-runtime/clip_video_to_start.py --in-video "${FULL_VIDEO_FILE}" --in-pose "${H5_V6_OUT_FILE}" --out-video "${VIDEO_FILE%.*}_trimmed.${VIDEO_FILE##*.}" --out-pose "${H5_V6_OUT_FILE%.*}_trimmed_pose_est_v6.h5" auto
+    # Reassign processing to the trimmed video file
+    rm ${H5_V6_OUT_FILE}
+    VIDEO_FILE="${VIDEO_FILE%.*}_trimmed.${VIDEO_FILE##*.}"
+    H5_V2_OUT_FILE="${VIDEO_FILE%.*}_trimmed_pose_est_v2.h5"
+    H5_V6_OUT_FILE="${VIDEO_FILE%.*}_trimmed_pose_est_v6.h5"
+fi
 
 # Save copy of V2 output if requested
 if [[ ! -z "${INCLUDE_V2}" && "${INCLUDE_V2}" -eq 1 ]]; then
