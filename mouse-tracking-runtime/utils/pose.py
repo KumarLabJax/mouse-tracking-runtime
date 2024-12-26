@@ -26,6 +26,11 @@ CONNECTED_SEGMENTS = [
 	],
 ]
 
+MIN_HIGH_CONFIDENCE = 0.75
+MIN_GAIT_CONFIDENCE = 0.3
+MIN_JABS_CONFIDENCE = 0.3
+MIN_JABS_CONFIDENCE = 3
+
 
 def rle(inarray: np.ndarray):
 	"""Run length encoding, implemented using numpy.
@@ -137,7 +142,7 @@ def convert_v2_to_v3(pose_data, conf_data, threshold: float = 0.3):
 			0.3 is used in JABS
 			0.4 is used for multi-mouse prediction code
 			0.5 is a typical default in other software
-	
+
 	Returns:
 		tuple of (pose_data_v3, conf_data_v3, instance_count, instance_embedding, instance_track_id)
 		pose_data_v3: pose_data reformatted to v3
@@ -169,7 +174,7 @@ def convert_multi_to_v2(pose_data, conf_data, identity_data):
 		pose_data: multi mouse pose data of shape [frame, max_animals, 12, 2]
 		conf_data: keypoint confidence data of shape [frame, max_animals, 12]
 		identity_data: identity data which indicates animal indices of shape [frame, max_animals]
-	
+
 	Returns:
 		list of tuples containing (id, pose_data_v2, conf_data_v2)
 		id: tracklet id
@@ -191,7 +196,8 @@ def convert_multi_to_v2(pose_data, conf_data, identity_data):
 		if len(id_frames) != len(set(id_frames)):
 			sorted_frames = np.sort(id_frames)
 			duplicated_frames = sorted_frames[:-1][sorted_frames[1:] == sorted_frames[:-1]]
-			raise ValueError(f'Identity {cur_id} contained multiple poses assigned on frames {duplicated_frames}.')
+			msg = f'Identity {cur_id} contained multiple poses assigned on frames {duplicated_frames}.'
+			raise ValueError(msg)
 		single_pose = np.zeros([len(pose_data), 12, 2], dtype=pose_data.dtype)
 		single_conf = np.zeros([len(pose_data), 12], dtype=conf_data.dtype)
 		single_pose[id_frames] = pose_data[id_frames, id_idxs]
@@ -202,7 +208,7 @@ def convert_multi_to_v2(pose_data, conf_data, identity_data):
 	return return_list
 
 
-def render_pose_overlay(image: np.ndarray, frame_points: np.ndarray, exclude_points: List = [], color: Tuple = (255, 255, 255)) -> np.ndarray:
+def render_pose_overlay(image: np.ndarray, frame_points: np.ndarray, exclude_points: list = [], color: tuple = (255, 255, 255)) -> np.ndarray:
 	"""Renders a single pose on an image.
 
 	Args:
@@ -273,10 +279,11 @@ def find_first_pose(confidence, confidence_threshold: float = 0.3, num_keypoints
 	# Multi-mouse
 	if num_keypoints_in_pose.ndim == 2:
 		num_keypoints_in_pose = np.max(num_keypoints_in_pose, axis=-1)
-	
-	completed_pose_frames = np.argwhere(num_keypoints_in_pose)
+
+	completed_pose_frames = np.argwhere(num_keypoints_in_pose > num_keypoints)
 	if len(completed_pose_frames) == 0:
-		raise ValueError("No poses detected")
+		msg = f"No poses detected with {num_keypoints} keypoints and confidence threshold {confidence_threshold}"
+		raise ValueError(msg)
 
 	return completed_pose_frames[0][0]
 
@@ -296,3 +303,92 @@ def find_first_pose_file(pose_file, confidence_threshold: float = 0.3, num_keypo
 		confidences = f['poseest/confidence'][...]
 
 	return find_first_pose(confidences, confidence_threshold, num_keypoints)
+
+
+def inspect_pose_v2(pose_file, pad: int = 150, duration: int = 108000):
+	"""Inspects a single mouse pose file v2 for coverage metrics.
+
+	Args:
+		pose_file: The pose file to inspect
+		pad: pad size expected in the beginning
+		duration: expected duration of experiment
+
+	Returns:
+		Dict containing the following keyed data:
+			first_frame_pose: First frame where the pose data appeared
+			first_frame_full_high_conf: First frame with 12 keypoints at high confidence
+			pose_counts: total number of poses predicted
+			missing_poses: missing poses in the primary duration of the video
+			missing_keypoint_frames: number of frames which don't contain 12 keypoints in the primary duration
+	"""
+	with h5py.File(pose_file, 'r') as f:
+		pose_version = f.attrs['pose_version']
+		if pose_version != 2:
+			msg = f'Only v2 pose files are supported for inspection. {pose_file} is version {pose_version}'
+			raise ValueError(msg)
+		pose_quality = f['poseest/confidence'][:]
+
+	num_keypoints = np.sum(pose_quality > MIN_JABS_CONFIDENCE, axis=1)
+	return_dict = {}
+	return_dict['first_frame_pose'] = np.where(np.all(num_keypoints, axis=1))[0][0]
+	high_conf_keypoints = np.all(pose_quality > MIN_HIGH_CONFIDENCE, axis=2).squeeze(1)
+	return_dict['first_frame_full_high_conf'] = np.where(high_conf_keypoints)[0][0]
+	return_dict['pose_counts'] = np.sum(num_keypoints > MIN_JABS_CONFIDENCE)
+	return_dict['missing_poses'] = duration - np.sum((num_keypoints > MIN_JABS_CONFIDENCE)[pad:pad + duration])
+	return_dict['missing_keypoint_frames'] = np.sum(num_keypoints[pad:pad + duration] != 12)
+	return return_dict
+
+
+def inspect_pose_v6(pose_file, pad: int = 150, duration: int = 108000):
+	"""Inspects a single mouse pose file v6 for coverage metrics.
+
+	Args:
+		pose_file: The pose file to inspect
+		pad: pad size expected in the beginning
+		duration: expected duration of experiment
+	Returns:
+		Dict containing the following keyed data:
+			first_frame_pose: First frame where the pose data appeared
+			first_frame_full_high_conf: First frame with 12 keypoints at high confidence
+			first_frame_seg: First frame where segmentation data was assigned an id
+			pose_counts: total number of poses predicted
+			seg_counts: total number of segmentations matched with poses
+			early_poses: number of pose predictions in the padded area of the video
+			early_segs: number of segmentation matched with poses in the padded area of the video
+			missing_poses: missing poses in the primary duration of the video
+			missing_segs: missing segmentations in the primary duration of the video
+			pose_tracklets: number of tracklets in the primary duration
+			missing_keypoint_frames: number of frames which don't contain 12 keypoints in the primary duration
+	"""
+	with h5py.File(pose_file, 'r') as f:
+		pose_version = f.attrs['pose_version']
+		if pose_version < 6:
+			msg = f'Only v6+ pose files are supported for inspection. {pose_file} is version {pose_version}'
+			raise ValueError(msg)
+		pose_counts = f['poseest/instance_count'][:]
+		if np.max(pose_counts) > 1:
+			msg = f'Only single mouse pose files are supported for inspection. {pose_file} contains multiple instances'
+			raise ValueError(msg)
+		pose_quality = f['poseest/confidence'][:]
+		pose_tracks = f['poseest/instance_track_id'][:]
+		seg_ids = f['poseest/longterm_seg_id'][:]
+
+	num_keypoints = 12 - np.sum(pose_quality.squeeze(1) == 0, axis=1)
+	return_dict = {}
+	return_dict['first_frame_pose'] = np.where(pose_counts > 0)[0][0]
+	high_conf_keypoints = np.all(pose_quality > MIN_HIGH_CONFIDENCE, axis=2).squeeze(1)
+	return_dict['first_frame_full_high_conf'] = np.where(high_conf_keypoints)[0][0]
+	jabs_keypoints = np.sum(pose_quality > MIN_JABS_CONFIDENCE, axis=2).squeeze(1)
+	return_dict['first_frame_jabs'] = np.where(jabs_keypoints >= MIN_JABS_CONFIDENCE)[0][0]
+	gait_keypoints = np.all(pose_quality[:, :, [BASE_TAIL_INDEX, LEFT_REAR_PAW_INDEX, RIGHT_REAR_PAW_INDEX]] > MIN_GAIT_CONFIDENCE, axis=2).squeeze(1)
+	return_dict['first_frame_gait'] = np.where(gait_keypoints)[0][0]
+	return_dict['first_frame_seg'] = np.where(seg_ids > 0)[0][0]
+	return_dict['pose_counts'] = np.sum(pose_counts)
+	return_dict['seg_counts'] = np.sum(seg_ids > 0)
+	return_dict['early_poses'] = np.sum(pose_counts[:pad])
+	return_dict['early_segs'] = np.sum(seg_ids[:pad] > 0)
+	return_dict['missing_poses'] = duration - np.sum(pose_counts[pad:pad + duration])
+	return_dict['missing_segs'] = duration - np.sum(seg_ids[pad:pad + duration] > 0)
+	return_dict['pose_tracklets'] = len(np.unique(pose_tracks[pad:pad + duration][pose_counts[pad:pad + duration] == 1]))
+	return_dict['missing_keypoint_frames'] = np.sum(num_keypoints[pad:pad + duration] != 12)
+	return return_dict
