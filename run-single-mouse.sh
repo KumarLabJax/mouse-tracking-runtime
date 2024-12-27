@@ -98,13 +98,17 @@ H5_V6_OUT_FILE="${VIDEO_FILE%.*}_pose_est_v6.h5"
 
 # Cleanup process to run when any step fails
 function fail_cleanup() {
-	rm ${H5_V6_OUT_FILE}
-  if [[ ! -z "${H5_V2_OUT_FILE}" ]]; then
+  rm ${H5_V6_OUT_FILE}
+  if [[ -f "${H5_V2_OUT_FILE}" ]]; then
     rm ${H5_V2_OUT_FILE}
   fi
-	echo "Error on line $1"
+  # Was the video trimmed? If so, remove it
+  if [[ "${VIDEO_FILE##*_trimmed}" = ".mp4" ]]; then
+	  rm ${VIDEO_FILE}
+  fi
+  echo "Error on pipeline script line $1"
   echo $( head -n $1 ${0} | tail -n 1 )
-	echo "Pipeline failed for Video ${VIDEO_FILE}, Please Rerun."
+  echo "Pipeline failed for Video ${VIDEO_FILE}, Please Rerun."
   exit 1
 }
 
@@ -122,21 +126,21 @@ retry singularity exec --nv "${SINGULARITY_RUNTIME}" python3 /kumar_lab_models/m
 # Manual clip if start frame is provided
 if [[ ! -z "${START_FRAME}" ]]; then
   echo "Clipping video file manually to frame ${START_FRAME}"
-  singularity exec "${SINGULARITY_RUNTIME}" python3 /kumar_lab_models/mouse-tracking-runtime/clip_video_to_start.py --in-video "${VIDEO_FILE}" --in-pose "${H5_V6_OUT_FILE}" --out-video "${VIDEO_FILE%.*}_trimmed.mp4" --out-pose "${H5_V6_OUT_FILE%.*}_trimmed_pose_est_v6.h5" manual --start-frame "${START_FRAME}"
+  singularity exec "${SINGULARITY_RUNTIME}" python3 /kumar_lab_models/mouse-tracking-runtime/clip_video_to_start.py --in-video "${VIDEO_FILE}" --in-pose "${H5_V6_OUT_FILE}" --out-video "${VIDEO_FILE%.*}_trimmed.mp4" --out-pose "${VIDEO_FILE%.*}_trimmed_pose_est_v6.h5" manual --start-frame "${START_FRAME}"
   # Reassign processing to the trimmed video file
   rm ${H5_V6_OUT_FILE}
   VIDEO_FILE="${VIDEO_FILE%.*}_trimmed.mp4"
-  H5_V2_OUT_FILE="${VIDEO_FILE%.*}_trimmed_pose_est_v2.h5"
-  H5_V6_OUT_FILE="${VIDEO_FILE%.*}_trimmed_pose_est_v6.h5"
+  H5_V2_OUT_FILE="${VIDEO_FILE%.*}_pose_est_v2.h5"
+  H5_V6_OUT_FILE="${VIDEO_FILE%.*}_pose_est_v6.h5"
 # Auto clip if requested
 elif [[ ! -z "${AUTO_CLIP}" && "${AUTO_CLIP}" -eq 1 ]]; then
   echo "Auto-clipping video file"
-  singularity exec "${SINGULARITY_RUNTIME}" python3 /kumar_lab_models/mouse-tracking-runtime/clip_video_to_start.py --in-video "${VIDEO_FILE}" --in-pose "${H5_V6_OUT_FILE}" --out-video "${VIDEO_FILE%.*}_trimmed.mp4" --out-pose "${H5_V6_OUT_FILE%.*}_trimmed_pose_est_v6.h5" auto
+  singularity exec "${SINGULARITY_RUNTIME}" python3 /kumar_lab_models/mouse-tracking-runtime/clip_video_to_start.py --in-video "${VIDEO_FILE}" --in-pose "${H5_V6_OUT_FILE}" --out-video "${VIDEO_FILE%.*}_trimmed.mp4" --out-pose "${VIDEO_FILE%.*}_trimmed_pose_est_v6.h5" auto
   # Reassign processing to the trimmed video file
   rm ${H5_V6_OUT_FILE}
   VIDEO_FILE="${VIDEO_FILE%.*}_trimmed.mp4"
-  H5_V2_OUT_FILE="${VIDEO_FILE%.*}_trimmed_pose_est_v2.h5"
-  H5_V6_OUT_FILE="${VIDEO_FILE%.*}_trimmed_pose_est_v6.h5"
+  H5_V2_OUT_FILE="${VIDEO_FILE%.*}_pose_est_v2.h5"
+  H5_V6_OUT_FILE="${VIDEO_FILE%.*}_pose_est_v6.h5"
 fi
 
 # Save copy of V2 output if requested
@@ -158,7 +162,7 @@ retry singularity exec --nv "${SINGULARITY_RUNTIME}" python3 /kumar_lab_models/m
 
 # Run QC Step
 echo "Running QC step:"
-singularity exec "${SINGULARITY_RUNTIME}" python3 /kumar_lab_models/mouse-tracking-runtime/qa_single_pose.py --pose-file "${H5_V6_OUT_FILE}" --log-file "${QC_FILE}"
+singularity exec "${SINGULARITY_RUNTIME}" python3 /kumar_lab_models/mouse-tracking-runtime/qa_single_pose.py --pose "${H5_V6_OUT_FILE}" --output "${QC_FILE}"
 # Force group permissions on qc file
 if [[ -f "${QC_FILE}" ]]; then
 	chmod g+wr ${QC_FILE}
