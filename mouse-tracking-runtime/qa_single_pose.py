@@ -15,9 +15,11 @@ def main(argv):
 	parser = argparse.ArgumentParser(description='Script that generates a tabular quality metrics for a single mouse pose file.')
 	parser.add_argument('--pose', help='Pose file to inspect.', required=True)
 	parser.add_argument('--output', help='Output filename. Will append row if already exists.', default=f'QA_{datetime.now().strftime("%Y%m%d_%H%M%S")}.csv')
+	parser.add_argument('--pad', help='Number of frames to pad the start and end of the video.', type=int, default=150)
+	parser.add_argument('--duration', help='Duration of the video in frames.', type=int, default=108000)
 
 	args = parser.parse_args()
-	quality_df = pd.DataFrame(inspect_pose_v6(args.folder, args.folder_depth), index=[0])
+	quality_df = pd.DataFrame(inspect_pose_v6(args.pose, args.pad, args.duration), index=[0])
 	quality_df.to_csv(args.output, mode='a', index=False, header=not Path(args.output).exists())
 
 
