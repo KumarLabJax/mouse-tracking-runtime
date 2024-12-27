@@ -1,8 +1,6 @@
-import numpy as np
 import cv2
 import h5py
-from typing import List, Tuple
-
+import numpy as np
 
 NOSE_INDEX = 0
 LEFT_EAR_INDEX = 1
@@ -48,12 +46,11 @@ def rle(inarray: np.ndarray):
 	n = len(ia)
 	if n == 0:
 		return (None, None, None)
-	else:
-		y = ia[1:] != ia[:-1]
-		i = np.append(np.where(y), n - 1)
-		z = np.diff(np.append(-1, i))
-		p = np.cumsum(np.append(0, z))[:-1]
-		return (p, z, ia[i])
+	y = ia[1:] != ia[:-1]
+	i = np.append(np.where(y), n - 1)
+	z = np.diff(np.append(-1, i))
+	p = np.cumsum(np.append(0, z))[:-1]
+	return (p, z, ia[i])
 
 
 def argmax_2d(arr):
@@ -94,9 +91,7 @@ def get_peak_coords(arr):
 	if len(peak_locations) == 0:
 		return np.zeros([0], dtype=np.float32), np.zeros([0, 2], dtype=np.int16)
 
-	max_vals = []
-	for coord in peak_locations:
-		max_vals.append(arr[coord.tolist()])
+	max_vals = [arr[coord.tolist()] for coord in peak_locations]
 
 	return np.stack(max_vals), peak_locations
 
@@ -344,21 +339,22 @@ def inspect_pose_v6(pose_file, pad: int = 150, duration: int = 108000):
 
 	Args:
 		pose_file: The pose file to inspect
-		pad: pad size expected in the beginning
-		duration: expected duration of experiment
+		pad: duration of data skipped in the beginning (not observation period)
+		duration: observation duration of experiment
 	Returns:
 		Dict containing the following keyed data:
+			video_duration: Duration of the video
 			first_frame_pose: First frame where the pose data appeared
-			first_frame_full_high_conf: First frame with 12 keypoints at high confidence
+			first_frame_full_high_conf: First frame with 12 keypoints > 0.75 confidence
+			first_frame_jabs: First frame with 3 keypoints > 0.3 confidence
+			first_frame_gait: First frame > 0.3 confidence for base tail and rear paws keypoints
 			first_frame_seg: First frame where segmentation data was assigned an id
-			pose_counts: total number of poses predicted
-			seg_counts: total number of segmentations matched with poses
-			early_poses: number of pose predictions in the padded area of the video
-			early_segs: number of segmentation matched with poses in the padded area of the video
-			missing_poses: missing poses in the primary duration of the video
-			missing_segs: missing segmentations in the primary duration of the video
-			pose_tracklets: number of tracklets in the primary duration
-			missing_keypoint_frames: number of frames which don't contain 12 keypoints in the primary duration
+			pose_counts: Total number of poses predicted
+			seg_counts: Total number of segmentations matched with poses
+			missing_poses: Missing poses in the observation duration of the video
+			missing_segs: Missing segmentations in the observation duration of the video
+			pose_tracklets: Number of tracklets in the observation duration
+			missing_keypoint_frames: Number of frames which don't contain 12 keypoints in the observation duration
 	"""
 	with h5py.File(pose_file, 'r') as f:
 		pose_version = f.attrs['pose_version']
@@ -375,6 +371,7 @@ def inspect_pose_v6(pose_file, pad: int = 150, duration: int = 108000):
 
 	num_keypoints = 12 - np.sum(pose_quality.squeeze(1) == 0, axis=1)
 	return_dict = {}
+	return_dict['video_duration'] = pose_counts.shape[0]
 	return_dict['first_frame_pose'] = np.where(pose_counts > 0)[0][0]
 	high_conf_keypoints = np.all(pose_quality > MIN_HIGH_CONFIDENCE, axis=2).squeeze(1)
 	return_dict['first_frame_full_high_conf'] = np.where(high_conf_keypoints)[0][0]
@@ -385,8 +382,6 @@ def inspect_pose_v6(pose_file, pad: int = 150, duration: int = 108000):
 	return_dict['first_frame_seg'] = np.where(seg_ids > 0)[0][0]
 	return_dict['pose_counts'] = np.sum(pose_counts)
 	return_dict['seg_counts'] = np.sum(seg_ids > 0)
-	return_dict['early_poses'] = np.sum(pose_counts[:pad])
-	return_dict['early_segs'] = np.sum(seg_ids[:pad] > 0)
 	return_dict['missing_poses'] = duration - np.sum(pose_counts[pad:pad + duration])
 	return_dict['missing_segs'] = duration - np.sum(seg_ids[pad:pad + duration] > 0)
 	return_dict['pose_tracklets'] = len(np.unique(pose_tracks[pad:pad + duration][pose_counts[pad:pad + duration] == 1]))

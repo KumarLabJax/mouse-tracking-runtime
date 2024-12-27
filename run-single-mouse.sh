@@ -42,12 +42,14 @@ else
 	JOB_STRING="${SLURM_JOB_ID}_${SLURM_ARRAY_TASK_ID}"
 fi
 
-#scontrol show job -d ${JOB_STRING}
+scontrol show job -d ${JOB_STRING}
 # Force group permissions if default log file used
 LOG_FILE=/projects/kumar-lab/multimouse-pipeline/logs/slurm-${SLURM_JOB_NAME}-${JOB_STRING}.out
 if [[ -f "${LOG_FILE}" ]]; then
 	chmod g+wr ${LOG_FILE}
 fi
+# Group permissions on QC file are changed later, to ensure header is written
+QC_FILE=/projects/kumar-lab/multimouse-pipeline/qa_logs/single-pose-${JOB_STRING}.csv
 
 # Check if we are running a batch job or a single job and assign the video file
 if [[ -z "${VIDEO_FILE}" ]]; then
@@ -122,6 +124,14 @@ retry singularity exec --nv "${SINGULARITY_RUNTIME}" python3 /kumar_lab_models/m
 # Fecal Boli Inference step
 echo "Running fecal boli inference step:"
 retry singularity exec --nv "${SINGULARITY_RUNTIME}" python3 /kumar_lab_models/mouse-tracking-runtime/infer_fecal_boli.py --video "${FULL_VIDEO_FILE}" --out-file "${H5_V6_OUT_FILE}"
+
+# Run QC Step
+echo "Running QC step:"
+singularity exec "${SINGULARITY_RUNTIME}" python3 /kumar_lab_models/mouse-tracking-runtime/qa_single_pose.py --pose-file "${H5_V6_OUT_FILE}" --log-file "${QC_FILE}"
+# Force group permissions on qc file
+if [[ -f "${QC_FILE}" ]]; then
+	chmod g+wr ${QC_FILE}
+fi
 
 # Cleanup if successful
 # rm ${VIDEO_FILE}
