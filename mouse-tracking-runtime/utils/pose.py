@@ -269,13 +269,13 @@ def find_first_pose(confidence, confidence_threshold: float = 0.3, num_keypoints
 	Raises:
 		ValueError if no pose meets the criteria
 	"""
-	valid_keypoints = np.all(confidence > confidence_threshold, axis=-1)
+	valid_keypoints = confidence > confidence_threshold
 	num_keypoints_in_pose = np.sum(valid_keypoints, axis=-1)
 	# Multi-mouse
 	if num_keypoints_in_pose.ndim == 2:
 		num_keypoints_in_pose = np.max(num_keypoints_in_pose, axis=-1)
 
-	completed_pose_frames = np.argwhere(num_keypoints_in_pose > num_keypoints)
+	completed_pose_frames = np.argwhere(num_keypoints_in_pose >= num_keypoints)
 	if len(completed_pose_frames) == 0:
 		msg = f"No poses detected with {num_keypoints} keypoints and confidence threshold {confidence_threshold}"
 		raise ValueError(msg)
@@ -344,6 +344,7 @@ def inspect_pose_v6(pose_file, pad: int = 150, duration: int = 108000):
 	Returns:
 		Dict containing the following keyed data:
 			video_duration: Duration of the video
+			corners_present: If the corners are present in the pose file
 			first_frame_pose: First frame where the pose data appeared
 			first_frame_full_high_conf: First frame with 12 keypoints > 0.75 confidence
 			first_frame_jabs: First frame with 3 keypoints > 0.3 confidence
@@ -368,10 +369,12 @@ def inspect_pose_v6(pose_file, pad: int = 150, duration: int = 108000):
 		pose_quality = f['poseest/confidence'][:]
 		pose_tracks = f['poseest/instance_track_id'][:]
 		seg_ids = f['poseest/longterm_seg_id'][:]
+		corners_present = 'static_objects/corners' in f
 
 	num_keypoints = 12 - np.sum(pose_quality.squeeze(1) == 0, axis=1)
 	return_dict = {}
 	return_dict['video_duration'] = pose_counts.shape[0]
+	return_dict['corners_present'] = corners_present
 	return_dict['first_frame_pose'] = np.where(pose_counts > 0)[0][0]
 	high_conf_keypoints = np.all(pose_quality > MIN_HIGH_CONFIDENCE, axis=2).squeeze(1)
 	return_dict['first_frame_full_high_conf'] = np.where(high_conf_keypoints)[0][0]
