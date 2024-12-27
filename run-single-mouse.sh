@@ -31,25 +31,31 @@ function retry {
 	done
 }
 
+# Print logging of the assigned resources
 echo "Running on node: ${SLURM_JOB_NODELIST}"
 echo "Assigned GPU: ${CUDA_VISIBLE_DEVICES}"
 echo "Using the following images:"
 ls -l ${SINGULARITY_RUNTIME}
 echo "Slurm job info: "
+# Job string is different for array jobs
 if [[ -z "${SLURM_ARRAY_TASK_ID}" ]]; then
 	JOB_STRING="${SLURM_JOB_ID}"
 else
 	JOB_STRING="${SLURM_JOB_ID}_${SLURM_ARRAY_TASK_ID}"
 fi
-
 scontrol show job -d ${JOB_STRING}
+
 # Force group permissions if default log file used
 LOG_FILE=/projects/kumar-lab/multimouse-pipeline/logs/slurm-${SLURM_JOB_NAME}-${JOB_STRING}.out
 if [[ -f "${LOG_FILE}" ]]; then
 	chmod g+wr ${LOG_FILE}
 fi
+
+# If QC_FILE is not set, use a default location
 # Group permissions on QC file are changed later, to ensure header is written
-QC_FILE=/projects/kumar-lab/multimouse-pipeline/qa_logs/single-pose-${JOB_STRING}.csv
+if [[ -z "${QC_FILE}" ]]; then
+    QC_FILE=/projects/kumar-lab/multimouse-pipeline/qa_logs/single-pose-${JOB_STRING}.csv
+fi
 
 # Check if we are running a batch job or a single job and assign the video file
 if [[ -z "${VIDEO_FILE}" ]]; then
@@ -76,6 +82,7 @@ module load apptainer
 H5_V2_OUT_FILE="${VIDEO_FILE%.*}_pose_est_v2.h5"
 H5_V6_OUT_FILE="${VIDEO_FILE%.*}_pose_est_v6.h5"
 
+# Cleanup process to run when any step fails
 function fail_cleanup() {
 	rm ${H5_V6_OUT_FILE}
     if [[ ! -z "${H5_V2_OUT_FILE}" ]]; then

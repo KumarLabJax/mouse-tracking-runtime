@@ -38,6 +38,9 @@ if [[ ${#files[@]} -eq 0 && ${#batches[@]} -eq 0 ]]; then
   exit 1
 fi
 
+# Store all qc from this command in the same file
+QC_FILE="/projects/kumar-lab/multimouse-pipeline/qa_logs/single-pose-$(date +"%Y%m%d%H%M").csv"
+
 # Submit array jobs for batch files
 for batch in "${batches[@]}"; do
   if [[ ! -f "${batch}" ]]; then
@@ -46,7 +49,7 @@ for batch in "${batches[@]}"; do
   fi
   NUM_VIDEOS=$(wc -l < "${batch}")
   echo "Submitting ${NUM_VIDEOS} videos for single mouse pose in: ${batch}"
-  sbatch --export=BATCH_FILE="${batch}",INCLUDE_V2="${flags[i]:=0}",AUTO_CLIP="${flags[a]:=0}" --array=1-"$NUM_VIDEOS"%56 "${SINGLE_MOUSE_POSE_SCRIPT}"
+  sbatch --export=BATCH_FILE="${batch}",INCLUDE_V2="${flags[i]:=0}",AUTO_CLIP="${flags[a]:=0}",QC_FILE="${QC_FILE}" --array=1-"$NUM_VIDEOS"%56 "${SINGLE_MOUSE_POSE_SCRIPT}"
 done
 
 # Submit jobs for individual files
@@ -56,5 +59,5 @@ for file in "${files[@]}"; do
 	continue
   fi
   echo "Submitting single mouse pose for: ${file}"
-  sbatch --export=VIDEO_FILE="${file}",INCLUDE_V2="${flags[i]:=0}",AUTO_CLIP="${flags[a]:=0}" "${SINGLE_MOUSE_POSE_SCRIPT}"
+  sbatch --export=VIDEO_FILE="${file}",INCLUDE_V2="${flags[i]:=0}",AUTO_CLIP="${flags[a]:=0}",QC_FILE="${QC_FILE}" "${SINGLE_MOUSE_POSE_SCRIPT}"
 done
