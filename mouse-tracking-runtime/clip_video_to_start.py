@@ -51,10 +51,10 @@ def clip_video(in_video, in_pose, out_video, out_pose, frame_start, frame_end):
 	if not Path(in_pose).exists():
 		msg = f'{in_pose} does not exist'
 		raise FileNotFoundError(msg)
-	if not isinstance(frame_start, int):
+	if not isinstance(frame_start, (int, np.integer)):
 		msg = f'frame_start must be an integer, not {type(frame_start)}'
 		raise TypeError(msg)
-	if not isinstance(frame_end, int):
+	if not isinstance(frame_end, (int, np.integer)):
 		msg = f'frame_start must be an integer, not {type(frame_end)}'
 		raise TypeError(msg)
 
