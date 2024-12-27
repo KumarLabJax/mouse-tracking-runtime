@@ -2,10 +2,10 @@
 shopt -s extglob
 
 SINGLE_MOUSE_POSE_SCRIPT="run-single-mouse.sh"
-USAGE_STR="Usage: ./infer-single-pose-pipeline-v6.sh [-b|--batch movie_list.txt] [-f|--file movie.avi] [-i|--include-v2] [-a|--auto-clip]"
+USAGE_STR="Usage: ./infer-single-pose-pipeline-v6.sh [-b|--batch movie_list.txt] [-f|--file movie.avi] [-m|--manual movie.avi start_time] [-i|--include-v2] [-a|--auto-clip]"
 
 declare -A flags=()
-files=() batches=()
+files=() batches=() manual_files=() manual_starts=()
 
 while (( $# > 0 )) ; do
   case $1 in
@@ -19,10 +19,11 @@ while (( $# > 0 )) ; do
 	#Argument parsing
     -a|--auto-clip) (( flags[a]++ )) ;;
     -i|--include-v2) (( flags[i]++ )) ;;
-    -b|--batch) batches+=( "${2?Missing argument for -b|--batch}" ) ; shift ;;
-    -f|--file) files+=( "${2?Missing argument for -f|--file}" ) ; shift ;;
+    -b|--batch) batches+=( "${2?Missing batch file argument for -b|--batch}" ) ; shift ;;
+    -f|--file) files+=( "${2?Missing file argument for -f|--file}" ) ; shift ;;
+	-m|--manual) manual_files+=( "${2?Missing file argument for -m|--manual}" ) ; manual_starts+=( "${3?Missing start frame argument for -m|--manual}" ) ; shift 2 ;;
     --) shift; break ;;
-    -*) printf >&2 'Unknown option %s\n' "$1" "\n${USAGE_STR}" ; exit 1 ;;
+    -*) printf >&2 'Unknown option %s\n' "$1" '\n${USAGE_STR}' ; exit 1 ;;
     *) break ;;
   esac
   shift
@@ -33,7 +34,7 @@ done
 
 ERROR_STR="ERROR: you need to provide at least one video file to process.\n${USAGE_STR}"
 
-if [[ ${#files[@]} -eq 0 && ${#batches[@]} -eq 0 ]]; then
+if [[ ${#files[@]} -eq 0 && ${#batches[@]} -eq 0 && ${#manual_files[@]} -eq 0 ]]; then
   echo "${ERROR_STR}"
   exit 1
 fi
@@ -52,7 +53,7 @@ for batch in "${batches[@]}"; do
   sbatch --export=BATCH_FILE="${batch}",INCLUDE_V2="${flags[i]:=0}",AUTO_CLIP="${flags[a]:=0}",QC_FILE="${QC_FILE}" --array=1-"$NUM_VIDEOS"%56 "${SINGLE_MOUSE_POSE_SCRIPT}"
 done
 
-# Submit jobs for individual files
+# Submit jobs for individual files with auto-detection starts
 for file in "${files[@]}"; do
   if [[ ! -f "${file}" ]]; then
 	echo "ERROR: File $file does not exist, skipping processing."
@@ -60,4 +61,16 @@ for file in "${files[@]}"; do
   fi
   echo "Submitting single mouse pose for: ${file}"
   sbatch --export=VIDEO_FILE="${file}",INCLUDE_V2="${flags[i]:=0}",AUTO_CLIP="${flags[a]:=0}",QC_FILE="${QC_FILE}" "${SINGLE_MOUSE_POSE_SCRIPT}"
+done
+
+# Submit jobs for individual files with manual start times
+for $(( i in "${#manual_files[@]}" )); do
+  file="${manual_files[$i]}"
+  start="${manual_starts[$i]}"
+  if [[ ! -f "${file}" ]]; then
+	echo "ERROR: File $file does not exist, skipping processing."
+	continue
+  fi
+  echo "Submitting single mouse pose for: ${file} with manual clipping at frame ${start}"
+  sbatch --export=VIDEO_FILE="${file}"START_FRAME="${start},INCLUDE_V2="${flags[i]:=0}",AUTO_CLIP="${flags[a]:=0}",QC_FILE="${QC_FILE}" "${SINGLE_MOUSE_POSE_SCRIPT}"
 done
