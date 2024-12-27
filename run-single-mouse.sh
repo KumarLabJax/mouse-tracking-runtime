@@ -116,25 +116,25 @@ trap 'fail_cleanup $LINENO' ERR
 
 # Pose V2 Inference step
 echo "Running single mouse pose step:"
-retry singularity exec --nv "${SINGULARITY_RUNTIME}" python3 /kumar_lab_models/mouse-tracking-runtime/infer_single_pose.py --video "${FULL_VIDEO_FILE}" --out-file "${H5_V6_OUT_FILE}" --batch-size 10
+retry singularity exec --nv "${SINGULARITY_RUNTIME}" python3 /kumar_lab_models/mouse-tracking-runtime/infer_single_pose.py --video "${VIDEO_FILE}" --out-file "${H5_V6_OUT_FILE}" --batch-size 10
 
 # Clip the video file if requested
 # Manual clip if start frame is provided
 if [[ ! -z "${START_FRAME}" ]]; then
   echo "Clipping video file manually to frame ${START_FRAME}"
-  singularity exec "${SINGULARITY_RUNTIME}" python3 /kumar_lab_models/mouse-tracking-runtime/clip_video_to_start.py --in-video "${FULL_VIDEO_FILE}" --in-pose "${H5_V6_OUT_FILE}" --out-video "${VIDEO_FILE%.*}_trimmed.${VIDEO_FILE##*.}" --out-pose "${H5_V6_OUT_FILE%.*}_trimmed_pose_est_v6.h5" manual --start-frame "${START_FRAME}"
+  singularity exec "${SINGULARITY_RUNTIME}" python3 /kumar_lab_models/mouse-tracking-runtime/clip_video_to_start.py --in-video "${VIDEO_FILE}" --in-pose "${H5_V6_OUT_FILE}" --out-video "${VIDEO_FILE%.*}_trimmed.mp4" --out-pose "${H5_V6_OUT_FILE%.*}_trimmed_pose_est_v6.h5" manual --start-frame "${START_FRAME}"
   # Reassign processing to the trimmed video file
   rm ${H5_V6_OUT_FILE}
-  VIDEO_FILE="${VIDEO_FILE%.*}_trimmed.${VIDEO_FILE##*.}"
+  VIDEO_FILE="${VIDEO_FILE%.*}_trimmed.mp4"
   H5_V2_OUT_FILE="${VIDEO_FILE%.*}_trimmed_pose_est_v2.h5"
   H5_V6_OUT_FILE="${VIDEO_FILE%.*}_trimmed_pose_est_v6.h5"
 # Auto clip if requested
 elif [[ ! -z "${AUTO_CLIP}" && "${AUTO_CLIP}" -eq 1 ]]; then
   echo "Auto-clipping video file"
-  singularity exec "${SINGULARITY_RUNTIME}" python3 /kumar_lab_models/mouse-tracking-runtime/clip_video_to_start.py --in-video "${FULL_VIDEO_FILE}" --in-pose "${H5_V6_OUT_FILE}" --out-video "${VIDEO_FILE%.*}_trimmed.${VIDEO_FILE##*.}" --out-pose "${H5_V6_OUT_FILE%.*}_trimmed_pose_est_v6.h5" auto
+  singularity exec "${SINGULARITY_RUNTIME}" python3 /kumar_lab_models/mouse-tracking-runtime/clip_video_to_start.py --in-video "${VIDEO_FILE}" --in-pose "${H5_V6_OUT_FILE}" --out-video "${VIDEO_FILE%.*}_trimmed.mp4" --out-pose "${H5_V6_OUT_FILE%.*}_trimmed_pose_est_v6.h5" auto
   # Reassign processing to the trimmed video file
   rm ${H5_V6_OUT_FILE}
-  VIDEO_FILE="${VIDEO_FILE%.*}_trimmed.${VIDEO_FILE##*.}"
+  VIDEO_FILE="${VIDEO_FILE%.*}_trimmed.mp4"
   H5_V2_OUT_FILE="${VIDEO_FILE%.*}_trimmed_pose_est_v2.h5"
   H5_V6_OUT_FILE="${VIDEO_FILE%.*}_trimmed_pose_est_v6.h5"
 fi
@@ -146,15 +146,15 @@ fi
 
 # Corner Inference step
 echo "Running arena corner step:"
-retry singularity exec --nv "${SINGULARITY_RUNTIME}" python3 /kumar_lab_models/mouse-tracking-runtime/infer_arena_corner.py --video "${FULL_VIDEO_FILE}" --out-file "${H5_V6_OUT_FILE}"
+retry singularity exec --nv "${SINGULARITY_RUNTIME}" python3 /kumar_lab_models/mouse-tracking-runtime/infer_arena_corner.py --video "${VIDEO_FILE}" --out-file "${H5_V6_OUT_FILE}"
 
 # Segmentation Inference step
 echo "Running segmentation step:"
-retry singularity exec --nv "${SINGULARITY_RUNTIME}" python3 /kumar_lab_models/mouse-tracking-runtime/infer_single_segmentation.py --video "${FULL_VIDEO_FILE}" --out-file "${H5_V6_OUT_FILE}"
+retry singularity exec --nv "${SINGULARITY_RUNTIME}" python3 /kumar_lab_models/mouse-tracking-runtime/infer_single_segmentation.py --video "${VIDEO_FILE}" --out-file "${H5_V6_OUT_FILE}"
 
 # Fecal Boli Inference step
 echo "Running fecal boli inference step:"
-retry singularity exec --nv "${SINGULARITY_RUNTIME}" python3 /kumar_lab_models/mouse-tracking-runtime/infer_fecal_boli.py --video "${FULL_VIDEO_FILE}" --out-file "${H5_V6_OUT_FILE}"
+retry singularity exec --nv "${SINGULARITY_RUNTIME}" python3 /kumar_lab_models/mouse-tracking-runtime/infer_fecal_boli.py --video "${VIDEO_FILE}" --out-file "${H5_V6_OUT_FILE}"
 
 # Run QC Step
 echo "Running QC step:"

@@ -64,7 +64,7 @@ for file in "${files[@]}"; do
 done
 
 # Submit jobs for individual files with manual start times
-for $(( i in "${#manual_files[@]}" )); do
+for (( i=0; i<"${#manual_files[@]}"; i++ )); do
   file="${manual_files[$i]}"
   start="${manual_starts[$i]}"
   if [[ ! -f "${file}" ]]; then
@@ -72,5 +72,5 @@ for $(( i in "${#manual_files[@]}" )); do
     continue
   fi
   echo "Submitting single mouse pose for: ${file} with manual clipping at frame ${start}"
-  sbatch --export=VIDEO_FILE="${file}"START_FRAME="${start},INCLUDE_V2="${flags[i]:=0}",AUTO_CLIP="${flags[a]:=0}",QC_FILE="${QC_FILE}" "${SINGLE_MOUSE_POSE_SCRIPT}"
+  sbatch --export=VIDEO_FILE="${file}"START_FRAME="${start}",INCLUDE_V2="${flags[i]:=0}",AUTO_CLIP="${flags[a]:=0}",QC_FILE="${QC_FILE}" "${SINGLE_MOUSE_POSE_SCRIPT}"
 done
