@@ -96,12 +96,12 @@ def main():
 
 	if args.detection == 'auto':
 		first_frame = find_first_pose_file(args.in_pose, args.confidence_threshold, args.num_keypoints)
-		output_start_frame = np.clip(first_frame - args.frame_offset, a_min=0)
+		output_start_frame = np.maximum(first_frame - args.frame_offset, 0)
 		output_end_frame = output_start_frame + args.frame_offset + args.observation_duration
 		print(f'Clipping video from frames {output_start_frame} ({print_time(output_start_frame)}) to {output_end_frame} ({print_time(output_end_frame)})')
 		clip_video(args.in_video, args.in_pose, args.out_video, args.out_pose, output_start_frame, output_end_frame)
 	elif args.detection == 'manual':
-		first_frame = np.clip(args.frame_start, a_min=0)
+		first_frame = np.maximum(args.frame_start, 0)
 		output_end_frame = first_frame + args.observation_duration
 		print(f'Clipping video from frames {first_frame} ({print_time(first_frame)}) to {output_end_frame} ({print_time(output_end_frame)})')
 		clip_video(args.in_video, args.in_pose, args.out_video, args.out_pose, first_frame, output_end_frame)
