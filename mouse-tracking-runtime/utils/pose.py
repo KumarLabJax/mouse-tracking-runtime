@@ -53,6 +53,21 @@ def rle(inarray: np.ndarray):
 	return (p, z, ia[i])
 
 
+def safe_find_first(arr):
+	"""Finds the first non-zero index in an array.
+
+	Args:
+		arr: array to search
+
+	Returns:
+		integer index of the first non-zero element, -1 if no non-zero elements
+	"""
+	nonzero = np.where(arr)[0]
+	if len(nonzero) == 0:
+		return -1
+	return sorted(nonzero)[0]
+
+
 def argmax_2d(arr):
 	"""Obtains the peaks for all keypoints in a pose.
 
@@ -325,9 +340,9 @@ def inspect_pose_v2(pose_file, pad: int = 150, duration: int = 108000):
 
 	num_keypoints = np.sum(pose_quality > MIN_JABS_CONFIDENCE, axis=1)
 	return_dict = {}
-	return_dict['first_frame_pose'] = np.where(np.all(num_keypoints, axis=1))[0][0]
+	return_dict['first_frame_pose'] = safe_find_first(np.all(num_keypoints, axis=1))
 	high_conf_keypoints = np.all(pose_quality > MIN_HIGH_CONFIDENCE, axis=2).squeeze(1)
-	return_dict['first_frame_full_high_conf'] = np.where(high_conf_keypoints)[0][0]
+	return_dict['first_frame_full_high_conf'] = safe_find_first(high_conf_keypoints)
 	return_dict['pose_counts'] = np.sum(num_keypoints > MIN_JABS_CONFIDENCE)
 	return_dict['missing_poses'] = duration - np.sum((num_keypoints > MIN_JABS_CONFIDENCE)[pad:pad + duration])
 	return_dict['missing_keypoint_frames'] = np.sum(num_keypoints[pad:pad + duration] != 12)
@@ -375,14 +390,14 @@ def inspect_pose_v6(pose_file, pad: int = 150, duration: int = 108000):
 	return_dict = {}
 	return_dict['video_duration'] = pose_counts.shape[0]
 	return_dict['corners_present'] = corners_present
-	return_dict['first_frame_pose'] = np.where(pose_counts > 0)[0][0]
+	return_dict['first_frame_pose'] = safe_find_first(pose_counts > 0)
 	high_conf_keypoints = np.all(pose_quality > MIN_HIGH_CONFIDENCE, axis=2).squeeze(1)
-	return_dict['first_frame_full_high_conf'] = np.where(high_conf_keypoints)[0][0]
+	return_dict['first_frame_full_high_conf'] = safe_find_first(high_conf_keypoints)
 	jabs_keypoints = np.sum(pose_quality > MIN_JABS_CONFIDENCE, axis=2).squeeze(1)
-	return_dict['first_frame_jabs'] = np.where(jabs_keypoints >= MIN_JABS_CONFIDENCE)[0][0]
+	return_dict['first_frame_jabs'] = safe_find_first(jabs_keypoints >= MIN_JABS_CONFIDENCE)
 	gait_keypoints = np.all(pose_quality[:, :, [BASE_TAIL_INDEX, LEFT_REAR_PAW_INDEX, RIGHT_REAR_PAW_INDEX]] > MIN_GAIT_CONFIDENCE, axis=2).squeeze(1)
-	return_dict['first_frame_gait'] = np.where(gait_keypoints)[0][0]
-	return_dict['first_frame_seg'] = np.where(seg_ids > 0)[0][0]
+	return_dict['first_frame_gait'] = safe_find_first(gait_keypoints)
+	return_dict['first_frame_seg'] = safe_find_first(seg_ids > 0)
 	return_dict['pose_counts'] = np.sum(pose_counts)
 	return_dict['seg_counts'] = np.sum(seg_ids > 0)
 	return_dict['missing_poses'] = duration - np.sum(pose_counts[pad:pad + duration])
