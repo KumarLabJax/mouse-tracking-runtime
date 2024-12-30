@@ -317,7 +317,7 @@ def inspect_pose_v2(pose_file, pad: int = 150, duration: int = 108000):
 			missing_keypoint_frames: number of frames which don't contain 12 keypoints in the primary duration
 	"""
 	with h5py.File(pose_file, 'r') as f:
-		pose_version = f.attrs['pose_version']
+		pose_version = f['poseest'].attrs['version'][0]
 		if pose_version != 2:
 			msg = f'Only v2 pose files are supported for inspection. {pose_file} is version {pose_version}'
 			raise ValueError(msg)
@@ -358,7 +358,7 @@ def inspect_pose_v6(pose_file, pad: int = 150, duration: int = 108000):
 			missing_keypoint_frames: Number of frames which don't contain 12 keypoints in the observation duration
 	"""
 	with h5py.File(pose_file, 'r') as f:
-		pose_version = f.attrs['pose_version']
+		pose_version = f['poseest'].attrs['version'][0]
 		if pose_version < 6:
 			msg = f'Only v6+ pose files are supported for inspection. {pose_file} is version {pose_version}'
 			raise ValueError(msg)

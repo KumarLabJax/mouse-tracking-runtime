@@ -28,6 +28,7 @@
 
 # Permanent locations of the singularity images
 SINGULARITY_RUNTIME=/projects/kumar-lab/multimouse-pipeline/deployment-runtime-RHEL9-current.sif
+CODE_FOLDER=/kumar_lab_models/mouse-tracking-runtime/
 
 # Basic function that retries a command up to 5 times
 function retry {
@@ -126,13 +127,13 @@ trap 'fail_cleanup $LINENO' ERR
 
 # Pose V2 Inference step
 echo "Running single mouse pose step:"
-retry singularity exec --nv "${SINGULARITY_RUNTIME}" python3 /kumar_lab_models/mouse-tracking-runtime/infer_single_pose.py --video "${VIDEO_FILE}" --out-file "${H5_V6_OUT_FILE}" --batch-size 10
+retry singularity exec --nv "${SINGULARITY_RUNTIME}" python3 "${CODE_FOLDER}infer_single_pose.py" --video "${VIDEO_FILE}" --out-file "${H5_V6_OUT_FILE}" --batch-size 10
 
 # Clip the video file if requested
 # Manual clip if start frame is provided
 if [[ ! -z "${START_FRAME}" ]]; then
   echo "Clipping video file manually to frame ${START_FRAME}"
-  singularity exec "${SINGULARITY_RUNTIME}" python3 /kumar_lab_models/mouse-tracking-runtime/clip_video_to_start.py --in-video "${VIDEO_FILE}" --in-pose "${H5_V6_OUT_FILE}" --out-video "${VIDEO_FILE%.*}_trimmed.mp4" --out-pose "${VIDEO_FILE%.*}_trimmed_pose_est_v6.h5" manual --start-frame "${START_FRAME}" --observation-duration "${CLIP_DURATION}"
+  singularity exec "${SINGULARITY_RUNTIME}" python3 "${CODE_FOLDER}clip_video_to_start.py" --in-video "${VIDEO_FILE}" --in-pose "${H5_V6_OUT_FILE}" --out-video "${VIDEO_FILE%.*}_trimmed.mp4" --out-pose "${VIDEO_FILE%.*}_trimmed_pose_est_v6.h5" --observation-duration "${CLIP_DURATION}" manual --start-frame "${START_FRAME}"
   # Reassign processing to the trimmed video file
   rm ${H5_V6_OUT_FILE}
   VIDEO_FILE="${VIDEO_FILE%.*}_trimmed.mp4"
@@ -141,7 +142,7 @@ if [[ ! -z "${START_FRAME}" ]]; then
 # Auto clip if requested
 elif [[ ! -z "${AUTO_CLIP}" && "${AUTO_CLIP}" -eq 1 ]]; then
   echo "Auto-clipping video file"
-  singularity exec "${SINGULARITY_RUNTIME}" python3 /kumar_lab_models/mouse-tracking-runtime/clip_video_to_start.py --in-video "${VIDEO_FILE}" --in-pose "${H5_V6_OUT_FILE}" --out-video "${VIDEO_FILE%.*}_trimmed.mp4" --out-pose "${VIDEO_FILE%.*}_trimmed_pose_est_v6.h5" auto --observation-duration "${CLIP_DURATION}"
+  singularity exec "${SINGULARITY_RUNTIME}" python3 "${CODE_FOLDER}clip_video_to_start.py" --in-video "${VIDEO_FILE}" --in-pose "${H5_V6_OUT_FILE}" --out-video "${VIDEO_FILE%.*}_trimmed.mp4" --out-pose "${VIDEO_FILE%.*}_trimmed_pose_est_v6.h5" --observation-duration "${CLIP_DURATION}" auto
   # Reassign processing to the trimmed video file
   rm ${H5_V6_OUT_FILE}
   VIDEO_FILE="${VIDEO_FILE%.*}_trimmed.mp4"
@@ -156,19 +157,19 @@ fi
 
 # Corner Inference step
 echo "Running arena corner step:"
-retry singularity exec --nv "${SINGULARITY_RUNTIME}" python3 /kumar_lab_models/mouse-tracking-runtime/infer_arena_corner.py --video "${VIDEO_FILE}" --out-file "${H5_V6_OUT_FILE}"
+retry singularity exec --nv "${SINGULARITY_RUNTIME}" python3 "${CODE_FOLDER}infer_arena_corner.py" --video "${VIDEO_FILE}" --out-file "${H5_V6_OUT_FILE}"
 
 # Segmentation Inference step
 echo "Running segmentation step:"
-retry singularity exec --nv "${SINGULARITY_RUNTIME}" python3 /kumar_lab_models/mouse-tracking-runtime/infer_single_segmentation.py --video "${VIDEO_FILE}" --out-file "${H5_V6_OUT_FILE}"
+retry singularity exec --nv "${SINGULARITY_RUNTIME}" python3 "${CODE_FOLDER}infer_single_segmentation.py" --video "${VIDEO_FILE}" --out-file "${H5_V6_OUT_FILE}"
 
 # Fecal Boli Inference step
 echo "Running fecal boli inference step:"
-retry singularity exec --nv "${SINGULARITY_RUNTIME}" python3 /kumar_lab_models/mouse-tracking-runtime/infer_fecal_boli.py --video "${VIDEO_FILE}" --out-file "${H5_V6_OUT_FILE}"
+retry singularity exec --nv "${SINGULARITY_RUNTIME}" python3 "${CODE_FOLDER}infer_fecal_boli.py" --video "${VIDEO_FILE}" --out-file "${H5_V6_OUT_FILE}"
 
 # Run QC Step
 echo "Running QC step:"
-singularity exec "${SINGULARITY_RUNTIME}" python3 /kumar_lab_models/mouse-tracking-runtime/qa_single_pose.py --pose "${H5_V6_OUT_FILE}" --output "${QC_FILE}" --duration "${CLIP_DURATION}"
+singularity exec "${SINGULARITY_RUNTIME}" python3 "${CODE_FOLDER}qa_single_pose.py" --pose "${H5_V6_OUT_FILE}" --output "${QC_FILE}" --duration "${CLIP_DURATION}"
 # Force group permissions on qc file
 if [[ -f "${QC_FILE}" ]]; then
 	chmod g+wr ${QC_FILE}
