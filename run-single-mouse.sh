@@ -30,6 +30,11 @@
 SINGULARITY_RUNTIME=/projects/kumar-lab/multimouse-pipeline/deployment-runtime-RHEL9-current.sif
 CODE_FOLDER=/kumar_lab_models/mouse-tracking-runtime/
 
+# Default clip duration to 1hr of frames if not set
+if [[ -z "${CLIP_DURATION}" ]]; then
+  CLIP_DURATION=108000
+fi
+
 # Basic function that retries a command up to 5 times
 function retry {
 	local n=1
@@ -82,11 +87,6 @@ if [[ -z "${VIDEO_FILE}" ]]; then
 	fi
 	echo "Reading from batch: ${BATCH_FILE}"
 	VIDEO_FILE=`head -n $SLURM_ARRAY_TASK_ID $BATCH_FILE | tail -n 1`
-fi
-
-# Default clip duration to 1hr of frames if not set
-if [[ -z "${CLIP_DURATION}" ]]; then
-  CLIP_DURATION=108000
 fi
 
 echo "Processing video file: ${VIDEO_FILE}"
