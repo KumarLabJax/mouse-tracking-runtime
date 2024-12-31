@@ -1,7 +1,7 @@
 #!/bin/bash
 shopt -s extglob
 
-SINGLE_MOUSE_POSE_SCRIPT="run-single-mouse.sh"
+SINGLE_MOUSE_POSE_SCRIPT="/projects/kumar-lab/multimouse-pipeline/run-single-mouse.sh"
 USAGE_STR="Usage: ./infer-single-pose-pipeline-v6.sh [-b|--batch movie_list.txt] [-f|--file movie.avi] [-m|--manual movie.avi start_time] [-i|--include-v2] [-a|--auto-clip]"
 # Store all qc from this command in the same file
 QC_FILE="/projects/kumar-lab/multimouse-pipeline/qa_logs/single-pose-$(date +"%Y%m%d%H%M").csv"
