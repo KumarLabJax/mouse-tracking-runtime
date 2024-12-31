@@ -1,3 +1,7 @@
+import hashlib
+import re
+from pathlib import Path
+
 import cv2
 import h5py
 import numpy as np
@@ -27,7 +31,7 @@ CONNECTED_SEGMENTS = [
 MIN_HIGH_CONFIDENCE = 0.75
 MIN_GAIT_CONFIDENCE = 0.3
 MIN_JABS_CONFIDENCE = 0.3
-MIN_JABS_CONFIDENCE = 3
+MIN_JABS_KEYPOINTS = 3
 
 
 def rle(inarray: np.ndarray):
@@ -66,6 +70,25 @@ def safe_find_first(arr):
 	if len(nonzero) == 0:
 		return -1
 	return sorted(nonzero)[0]
+
+
+def hash_file(file: Path):
+	"""Return hash of file.
+
+	Args:
+		file: path to file to hash
+
+	Returns:
+		blake2b hash of file
+	"""
+	chunk_size = 8192
+	with file.open('rb') as f:
+		h = hashlib.blake2b(digest_size=20)
+		c = f.read(chunk_size)
+		while c:
+			h.update(c)
+			c = f.read(chunk_size)
+	return h.hexdigest()
 
 
 def argmax_2d(arr):
@@ -356,8 +379,12 @@ def inspect_pose_v6(pose_file, pad: int = 150, duration: int = 108000):
 		pose_file: The pose file to inspect
 		pad: duration of data skipped in the beginning (not observation period)
 		duration: observation duration of experiment
+
 	Returns:
 		Dict containing the following keyed data:
+			pose_file: The pose file inspected
+			pose_hash: The blake2b hash of the pose file
+			video_name: The video name associated with the pose file (no extension)
 			video_duration: Duration of the video
 			corners_present: If the corners are present in the pose file
 			first_frame_pose: First frame where the pose data appeared
@@ -388,13 +415,18 @@ def inspect_pose_v6(pose_file, pad: int = 150, duration: int = 108000):
 
 	num_keypoints = 12 - np.sum(pose_quality.squeeze(1) == 0, axis=1)
 	return_dict = {}
+	return_dict['pose_file'] = Path(pose_file).name
+	return_dict['pose_hash'] = hash_file(Path(pose_file))
+	# Keep 2 folders if present for video name
+	folder_name = '/'.join(Path(pose_file).parts[-3:-1]) + '/'
+	return_dict['video_name'] = folder_name + re.sub('_pose_est_v[0-9]+', '', Path(pose_file).stem)
 	return_dict['video_duration'] = pose_counts.shape[0]
 	return_dict['corners_present'] = corners_present
 	return_dict['first_frame_pose'] = safe_find_first(pose_counts > 0)
 	high_conf_keypoints = np.all(pose_quality > MIN_HIGH_CONFIDENCE, axis=2).squeeze(1)
 	return_dict['first_frame_full_high_conf'] = safe_find_first(high_conf_keypoints)
 	jabs_keypoints = np.sum(pose_quality > MIN_JABS_CONFIDENCE, axis=2).squeeze(1)
-	return_dict['first_frame_jabs'] = safe_find_first(jabs_keypoints >= MIN_JABS_CONFIDENCE)
+	return_dict['first_frame_jabs'] = safe_find_first(jabs_keypoints >= MIN_JABS_KEYPOINTS)
 	gait_keypoints = np.all(pose_quality[:, :, [BASE_TAIL_INDEX, LEFT_REAR_PAW_INDEX, RIGHT_REAR_PAW_INDEX]] > MIN_GAIT_CONFIDENCE, axis=2).squeeze(1)
 	return_dict['first_frame_gait'] = safe_find_first(gait_keypoints)
 	return_dict['first_frame_seg'] = safe_find_first(seg_ids > 0)
