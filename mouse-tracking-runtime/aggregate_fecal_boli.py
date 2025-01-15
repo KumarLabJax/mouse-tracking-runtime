@@ -41,7 +41,7 @@ def aggregate_folder_data(folder: str, depth: int = 2):
 		pivot = new_df.pivot(index='NetworkFilename', columns='minute', values='count')
 		read_data.append(pivot)
 
-	all_data = pd.concat(read_data).reset_index(drop=True)
+	all_data = pd.concat(read_data).reset_index(drop=False)
 	return all_data
 
 
