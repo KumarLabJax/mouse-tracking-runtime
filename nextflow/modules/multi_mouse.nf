@@ -1,4 +1,4 @@
-process MULTI_MOUSE_SEGMENTATION {
+process PREDICT_MULTI_MOUSE_SEGMENTATION {
     label "gpu"
     label "tracking"
     
@@ -16,7 +16,7 @@ process MULTI_MOUSE_SEGMENTATION {
     """
 }
 
-process MULTI_MOUSE_KEYPOINTS {
+process PREDICT_MULTI_MOUSE_KEYPOINTS {
     label "gpu"
     label "tracking"
     
@@ -34,7 +34,7 @@ process MULTI_MOUSE_KEYPOINTS {
     """
 }
 
-process MULTI_MOUSE_IDENTITY {
+process PREDICT_MULTI_MOUSE_IDENTITY {
     label "gpu"
     label "tracking"
     
@@ -52,7 +52,7 @@ process MULTI_MOUSE_IDENTITY {
     """
 }
 
-process MULTI_MOUSE_TRACKLETS {
+process GENERATE_MULTI_MOUSE_TRACKLETS {
     label "cpu"
     label "tracking"
     

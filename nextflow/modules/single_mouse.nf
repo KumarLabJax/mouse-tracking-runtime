@@ -1,4 +1,4 @@
-process SINGLE_MOUSE_SEGMENTATION {
+process PREDICT_SINGLE_MOUSE_SEGMENTATION {
     label "gpu"
     label "tracking"
     
@@ -16,7 +16,7 @@ process SINGLE_MOUSE_SEGMENTATION {
     """
 }
 
-process SINGLE_MOUSE_KEYPOINTS {
+process PREDICT_SINGLE_MOUSE_KEYPOINTS {
     label "gpu"
     label "tracking"
     
