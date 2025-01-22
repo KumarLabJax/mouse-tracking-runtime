@@ -5,6 +5,10 @@
 *.mp4
 *.h5
 *.onnx
+.nextflow.log*
+.nextflow
+.vscode
 __pycache__
 models
+work
 !mouse-tracking-runtime/models
