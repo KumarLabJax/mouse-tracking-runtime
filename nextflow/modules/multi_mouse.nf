@@ -3,11 +3,10 @@ process PREDICT_MULTI_MOUSE_SEGMENTATION {
     label "tracking"
     
     input:
-    path video_file
-    path in_pose
+    tuple path(video_file), path(in_pose)
 
     output:
-    path "${video_file.baseName}_seg_data.h5", emit: pose_file
+    tuple path(video_file), path("${video_file.baseName}_seg_data.h5"), emit: files
 
     script:
     """
@@ -21,11 +20,10 @@ process PREDICT_MULTI_MOUSE_KEYPOINTS {
     label "tracking"
     
     input:
-    path video_file
-    path in_pose
+    tuple path(video_file), path(in_pose)
 
     output:
-    path "${video_file.baseName}_pose_est_v3.h5", emit: pose_file
+    tuple path(video_file), path("${video_file.baseName}_pose_est_v3.h5"), emit: files
 
     script:
     """
@@ -39,11 +37,10 @@ process PREDICT_MULTI_MOUSE_IDENTITY {
     label "tracking"
     
     input:
-    path video_file
-    path in_pose
+    tuple path(video_file), path(in_pose)
 
     output:
-    path "${video_file.baseName}_pose_est_v3_with_id.h5", emit: pose_file
+    tuple poath(video_file), path("${video_file.baseName}_pose_est_v3_with_id.h5"), emit: files
 
     script:
     """
@@ -57,11 +54,11 @@ process GENERATE_MULTI_MOUSE_TRACKLETS {
     label "tracking"
     
     input:
+    tuple path(video_file), path(in_pose)
     val num_animals
-    path in_pose
 
     output:
-    path "${video_file.baseName}_pose_est_v4.h5", emit: pose_file
+    tuple path(video_file), path("${video_file.baseName}_pose_est_v4.h5"), emit: pose_file
 
     // Number of tracklets is not yet a parameter accepted by code, so num_animals is currently ignored
     script:

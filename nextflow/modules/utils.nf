@@ -4,7 +4,7 @@ process VIDEO_TO_POSE {
     path video_file
 
     output:
-    path "${video_file.baseName}_pose_est_v0.h5", emit: pose_file;
+    tuple path(video_file), path("${video_file.baseName}_pose_est_v0.h5"), emit: files;
 
     script:
     """

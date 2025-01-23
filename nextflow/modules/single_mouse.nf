@@ -3,11 +3,10 @@ process PREDICT_SINGLE_MOUSE_SEGMENTATION {
     label "tracking"
     
     input:
-    path video_file
-    path in_pose_file
+    tuple path(video_file), path(in_pose_file)
 
     output:
-    path "${video_file.baseName}_pose_est_v6.h5", emit: pose_file
+    tuple path(video_file), path("${video_file.baseName}_pose_est_v6.h5"), emit: pose_file
 
     script:
     """
@@ -21,11 +20,10 @@ process PREDICT_SINGLE_MOUSE_KEYPOINTS {
     label "tracking"
     
     input:
-    path video_file
-    path in_pose_file
+    tuple path(video_file), path(in_pose_file)
 
     output:
-    path "${video_file.baseName}_pose_est_v2.h5", emit: pose_file
+    tuple path(video_file), path("${video_file.baseName}_pose_est_v2.h5"), emit: pose_file
 
     script:
     """
