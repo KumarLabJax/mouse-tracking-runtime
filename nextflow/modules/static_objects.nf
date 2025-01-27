@@ -6,7 +6,7 @@ process PREDICT_ARENA_CORNERS {
     tuple path(video_file), path(in_pose)
 
     output:
-    tuple path(video_file), path("${video_file.baseName}_with_corners.h5"), emit: pose_file
+    tuple path(video_file), path("${video_file.baseName}_with_corners.h5"), emit: files
 
     script:
     """
@@ -23,7 +23,7 @@ process PREDICT_FOOD_HOPPER {
     tuple path(video_file), path(in_pose)
 
     output:
-    tuple path(video_file), path("${video_file.baseName}_with_food.h5"), emit: pose_file
+    tuple path(video_file), path("${video_file.baseName}_with_food.h5"), emit: files
 
     script:
     """
@@ -40,7 +40,7 @@ process PREDICT_LIXIT {
     tuple path(video_file), path(in_pose)
 
     output:
-    tuple path(video_file), path("${video_file.baseName}_with_lixit.h5"), emit: pose_file
+    tuple path(video_file), path("${video_file.baseName}_with_lixit.h5"), emit: files
 
     script:
     """

@@ -32,3 +32,37 @@ process CHECK_FILE {
     fi
     """
 }
+
+process FILTER_QC_WITH_CORNERS {
+    input:
+    path(qc_file)
+
+    output:
+    path "${qc_file.baseName}_with_corners.txt", emit: with_corners
+    path "${qc_file.baseName}_without_corners.txt", emit: without_corners
+
+    script:
+    """
+    awk -F',' '
+    NR==1 {
+        for (i=1; i<=NF; i++) {
+            f[\$i] = i
+        }
+    }
+    {
+        if (\$(f["corners_present"]) == "True") print \$(f["pose_file"])
+    }
+    ' ${qc_file} > "${qc_file.baseName}_with_corners.txt"
+    
+    awk -F',' '
+    NR==1 {
+        for (i=1; i<=NF; i++) {
+            f[\$i] = i
+        }
+    }
+    {
+        if (\$(f["corners_present"]) == "False") print \$(f["pose_file"])
+    }
+    ' ${qc_file} > "${qc_file.baseName}_without_corners.txt"
+    """
+}
