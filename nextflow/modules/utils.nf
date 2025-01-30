@@ -4,7 +4,7 @@ process VIDEO_TO_POSE {
     path video_file
 
     output:
-    tuple path(video_file), path("${video_file.baseName}_pose_est_v0.h5"), emit: files;
+    tuple path(video_file), path("${video_file.baseName}_pose_est_v0.h5"), emit: files
 
     script:
     """
@@ -30,6 +30,25 @@ process CHECK_FILE {
         echo "File does not exist"
         exit 1
     fi
+    """
+}
+
+process MERGE_FEATURE_ROWS {
+    input:
+    path feature_files
+    val feature_name
+    val header_size
+
+    output:
+    path "${feature_name}.csv", emit: merged_features
+
+    script:
+    """
+    head -n${header_size} ${feature_files[0]} > ${feature_name}.csv
+    for feature_file in ${feature_files};
+    do
+        tail -n+\$((${header_size}+1)) \${feature_file} >> ${feature_name}.csv
+    done
     """
 }
 

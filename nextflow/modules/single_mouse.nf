@@ -51,3 +51,19 @@ process QC_SINGLE_MOUSE {
     done
     """
 }
+
+process CLIP_VIDEO_AND_POSE {
+    label "tracking"
+
+    input:
+    tuple path(in_video), path(in_pose_file)
+    val clip_duration
+    
+    output:
+    tuple path("${in_video.baseName}_trimmed.mp4"), path("${in_pose_file.baseName}_trimmed.h5"), emit: files
+
+    script:
+    """
+    python3 ${params.tracking_code_dir}/clip_video_to_start.py --in-video "${in_video}" --in-pose "${in_pose_file}" --out-video "${in_video.baseName}_trimmed.mp4" --out-pose "${in_pose_file.baseName}_trimmed.h5" --observation-duration "${clip_duration}" auto
+    """
+}
