@@ -36,19 +36,44 @@ process CHECK_FILE {
 process MERGE_FEATURE_ROWS {
     input:
     path feature_files
-    val feature_name
+    val out_filename
     val header_size
 
     output:
-    path "${feature_name}.csv", emit: merged_features
+    path "${out_filename}.csv", emit: merged_features
 
     script:
     """
-    head -n${header_size} ${feature_files[0]} > ${feature_name}.csv
+    head -n${header_size} ${feature_files[0]} > ${out_filename}.csv
     for feature_file in ${feature_files};
     do
-        tail -n+\$((${header_size}+1)) \${feature_file} >> ${feature_name}.csv
+        tail -n+\$((${header_size}+1)) \${feature_file} >> ${out_filename}.csv
     done
+    """
+}
+
+process MERGE_FEATURE_COLS {
+    // Any environment with pandas installed should work here.
+    label "tracking"
+
+    input:
+    path feature_files
+    val col_to_merge_on
+    val out_filename
+
+    output:
+    path "${out_filename}.csv", emit: merged_features
+
+    script:
+    """
+    #!/usr/bin/env python3
+
+    import pandas as pd
+    import functools
+    file_list = [${feature_files.collect { "\"${it}\"" }.join(', ')}]
+    read_data = [pd.read_csv(f) for f in file_list]
+    merged_data = functools.reduce(lambda left, right: pd.merge(left, right, on="${col_to_merge_on}"), read_data)
+    merged_data.to_csv("${out_filename}", index=False)
     """
 }
 
