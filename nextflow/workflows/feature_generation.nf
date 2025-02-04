@@ -6,7 +6,8 @@ include { MERGE_FEATURE_ROWS as MERGE_GAIT;
           MERGE_FEATURE_ROWS as MERGE_DIST_B;
           MERGE_FEATURE_ROWS as MERGE_REAR_PAW_WIDTHS;
           MERGE_FEATURE_COLS } from "./../../nextflow/modules/utils"
-
+include { GENERATE_FEATURE_CACHE;
+          PREDICT_CLASSIFIERS } from "./../../nextflow/modules/jabs_classifiers"
 
 workflow SINGLE_MOUSE_V2_FEATURES {
     take:
@@ -36,3 +37,24 @@ workflow SINGLE_MOUSE_V2_FEATURES {
     emit:
     gait_results
 }
+
+// workflow SINGLE_MOUSE_V6_FEATURES {
+//     take:
+//     // tuple of video_file and pose_file from SINGLE_MOUSE_TRACKING
+//     input_pose_v6_batch
+
+//     main:
+//     GENERATE_FEATURE_CACHE(input_pose_v6_batch)
+//     // JABS Heuristic Classifiers
+//     heuristic_tables = PREDICT_HEURISTICS(GENERATE_FEATURE_CACHE.files, process.heuristic_classifiers)
+
+//     // JABS Behavior Classifiers
+//     classifier_predictions = PREDICT_CLASSIFIER(GENERATE_FEATURE_CACHE.files, process.single_mouse_classifiers)
+//     classifier_tables = GENERATE_BEHAVIOR_TABLES(classifier_predictions.collect(), process.single_mouse_classifiers)
+
+//     // Fecal Boli Extraction
+
+
+//     emit:
+    
+// }
