@@ -9,10 +9,12 @@ if (!params.workflow) {
     System.exit(1)
 }
 include { SINGLE_MOUSE_TRACKING } from './nextflow/workflows/single_mouse_pipeline'
-include { SINGLE_MOUSE_V2_FEATURES } from './nextflow/workflows/feature_generation'
+include { SINGLE_MOUSE_V2_FEATURES; SINGLE_MOUSE_V6_FEATURES } from './nextflow/workflows/feature_generation'
 include { MULTI_MOUSE_TRACKING } from './nextflow/workflows/multi_mouse_pipeline'
 include { QC_SINGLE_MOUSE } from './nextflow/modules/single_mouse'
-include { FILTER_QC_WITH_CORNERS } from './nextflow/modules/utils'
+include { SELECT_COLUMNS;
+          SUBSET_PATH_BY_VAR as WITH_CORNERS;
+          SUBSET_PATH_BY_VAR as WITHOUT_CORNERS } from './nextflow/modules/utils'
 
 /*
  * Combine input_data and input_batch into a single list
@@ -49,10 +51,23 @@ workflow{
         SINGLE_MOUSE_V2_FEATURES(all_v2_outputs)
 
         // Only continue processing files that generate corners
-        // FILTER_QC_WITH_CORNERS(QC_SINGLE_MOUSE.out)
-        // v6_with_corners = Channel.fromPath(FILTER_QC_WITH_CORNERS.out.with_corners)
-        // SINGLE_MOUSE_V6_FEATURES(v6_with_corners)
-        // v6_without_corners = Channel.fromPath(FILTER_QC_WITH_CORNERS.out.without_corners)
+        def split_criteria = multiMapCriteria { f, v ->
+            present: v == "True" ? f : null
+            missing: v == "False" ? f : null
+        }
+        joined_channel = SELECT_COLUMNS(QC_SINGLE_MOUSE.out, 'pose_file', 'corners_present')
+            .splitCsv(header: true, sep: ',')
+            .map(row -> [row.pose_file, row.corners_present])
+        joined_channel.view() {v -> "All files: ${v}"}
+        split_channel = joined_channel.multiMap(split_criteria)
+        split_channel.present.view() {v -> "Present corners: ${v}"}
+        split_channel.missing.view() {v -> "Missing corners: ${v}"}
+        // v6_with_corners = WITH_CORNERS(all_v6_outputs, split_channel.present.flatten(), 'tmp')
+        v6_with_corners = all_v6_outputs.filter { video, pose ->
+            split_channel.present.flatten().toList().contains(pose) ? [video, pose] : null
+        }
+        SINGLE_MOUSE_V6_FEATURES(v6_with_corners)
+        // v6_without_corners = Channel.fromPath(SELECT_COLUMNS.out.without_corners)
         // ADD_TO_MANUAL_CORNER_CORRECTION(v6_without_corners)
     }
     if (params.workflow == "multi-mouse"){

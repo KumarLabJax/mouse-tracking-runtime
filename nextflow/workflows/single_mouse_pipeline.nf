@@ -1,5 +1,6 @@
 include { PREDICT_SINGLE_MOUSE_SEGMENTATION; PREDICT_SINGLE_MOUSE_KEYPOINTS; CLIP_VIDEO_AND_POSE } from "./../../nextflow/modules/single_mouse"
 include { PREDICT_ARENA_CORNERS } from "./../../nextflow/modules/static_objects"
+include { PREDICT_FECAL_BOLI } from "./../../nextflow/modules/fecal_boli"
 include { VIDEO_TO_POSE } from "./../../nextflow/modules/utils"
 
 workflow SINGLE_MOUSE_TRACKING {
@@ -17,7 +18,8 @@ workflow SINGLE_MOUSE_TRACKING {
     }
     pose_and_seg_data = PREDICT_SINGLE_MOUSE_SEGMENTATION(pose_v2_data).files
     // Completed Pose v6 is output from this step
-    pose_v6_data = PREDICT_ARENA_CORNERS(pose_and_seg_data).files
+    pose_with_corners = PREDICT_ARENA_CORNERS(pose_and_seg_data).files
+    pose_v6_data = PREDICT_FECAL_BOLI(pose_with_corners).files
 
     emit:
     pose_v2_data

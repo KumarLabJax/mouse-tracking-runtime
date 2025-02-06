@@ -77,13 +77,14 @@ process MERGE_FEATURE_COLS {
     """
 }
 
-process FILTER_QC_WITH_CORNERS {
+process SELECT_COLUMNS {
     input:
     path(qc_file)
+    val key_1
+    val key_2
 
     output:
-    path "${qc_file.baseName}_with_corners.txt", emit: with_corners
-    path "${qc_file.baseName}_without_corners.txt", emit: without_corners
+    path "${qc_file.baseName}_${key_1}_${key_2}.csv", emit: csv_file
 
     script:
     """
@@ -94,19 +95,27 @@ process FILTER_QC_WITH_CORNERS {
         }
     }
     {
-        if (\$(f["corners_present"]) == "True") print \$(f["pose_file"])
+        print \$(f["${key_1}"]), \$(f["${key_2}"])
     }
-    ' ${qc_file} > "${qc_file.baseName}_with_corners.txt"
-    
-    awk -F',' '
-    NR==1 {
-        for (i=1; i<=NF; i++) {
-            f[\$i] = i
-        }
-    }
-    {
-        if (\$(f["corners_present"]) == "False") print \$(f["pose_file"])
-    }
-    ' ${qc_file} > "${qc_file.baseName}_without_corners.txt"
+    ' OFS=',' ${qc_file} > "${qc_file.baseName}_${key_1}_${key_2}.csv"
+    """
+}
+
+process SUBSET_PATH_BY_VAR {
+    input:
+    path all_files
+    val subset_files
+    val dir
+
+    output:
+    path("${dir}/*"), emit: subset_files
+
+    script:
+    """
+    mkdir ${dir}
+    for file in ${subset_files}
+    do
+        ln -s \$(pwd)/\${file} ${dir}/\$(basename \${file})
+    done
     """
 }

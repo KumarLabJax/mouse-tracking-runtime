@@ -3,15 +3,20 @@ process GENERATE_FEATURE_CACHE {
 
     input:
     tuple path(video_file), path(in_pose)
+    var window_sizes
 
     output:
     tuple path(in_pose), path("${video_file.baseName}"), emit: files
 
     script:
     """
-
+    mkdir -p ${video_file.baseName}
+    for window_size in ${window_sizes};
+    do
+        jabs-features --input-pose ${in_pose} --out-dir ${video_file.baseName} --window-size \${window_size}
+    done
     """
-}
+}  
 
 process PREDICT_CLASSIFIERS {
     label "jabs_classify_0.18.0"
@@ -48,11 +53,10 @@ process GENERATE_BEHAVIOR_TABLES {
     tuple path("${in_pose.baseName}/*_bouts.csv"), path("${in_pose.baseName}/*_summaries.csv"), emit: files
 
     script:
-    // TODO: Add in classifiers by converting list to a string of "--behavior ${classifier}" for each classifier
     """
-    
+    behavior_command = "--behavior ${feature_files.collect { "\"${it}\"" }.join(' --behavior ')}"
     mkdir -p ${in_pose.baseName}
-    python3 /JABS-postprocess/generate_behavior_tables.py --project_folder . --feature_folder ${feature_cache} --out_prefix ${in_pose.baseName}/ --out_bin_size 5
+    python3 /JABS-postprocess/generate_behavior_tables.py --project_folder . --feature_folder ${feature_cache} --out_prefix ${in_pose.baseName}/ --out_bin_size 5 ${behavior_command}
     """
 }
 
