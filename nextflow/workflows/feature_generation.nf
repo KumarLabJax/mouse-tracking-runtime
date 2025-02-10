@@ -8,7 +8,8 @@ include { MERGE_FEATURE_ROWS as MERGE_GAIT;
           MERGE_FEATURE_ROWS as MERGE_FECAL_BOLI;
           MERGE_FEATURE_COLS } from "./../../nextflow/modules/utils"
 include { GENERATE_FEATURE_CACHE;
-          PREDICT_CLASSIFIERS } from "./../../nextflow/modules/jabs_classifiers"
+          PREDICT_CLASSIFIERS;
+          GENERATE_BEHAVIOR_TABLES } from "./../../nextflow/modules/jabs_classifiers"
 include { EXTRACT_FECAL_BOLI_BINS } from "./../../nextflow/modules/fecal_boli"
 
 workflow SINGLE_MOUSE_V2_FEATURES {
@@ -47,14 +48,16 @@ workflow SINGLE_MOUSE_V6_FEATURES {
     input_pose_v6_batch
 
     main:
-    // GENERATE_FEATURE_CACHE(input_pose_v6_batch)
+    cached_features = GENERATE_FEATURE_CACHE(input_pose_v6_batch).files
     // JABS Heuristic Classifiers
-    // heuristic_tables = PREDICT_HEURISTICS(GENERATE_FEATURE_CACHE.files, process.heuristic_classifiers)
+    // heuristic_tables = PREDICT_HEURISTICS(GENERATE_FEATURE_CACHE.files, params.heuristic_classifiers)
 
     // // JABS Behavior Classifiers
-    // available_classifiers = process.single_mouse_classifiers.keySet().collect()
-    // classifier_predictions = PREDICT_CLASSIFIER(GENERATE_FEATURE_CACHE.files, available_classifiers)
-    // classifier_tables = GENERATE_BEHAVIOR_TABLES(classifier_predictions.collect(), available_classifiers)
+    // We let the inner prediction loop over classifiers because they write to a single file
+    available_classifiers = params.single_mouse_classifiers.keySet()
+    classifier_objects = available_classifiers.collect { params.exported_classifier_folder + it + params.classifier_artifact_suffix }
+    classifier_predictions = PREDICT_CLASSIFIERS(cached_features, classifier_objects)
+    classifier_tables = GENERATE_BEHAVIOR_TABLES(classifier_predictions.collect(), available_classifiers)
 
     // Fecal Boli Extraction
     individual_fecal_boli = EXTRACT_FECAL_BOLI_BINS(input_pose_v6_batch)
