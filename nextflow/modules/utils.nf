@@ -119,3 +119,20 @@ process SUBSET_PATH_BY_VAR {
     done
     """
 }
+
+process PUBLISH_RESULT_FILE {
+    publishDir "${params.pubdir}", mode:'copy'
+
+    input:
+    tuple path(result_file), val(publish_filename)
+
+    output:
+    path(publish_filename), emit: published_file
+    
+    script:
+    """
+    if [ ! -f ${publish_filename} ]; then
+        ln -s ${result_file} ${publish_filename}
+    fi
+    """
+}

@@ -14,7 +14,11 @@ include { MULTI_MOUSE_TRACKING } from './nextflow/workflows/multi_mouse_pipeline
 include { QC_SINGLE_MOUSE } from './nextflow/modules/single_mouse'
 include { SELECT_COLUMNS;
           SUBSET_PATH_BY_VAR as WITH_CORNERS;
-          SUBSET_PATH_BY_VAR as WITHOUT_CORNERS } from './nextflow/modules/utils'
+          SUBSET_PATH_BY_VAR as WITHOUT_CORNERS;
+          PUBLISH_RESULT_FILE as PUBLISH_SM_TRIMMED_VID;
+          PUBLISH_RESULT_FILE as PUBLISH_SM_POSE_V2;
+          PUBLISH_RESULT_FILE as PUBLISH_SM_POSE_V6;
+          PUBLISH_RESULT_FILE as PUBLISH_FBOLI } from './nextflow/modules/utils'
 
 /*
  * Combine input_data and input_batch into a single list
@@ -46,6 +50,20 @@ workflow{
         all_v2_outputs = SINGLE_MOUSE_TRACKING.out[0].collect()
         all_v6_outputs = SINGLE_MOUSE_TRACKING.out[1].collect()
         QC_SINGLE_MOUSE(all_v6_outputs, params.clip_duration, params.batch_name)
+
+        // Publish the pose results
+        trimmed_video_files = all_v2_outputs.map { video, pose ->
+            tuple(video, "${video.name}")
+        }
+        PUBLISH_SM_TRIMMED_VID(trimmed_video_files)
+        v2_poses_renamed = all_v2_outputs.map { video, pose ->
+            tuple(pose, "${video.baseName}_pose_est_v2.h5")
+        }
+        PUBLISH_SM_POSE_V2(v2_poses_renamed)
+        v6_poses_renamed = all_v6_outputs.map { video, pose ->
+            tuple(pose, "${video.baseName}_pose_est_v6.h5")
+        }
+        PUBLISH_SM_POSE_V6(v6_poses_renamed)
 
         // Pose v2 branch calculations
         SINGLE_MOUSE_V2_FEATURES(all_v2_outputs)
