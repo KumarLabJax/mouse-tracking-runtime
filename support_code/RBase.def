@@ -1,5 +1,12 @@
 Bootstrap: docker
-From:rocker/tidyverse:latest
+From:rocker/tidyverse:4.4.2
+
+%setup
+        mkdir -p ${SINGULARITY_ROOTFS}/mouse-tracking-runtime/support_code/
+
+%files
+        behavior_summaries.R /mouse-tracking-runtime/support_code/.
+
 %post
         apt-get update
         apt-get -y install locales build-essential
@@ -11,5 +18,5 @@ From:rocker/tidyverse:latest
         echo 'Etc/UTC' > /etc/timezone
         apt-get install -y libnlopt-dev 
         apt-get install -y build-essential libcurl4-gnutls-dev libxml2-dev libssl-dev libgit2-dev
-        Rscript -e 'install.packages(c("usethis","devtools"), repos="https://cran.rstudio.com")'
+        Rscript -e 'install.packages(c("usethis","devtools","optparse"), repos="https://cran.rstudio.com")'
         

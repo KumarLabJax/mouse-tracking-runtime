@@ -1,16 +1,26 @@
-libs <- c("dplyr", "readr")
+#!/usr/bin/env Rscript
+libs <- c("dplyr", "readr", "optparse")
 sapply(libs, require, character.only = TRUE)
+ 
+option_list <- list(
+    make_option(c("-f", "--file"), type = "character", default = NULL, 
+        help = "input JABS-postprocessing summary table file", metavar = "character"),
+    #number of rows to consider for each bin. Each row corresponds to 5 minutes. So 1 corresponds to 5 minutes, 4 corresponds to 20 minutes and 11 corresponds to 55 minutes.  
+    make_option(c("-b", "--bin_size"), type = "integer", default = NULL, 
+        help = "number of bins to aggregate", metavar = "character"),
+    make_option(c("-o", "--output"), type = "character", default = NULL, 
+        help = "output file name", metavar = "character")
+)
+ 
+opt_parser <- OptionParser(option_list = option_list)
+opt <- parse_args(opt_parser)
 
-
-#User defined variables
-behavior <- "freeze" 
-row_num <- c(1, 4, 11) #number of rows to consider for each bin. Each row corresponds to 5 minutes. So 1 corresponds to 5 minutes, 4 corresponds to 20 minutes and 11 corresponds to 55 minutes.  
-data <- read_csv("/Users/sabnig/Downloads/Lupus_OFMetrics_Freeze_summaries.csv", skip = 2)
+data_header <- read_csv(opt$file, n_max = 1)
+behavior <- data_header$Behavior[1]
+row_num <- c(opt$bin_size)
+data <- read_csv(opt$file, skip = 2)
 data <- data |> select(!"longterm_idx") |> rename(MouseID = exp_prefix)
 
-
-
-#No edits needed below this line
 cols_to_exclude <- c(paste0(behavior, "_", c("time_no_pred", "time_not_behavior", "time_behavior", "bout_behavior", "not_behavior_dist", "behavior_dist"), sep = ""))
 names(data)[!names(data) %in% "MouseID"] <- paste0(behavior, "_", setdiff(names(data), "MouseID"))
 
@@ -27,12 +37,5 @@ data_agg <- lapply(seq_along(row_num), function(x) {
 
 })
 
-
 data_res <- Reduce(function(x, y) merge(x, y, by = "MouseID"), data_agg) |> as_tibble()
-data_res |> write.csv(paste0(behavior, "_summaries", ".csv"), row.names = FALSE)
-
-
-
-
-
-
+data_res |> write.csv(opt$output, row.names = FALSE)
