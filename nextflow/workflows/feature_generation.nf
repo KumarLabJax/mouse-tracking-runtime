@@ -10,7 +10,8 @@ include { MERGE_FEATURE_ROWS as MERGE_GAIT;
 include { GENERATE_FEATURE_CACHE;
           PREDICT_CLASSIFIERS;
           GENERATE_BEHAVIOR_TABLES;
-          PREDICT_HEURISTICS } from "./../../nextflow/modules/jabs_classifiers"
+          PREDICT_HEURISTICS;
+          BEHAVIOR_TABLE_TO_FEATURES } from "./../../nextflow/modules/jabs_classifiers"
 include { EXTRACT_FECAL_BOLI_BINS } from "./../../nextflow/modules/fecal_boli"
 
 workflow SINGLE_MOUSE_V2_FEATURES {
@@ -54,19 +55,27 @@ workflow SINGLE_MOUSE_V6_FEATURES {
     heuristic_classifiers = params.heuristic_classifiers.collect { params.heuristic_classifier_folder + it + ".yaml" }
     heuristic_tables = PREDICT_HEURISTICS(cached_features, heuristic_classifiers)
 
-    // // JABS Behavior Classifiers
+    // JABS Behavior Classifiers
     // We let the inner prediction loop over classifiers because they write to a single file
     available_classifiers = params.single_mouse_classifiers.keySet()
     classifier_objects = available_classifiers.collect { params.exported_classifier_folder + it + params.classifier_artifact_suffix }
     classifier_predictions = PREDICT_CLASSIFIERS(cached_features, classifier_objects)
     classifier_tables = GENERATE_BEHAVIOR_TABLES(classifier_predictions.collect(), available_classifiers)
 
+    // Combine table data into feature file
+    all_summary_tables = heuristic_tables
+        .concat(classifier_tables)
+        .map { bout_table, summary_table -> summary_table }
+        .flatten()
+        .combine(params.feature_bins)
+    individual_behavior_features = BEHAVIOR_TABLE_TO_FEATURES(all_summary_tables)
+    all_behavior_features = MERGE_FEATURE_COLS(individual_behavior_features.collect(), "MouseID", "behavior_features")
+
     // Fecal Boli Extraction
     individual_fecal_boli = EXTRACT_FECAL_BOLI_BINS(input_pose_v6_batch)
     fecal_boli_table = MERGE_FECAL_BOLI(individual_fecal_boli.fecal_boli.collect(), "fecal_boli", 1)
 
     emit:
-    // heuristic_tables
-    // classifier_tables
+    all_behavior_features
     fecal_boli_table
 }

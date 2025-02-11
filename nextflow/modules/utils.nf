@@ -70,8 +70,9 @@ process MERGE_FEATURE_COLS {
 
     import pandas as pd
     import functools
-    file_list = [${feature_files.collect { "\"${it}\"" }.join(', ')}]
-    read_data = [pd.read_csv(f).drop("Unnamed: 0", axis=1) for f in file_list]
+    file_list = [${feature_files.collect { element -> "\"${element.toString()}\"" }.join(', ')}]
+    read_data = [pd.read_csv(f) for f in file_list]
+    read_data = [x.drop("Unnamed: 0", axis=1) if "Unnamed: 0" in x.columns else x for x in read_data]
     merged_data = functools.reduce(lambda left, right: pd.merge(left, right, on="${col_to_merge_on}"), read_data)
     merged_data.to_csv("${out_filename}.csv", index=False)
     """

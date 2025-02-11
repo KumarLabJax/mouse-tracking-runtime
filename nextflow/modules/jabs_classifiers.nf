@@ -78,3 +78,18 @@ process PREDICT_HEURISTICS {
     done
     """
 }
+
+process BEHAVIOR_TABLE_TO_FEATURES {
+    label "jabs_table_convert"
+
+    input:
+    tuple path(in_summary_table), val(bin_size)
+
+    output:
+    path("${in_summary_table.baseName}_features_${bin_size}.csv"), emit: features
+
+    script:
+    """
+    Rscript ${params.support_code_dir}behavior_summaries.R -f ${in_summary_table} -b ${bin_size} -o "${in_summary_table.baseName}_features_${bin_size}.csv"
+    """
+}

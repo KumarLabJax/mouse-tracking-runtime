@@ -18,6 +18,7 @@ include { SELECT_COLUMNS;
           PUBLISH_RESULT_FILE as PUBLISH_SM_TRIMMED_VID;
           PUBLISH_RESULT_FILE as PUBLISH_SM_POSE_V2;
           PUBLISH_RESULT_FILE as PUBLISH_SM_POSE_V6;
+          PUBLISH_RESULT_FILE as PUBLISH_SM_V6_FEATURES;
           PUBLISH_RESULT_FILE as PUBLISH_FBOLI } from './nextflow/modules/utils'
 
 /*
@@ -85,6 +86,19 @@ workflow{
             split_channel.present.flatten().toList().contains(pose) ? [video, pose] : null
         }
         SINGLE_MOUSE_V6_FEATURES(v6_with_corners)
+
+        // Publish the feature results
+        feature_file = SINGLE_MOUSE_V6_FEATURES.out[0].collect()
+        fecal_boli = SINGLE_MOUSE_V6_FEATURES.out[1].collect()
+        feature_outputs = feature_file.map { feature_file ->
+            tuple(feature_file, "features.csv")
+        }
+        PUBLISH_SM_V6_FEATURES(feature_outputs)
+        fecal_boli_outputs = fecal_boli.map { fecal_boli ->
+            tuple(fecal_boli, "fecal_boli.csv")
+        }
+        PUBLISH_FBOLI(fecal_boli_outputs)
+
         // v6_without_corners = Channel.fromPath(SELECT_COLUMNS.out.without_corners)
         // ADD_TO_MANUAL_CORNER_CORRECTION(v6_without_corners)
     }
