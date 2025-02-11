@@ -9,7 +9,8 @@ include { MERGE_FEATURE_ROWS as MERGE_GAIT;
           MERGE_FEATURE_COLS } from "./../../nextflow/modules/utils"
 include { GENERATE_FEATURE_CACHE;
           PREDICT_CLASSIFIERS;
-          GENERATE_BEHAVIOR_TABLES } from "./../../nextflow/modules/jabs_classifiers"
+          GENERATE_BEHAVIOR_TABLES;
+          PREDICT_HEURISTICS } from "./../../nextflow/modules/jabs_classifiers"
 include { EXTRACT_FECAL_BOLI_BINS } from "./../../nextflow/modules/fecal_boli"
 
 workflow SINGLE_MOUSE_V2_FEATURES {
@@ -50,7 +51,8 @@ workflow SINGLE_MOUSE_V6_FEATURES {
     main:
     cached_features = GENERATE_FEATURE_CACHE(input_pose_v6_batch).files
     // JABS Heuristic Classifiers
-    // heuristic_tables = PREDICT_HEURISTICS(GENERATE_FEATURE_CACHE.files, params.heuristic_classifiers)
+    heuristic_classifiers = params.heuristic_classifiers.collect { params.heuristic_classifier_folder + it + ".yaml" }
+    heuristic_tables = PREDICT_HEURISTICS(cached_features, heuristic_classifiers)
 
     // // JABS Behavior Classifiers
     // We let the inner prediction loop over classifiers because they write to a single file

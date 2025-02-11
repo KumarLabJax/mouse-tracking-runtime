@@ -46,16 +46,15 @@ process GENERATE_BEHAVIOR_TABLES {
     label "jabs_postprocess"
 
     input:
-    tuple path(in_pose), path(feature_cache), path(classifier_file)
-    val feature_files
+    tuple path(in_pose), path(feature_cache), path(behavior_files)
+    val classifier_keys
 
     output:
-    tuple path("${in_pose.baseName}/*_bouts.csv"), path("${in_pose.baseName}*_summaries.csv"), emit: files
+    tuple path("${in_pose.baseName}*_bouts.csv"), path("${in_pose.baseName}*_summaries.csv"), emit: files
 
     script:
     """
-    behavior_command="--behavior ${feature_files.join(' --behavior ')}"
-    mkdir -p ${in_pose.baseName}
+    behavior_command="--behavior ${classifier_keys.join(' --behavior ')}"
     python3 /JABS-postprocess/generate_behavior_tables.py --project_folder . --feature_folder . --out_prefix ${in_pose.baseName} --out_bin_size 5 \${behavior_command}
     """
 }
@@ -64,18 +63,18 @@ process PREDICT_HEURISTICS {
     label "jabs_postprocess"
 
     input:
-    tuple path(in_pose), path(in_behavior), path(feature_cache)
-    var heuristic_classifiers
+    // Pose file must be of form "${video_file.baseName}_pose_est_v[0-9]+.h5"
+    tuple path(in_pose), path(feature_cache)
+    val heuristic_classifiers
 
     output:
-    tuple path("${in_pose.baseName}/*_bouts.csv"), path("${in_pose.baseName}/*_summaries.csv"), emit: files
+    tuple path("${in_pose.baseName}*_bouts.csv"), path("${in_pose.baseName}*_summaries.csv"), emit: files
 
     script:
     """
-    mkdir -p ${in_pose.baseName}
-    for classifier in ${heuristic_classifiers};
+    for classifier in ${heuristic_classifiers.join(' ')};
     do
-        python3 /JABS-postprocess/heuristic_classify.py --project_folder . --feature_folder . --behavior_config \${classifier} --out_prefix ${in_pose.baseName}/\${classifier} --out_bin_size 5
+        python3 /JABS-postprocess/heuristic_classify.py --project_folder . --feature_folder . --behavior_config \${classifier} --out_prefix ${in_pose.baseName} --out_bin_size 5
     done
     """
 }
