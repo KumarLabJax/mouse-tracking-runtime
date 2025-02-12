@@ -113,8 +113,5 @@ workflow{
     if (params.workflow == "multi-mouse"){
         MULTI_MOUSE_TRACKING(PREPARE_DATA.out.video_file, params.num_mice)
     }
-
-    // Move the final pose files to the appropriate location
-    //POSTPROCESS_DATA(all_files, params.location)
 }
 
