@@ -17,6 +17,8 @@ include { SELECT_COLUMNS;
           SUBSET_PATH_BY_VAR as WITHOUT_CORNERS;
           PUBLISH_RESULT_FILE as PUBLISH_SM_TRIMMED_VID;
           PUBLISH_RESULT_FILE as PUBLISH_SM_POSE_V2;
+          PUBLISH_RESULT_FILE as PUBLISH_GAIT;
+          PUBLISH_RESULT_FILE as PUBLISH_MORPHOMETRICS;
           PUBLISH_RESULT_FILE as PUBLISH_SM_POSE_V6;
           PUBLISH_RESULT_FILE as PUBLISH_SM_V6_FEATURES;
           PUBLISH_RESULT_FILE as PUBLISH_FBOLI } from './nextflow/modules/utils'
@@ -67,7 +69,15 @@ workflow{
         PUBLISH_SM_POSE_V6(v6_poses_renamed)
 
         // Pose v2 branch calculations
-        SINGLE_MOUSE_V2_FEATURES(all_v2_outputs)
+        pose_v2_results = SINGLE_MOUSE_V2_FEATURES(all_v2_outputs)
+        gait_outputs = pose_v2_results[0].map { feature_file ->
+            tuple(feature_file, "gait.csv")
+        }
+        PUBLISH_GAIT(gait_outputs)
+        morphometric_outputs = pose_v2_results[1].map { feature_file ->
+            tuple(feature_file, "morphometrics.csv")
+        }
+        PUBLISH_MORPHOMETRICS(morphometric_outputs)
 
         // Only continue processing files that generate corners
         def split_criteria = multiMapCriteria { f, v ->
@@ -77,11 +87,7 @@ workflow{
         joined_channel = SELECT_COLUMNS(QC_SINGLE_MOUSE.out, 'pose_file', 'corners_present')
             .splitCsv(header: true, sep: ',')
             .map(row -> [row.pose_file, row.corners_present])
-        joined_channel.view() {v -> "All files: ${v}"}
         split_channel = joined_channel.multiMap(split_criteria)
-        split_channel.present.view() {v -> "Present corners: ${v}"}
-        split_channel.missing.view() {v -> "Missing corners: ${v}"}
-        // v6_with_corners = WITH_CORNERS(all_v6_outputs, split_channel.present.flatten(), 'tmp')
         v6_with_corners = all_v6_outputs.filter { video, pose ->
             split_channel.present.flatten().toList().contains(pose) ? [video, pose] : null
         }
@@ -99,7 +105,9 @@ workflow{
         }
         PUBLISH_FBOLI(fecal_boli_outputs)
 
-        // v6_without_corners = Channel.fromPath(SELECT_COLUMNS.out.without_corners)
+        // v6_without_corners = all_v6_outputs.filter { video, pose ->
+        //     split_channel.missing.flatten().toList().contains(pose) ? [video, pose] : null
+        // }
         // ADD_TO_MANUAL_CORNER_CORRECTION(v6_without_corners)
     }
     if (params.workflow == "multi-mouse"){
