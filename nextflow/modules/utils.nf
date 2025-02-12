@@ -133,7 +133,10 @@ process PUBLISH_RESULT_FILE {
     script:
     """
     if [ ! -f ${publish_filename} ]; then
-        ln -s ${result_file} ${publish_filename}
+        if [ \$(dirname ${publish_filename}) != "" ]; then
+            mkdir -p \$(dirname ${publish_filename})
+        fi
+        ln -s \$(pwd)/${result_file} ${publish_filename}
     fi
     """
 }

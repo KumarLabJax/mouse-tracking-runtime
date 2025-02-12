@@ -54,15 +54,15 @@ workflow{
 
         // Publish the pose results
         trimmed_video_files = all_v2_outputs.map { video, pose ->
-            tuple(video, "${video.name}")
+            tuple(video, "results/${video.name}")
         }
         PUBLISH_SM_TRIMMED_VID(trimmed_video_files)
         v2_poses_renamed = all_v2_outputs.map { video, pose ->
-            tuple(pose, "${video.baseName}_pose_est_v2.h5")
+            tuple(pose, "results/${video.baseName}_pose_est_v2.h5")
         }
         PUBLISH_SM_POSE_V2(v2_poses_renamed)
         v6_poses_renamed = all_v6_outputs.map { video, pose ->
-            tuple(pose, "${video.baseName}_pose_est_v6.h5")
+            tuple(pose, "results/${video.baseName}_pose_est_v6.h5")
         }
         PUBLISH_SM_POSE_V6(v6_poses_renamed)
 
