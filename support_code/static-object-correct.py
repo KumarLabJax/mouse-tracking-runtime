@@ -16,16 +16,16 @@ FLIPPED_OBJECTS = [
 ]
 
 def measure_pair_dists(annotation):
-	"""Measure distances between all pairs of points.
+    """Measure distances between all pairs of points.
 
-	Args:
-		annotation: Array of shape (n_points, 2)
+    Args:
+        annotation: Array of shape (n_points, 2)
 
-	Returns:
-		Distances between all pairs of points.
-	"""
-	dists = cdist(annotation, annotation)
-	return dists[np.nonzero(np.triu(dists))]
+    Returns:
+        Distances between all pairs of points.
+    """
+    dists = cdist(annotation, annotation)
+    return dists[np.nonzero(np.triu(dists))]
 
 
 def write_static_objects(sleap_data: dict, filename: str):
@@ -48,59 +48,59 @@ def write_static_objects(sleap_data: dict, filename: str):
                 object_grp.require_dataset(
                     object_key,
                     object_keypoints.shape,
-					np.uint16,
+                    np.uint16,
                     data=object_keypoints.astype(np.uint16),
                 )
 
 def write_px_per_cm(sleap_data: dict, filename: str):
-	"""Write pixels per cm data to JABS pose file.
+    """Write pixels per cm data to JABS pose file.
 
-	Args:
-		sleap_data: Dictionary of JABS data generated from convert_labels
-		filename: Filename to write data to
-	"""
-	coordinates = sleap_data['static_objects']['corners']
-	dists = measure_pair_dists(coordinates)
-	# Edges are shorter than diagonals
-	sorted_dists = np.sort(dists)
-	edges = sorted_dists[:4]
-	diags = sorted_dists[4:]
-	edges = np.concatenate([np.sqrt(np.square(diags) / 2), edges])
-	cm_per_pixel = np.float32(52. / np.mean(edges))
-	with h5py.File(filename, 'a') as f:
-		f['poseest'].attrs['cm_per_pixel'] = cm_per_pixel
-		f['poseest'].attrs['cm_per_pixel_source'] = 'manually_set'
+    Args:
+        sleap_data: Dictionary of JABS data generated from convert_labels
+        filename: Filename to write data to
+    """
+    coordinates = sleap_data['static_objects']['corners']
+    dists = measure_pair_dists(coordinates)
+    # Edges are shorter than diagonals
+    sorted_dists = np.sort(dists)
+    edges = sorted_dists[:4]
+    diags = sorted_dists[4:]
+    edges = np.concatenate([np.sqrt(np.square(diags) / 2), edges])
+    cm_per_pixel = np.float32(52. / np.mean(edges))
+    with h5py.File(filename, 'a') as f:
+        f['poseest'].attrs['cm_per_pixel'] = cm_per_pixel
+        f['poseest'].attrs['cm_per_pixel_source'] = 'manually_set'
 
 
 def main(argv):
-	"""Parse command line arguments."""
-	parser = argparse.ArgumentParser(description='Script that integrates SLEAP annotations of arena corners back into pose files.')
-	parser.add_argument('--sleap-annotations', help='SLEAP annotations file.', required=True)
-	parser.add_argument('--pose-file', help='Pose file to correct.', required=True)
+    """Parse command line arguments."""
+    parser = argparse.ArgumentParser(description='Script that integrates SLEAP annotations of arena corners back into pose files.')
+    parser.add_argument('--sleap-annotations', help='SLEAP annotations file.', required=True)
+    parser.add_argument('--pose-file', help='Pose file to correct.', required=True)
 
-	args = parser.parse_args()
-	if not Path(args.sleap_annotations).exists():
-		msg = f"{args.sleap_annotations} doesn't exist."
-		raise FileNotFoundError(msg)
-	if not Path(args.pose_file).exists():
-		msg = f"{args.pose_file} doesn't exist."
-		raise FileNotFoundError(msg)
+    args = parser.parse_args()
+    if not Path(args.sleap_annotations).exists():
+        msg = f"{args.sleap_annotations} doesn't exist."
+        raise FileNotFoundError(msg)
+    if not Path(args.pose_file).exists():
+        msg = f"{args.pose_file} doesn't exist."
+        raise FileNotFoundError(msg)
 
-	# Load SLEAP annotations
-	corrected_annotations = slp.read_labels(args.sleap_annotations)
-	# Search for annotations for the requested pose file
-	corrected_frame_names = [x.backend.source_filename for x in  corrected_annotations.videos]
-	expected_corrected_filenames = [Path(x).basename() + "_pose_est_v6.h5" for x in corrected_frame_names]
+    # Load SLEAP annotations
+    corrected_annotations = slp.read_labels(args.sleap_annotations)
+    # Search for annotations for the requested pose file
+    corrected_frame_names = [x.backend.source_filename for x in  corrected_annotations.videos]
+    expected_corrected_filenames = [Path(x).basename() + "_pose_est_v6.h5" for x in corrected_frame_names]
 
-	matched_video_idx = [i for i, x in enumerate(expected_corrected_filenames) if x == Path(args.pose_file).basename()]
-	if len(matched_video_idx) == 0:
-		msg = f"Couldn't find annotations for {args.pose_file}."
-		raise ValueError(msg)
+    matched_video_idx = [i for i, x in enumerate(expected_corrected_filenames) if x == Path(args.pose_file).basename()]
+    if len(matched_video_idx) == 0:
+        msg = f"Couldn't find annotations for {args.pose_file}."
+        raise ValueError(msg)
 
-	video = corrected_annotations.videos[matched_video_idx[0]]
-	data = jabs.conver_labels(corrected_annotations, video)
-	write_static_objects(data, args.pose_file)
-	write_px_per_cm(data, args.pose_file)
+    video = corrected_annotations.videos[matched_video_idx[0]]
+    data = jabs.conver_labels(corrected_annotations, video)
+    write_static_objects(data, args.pose_file)
+    write_px_per_cm(data, args.pose_file)
 
 if __name__ == '__main__':
-	main(sys.argv[1:])
+    main(sys.argv[1:])
