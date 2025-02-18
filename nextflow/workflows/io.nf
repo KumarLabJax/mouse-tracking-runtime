@@ -1,4 +1,4 @@
-include { CHECK_FILE } from './../../nextflow/modules/utils'
+include { CHECK_FILE; URLIFY_FILE } from './../../nextflow/modules/utils'
 include { GET_DATA_FROM_T2; PUT_DATA_TO_T2 } from './../../nextflow/modules/remote_io'
 include { GET_DATA_FROM_DROPBOX; PUT_DATA_TO_DROPBOX } from './../../nextflow/modules/remote_io'
 
@@ -19,8 +19,9 @@ workflow PREPARE_DATA {
         //    GET_DATA_FROM_T2(${in_video_file})
         // """
         else error "${location} is invalid, specify either local or dropbox"
+        out_file = URLIFY_FILE(video_file, params.path_depth).file
     }
 
     emit:
-    video_file
+    out_file
 }

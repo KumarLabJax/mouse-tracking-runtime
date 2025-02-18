@@ -33,6 +33,21 @@ process CHECK_FILE {
     """
 }
 
+process URLIFY_FILE {
+    // WARNING: This process will fail if depth > actual file depth
+    input:
+    val file_to_urlify
+    val depth
+
+    output:
+    path "${file_to_urlify.split('/')[-1-depth..-1].join('%20')}", emit: file
+
+    script:
+    """
+    ln -s ${file_to_urlify} "${file_to_urlify.split('/')[-1-depth..-1].join('%20')}"
+    """
+}
+
 process MERGE_FEATURE_ROWS {
     input:
     path feature_files

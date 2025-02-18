@@ -51,7 +51,7 @@ workflow{
 
     // Generate pose files
     if (params.workflow == "single-mouse"){
-        SINGLE_MOUSE_TRACKING(PREPARE_DATA.out.video_file)
+        SINGLE_MOUSE_TRACKING(PREPARE_DATA.out.out_file)
         // [0] contains v2 pose files and [1] contains v6 pose files
         all_v2_outputs = SINGLE_MOUSE_TRACKING.out[0].collect()
         all_v6_outputs = SINGLE_MOUSE_TRACKING.out[1].collect()
