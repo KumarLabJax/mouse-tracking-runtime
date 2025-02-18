@@ -90,9 +90,9 @@ def main(argv):
     corrected_annotations = slp.read_labels(args.sleap_annotations)
     # Search for annotations for the requested pose file
     corrected_frame_names = [x.backend.source_filename for x in  corrected_annotations.videos]
-    expected_corrected_filenames = [Path(x).basename() + "_pose_est_v6.h5" for x in corrected_frame_names]
+    expected_corrected_prefix = [Path(x).name for x in corrected_frame_names]
 
-    matched_video_idx = [i for i, x in enumerate(expected_corrected_filenames) if x == Path(args.pose_file).basename()]
+    matched_video_idx = [i for i, x in enumerate(expected_corrected_prefix) if Path(args.pose_file).name.startswith(x)]
     if len(matched_video_idx) == 0:
         msg = f"Couldn't find annotations for {args.pose_file}."
         raise ValueError(msg)

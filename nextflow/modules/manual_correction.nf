@@ -61,6 +61,6 @@ process INTEGRATE_SLEAP_CORNER_ANNOTATIONS {
     script:
     """
     cp ${pose_file} ${pose_file.baseName}_corrected.h5
-    python /mouse-tracking-runtime/support_code/static-object-correct.py --pose_file ${pose_file.baseName}_corrected.h5 --sleap_file ${sleap_file}
+    python /mouse-tracking-runtime/support_code/static-object-correct.py --pose-file ${pose_file.baseName}_corrected.h5 --sleap-annotations ${sleap_file}
     """
 }
