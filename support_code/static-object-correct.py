@@ -1,46 +1,106 @@
-# In branch of sleap_io that corrects static object xy sorting
-# As of the time of writing this (2023-12-22), only Brian has access to this branch locally.
-# However, these fixes should make their way into the official sleap_io repo.
-# Check for a merged pull request related to this.
-from sleap_io.io import jabs
-from sleap_io.io import slp
-import os
-import re
-import h5py
+#!/usr/bin/env python
+"""Integrates SLEAP annotations of arena corners back into pose files."""
+import argparse
+import sys
 from pathlib import Path
-import warnings
+
+import h5py
 import numpy as np
 from scipy.spatial.distance import cdist
-corrected_file = '/media/bgeuther/Storage/TempStorage/dataset-releases/autism/cropped_videos/labels.v001.slp'
-root_folder = '/media/bgeuther/Storage/TempStorage/dataset-releases/autism/cropped_videos/'
-corrected_annotations = slp.read_labels(corrected_file)
+from sleap_io.io import jabs, slp
+
+# Keys of static objects that are stored in y,x instead of x,y order
+FLIPPED_OBJECTS = [
+    "lixit",
+    "food_hopper",
+]
 
 def measure_pair_dists(annotation):
+	"""Measure distances between all pairs of points.
+
+	Args:
+		annotation: Array of shape (n_points, 2)
+
+	Returns:
+		Distances between all pairs of points.
+	"""
 	dists = cdist(annotation, annotation)
-	dists = dists[np.nonzero(np.triu(dists))]
-	return dists
+	return dists[np.nonzero(np.triu(dists))]
 
 
-for video in corrected_annotations.videos:
-	out_filename = str(Path(root_folder) / os.path.splitext(video.filename[0])[0]) + f"_pose_est_v6.h5"
-	# Patch the 'frames' subfolder and replacing '/' with '+'
-	out_filename = re.sub('frames/', '', re.sub('\+', '/', out_filename))
-	if not os.path.exists(out_filename):
-		warnings.warn(f"{out_filename} doesn't exist. Skipping...")
-		continue
-	data = jabs.convert_labels(corrected_annotations, video)
-	jabs.write_static_objects(data, out_filename)
-	# We also need to fix px_to_cm field
-	# This code is adopted from tf-obj-api corner scripts
-	coordinates = data['static_objects']['corners']
+def write_static_objects(sleap_data: dict, filename: str):
+    """Write static object data to a JABS pose file.
+
+    Args:
+        sleap_data: Dictionary of JABS data generated from convert_labels
+        filename: Filename to write data to
+    """
+    with h5py.File(filename, "a") as h5:
+        pose_grp = h5.require_group("poseest")
+        pose_grp.attrs.update({"version": [5, 0]})
+        if "static_objects" in sleap_data:
+            object_grp = h5.require_group("static_objects")
+            for object_key, object_keypoints in sleap_data["static_objects"].items():
+                if object_key in FLIPPED_OBJECTS:
+                    object_keypoints = np.flip(object_keypoints, axis=-1)
+                if object_key in object_grp:
+                    del object_grp[object_key]
+                object_grp.require_dataset(
+                    object_key,
+                    object_keypoints.shape,
+					np.uint16,
+                    data=object_keypoints.astype(np.uint16),
+                )
+
+def write_px_per_cm(sleap_data: dict, filename: str):
+	"""Write pixels per cm data to JABS pose file.
+
+	Args:
+		sleap_data: Dictionary of JABS data generated from convert_labels
+		filename: Filename to write data to
+	"""
+	coordinates = sleap_data['static_objects']['corners']
 	dists = measure_pair_dists(coordinates)
 	# Edges are shorter than diagonals
 	sorted_dists = np.sort(dists)
 	edges = sorted_dists[:4]
 	diags = sorted_dists[4:]
-	# Calculate all equivalent edge lengths (turn diagonals into edges)
 	edges = np.concatenate([np.sqrt(np.square(diags) / 2), edges])
 	cm_per_pixel = np.float32(52. / np.mean(edges))
-	with h5py.File(out_filename, 'a') as f:
+	with h5py.File(filename, 'a') as f:
 		f['poseest'].attrs['cm_per_pixel'] = cm_per_pixel
 		f['poseest'].attrs['cm_per_pixel_source'] = 'manually_set'
+
+
+def main(argv):
+	"""Parse command line arguments."""
+	parser = argparse.ArgumentParser(description='Script that integrates SLEAP annotations of arena corners back into pose files.')
+	parser.add_argument('--sleap-annotations', help='SLEAP annotations file.', required=True)
+	parser.add_argument('--pose-file', help='Pose file to correct.', required=True)
+
+	args = parser.parse_args()
+	if not Path(args.sleap_annotations).exists():
+		msg = f"{args.sleap_annotations} doesn't exist."
+		raise FileNotFoundError(msg)
+	if not Path(args.pose_file).exists():
+		msg = f"{args.pose_file} doesn't exist."
+		raise FileNotFoundError(msg)
+
+	# Load SLEAP annotations
+	corrected_annotations = slp.read_labels(args.sleap_annotations)
+	# Search for annotations for the requested pose file
+	corrected_frame_names = [x.backend.source_filename for x in  corrected_annotations.videos]
+	expected_corrected_filenames = [Path(x).basename() + "_pose_est_v6.h5" for x in corrected_frame_names]
+
+	matched_video_idx = [i for i, x in enumerate(expected_corrected_filenames) if x == Path(args.pose_file).basename()]
+	if len(matched_video_idx) == 0:
+		msg = f"Couldn't find annotations for {args.pose_file}."
+		raise ValueError(msg)
+
+	video = corrected_annotations.videos[matched_video_idx[0]]
+	data = jabs.conver_labels(corrected_annotations, video)
+	write_static_objects(data, args.pose_file)
+	write_px_per_cm(data, args.pose_file)
+
+if __name__ == '__main__':
+	main(sys.argv[1:])
