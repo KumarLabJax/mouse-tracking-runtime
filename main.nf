@@ -21,10 +21,16 @@ include { SELECT_COLUMNS;
           PUBLISH_RESULT_FILE as PUBLISH_GAIT;
           PUBLISH_RESULT_FILE as PUBLISH_MORPHOMETRICS;
           PUBLISH_RESULT_FILE as PUBLISH_SM_POSE_V6;
+          PUBLISH_RESULT_FILE as PUBLISH_SM_POSE_V6_NOCORN;
           PUBLISH_RESULT_FILE as PUBLISH_SM_QC;
           PUBLISH_RESULT_FILE as PUBLISH_SM_V6_FEATURES;
           PUBLISH_RESULT_FILE as PUBLISH_FBOLI;
-          PUBLISH_RESULT_FILE as PUBLISH_SM_MANUAL_CORRECT } from './nextflow/modules/utils'
+          PUBLISH_RESULT_FILE as PUBLISH_SM_MANUAL_CORRECT;
+          REMOVE_URLIFY_FIELDS as NOURL_QC;
+          REMOVE_URLIFY_FIELDS as NOURL_JABS;
+          REMOVE_URLIFY_FIELDS as NOURL_GAIT;
+          REMOVE_URLIFY_FIELDS as NOURL_MORPH;
+          REMOVE_URLIFY_FIELDS as NOURL_FBOLI } from './nextflow/modules/utils'
 
 /*
  * Combine input_data and input_batch into a single list
@@ -57,29 +63,25 @@ workflow{
         all_v6_outputs = SINGLE_MOUSE_TRACKING.out[1].collect()
         QC_SINGLE_MOUSE(all_v6_outputs, params.clip_duration, params.batch_name)
         qc_output = QC_SINGLE_MOUSE.out.qc_file
-        PUBLISH_SM_QC(qc_output.map { file -> tuple(file, "qc_${params.batch_name}.csv") })
+        PUBLISH_SM_QC(NOURL_QC(qc_output).map { file -> tuple(file, "qc_${params.batch_name}.csv") })
 
         // Publish the pose results
         trimmed_video_files = all_v2_outputs.map { video, pose ->
-            tuple(video, "results/${video.name}")
+            tuple(video, "results/${video.name.replace("%20", "/")}")
         }
         PUBLISH_SM_TRIMMED_VID(trimmed_video_files)
         v2_poses_renamed = all_v2_outputs.map { video, pose ->
-            tuple(pose, "results/${video.baseName}_pose_est_v2.h5")
+            tuple(pose, "results/${video.baseName.replace("%20", "/")}_pose_est_v2.h5")
         }
         PUBLISH_SM_POSE_V2(v2_poses_renamed)
-        v6_poses_renamed = all_v6_outputs.map { video, pose ->
-            tuple(pose, "results/${video.baseName}_pose_est_v6.h5")
-        }
-        PUBLISH_SM_POSE_V6(v6_poses_renamed)
 
         // Pose v2 branch calculations
         pose_v2_results = SINGLE_MOUSE_V2_FEATURES(all_v2_outputs)
-        gait_outputs = pose_v2_results[0].map { feature_file ->
+        gait_outputs = NOURL_GAIT(pose_v2_results[0]).map { feature_file ->
             tuple(feature_file, "gait.csv")
         }
         PUBLISH_GAIT(gait_outputs)
-        morphometric_outputs = pose_v2_results[1].map { feature_file ->
+        morphometric_outputs = NOURL_MORPH(pose_v2_results[1]).map { feature_file ->
             tuple(feature_file, "morphometrics.csv")
         }
         PUBLISH_MORPHOMETRICS(morphometric_outputs)
@@ -109,14 +111,24 @@ workflow{
         // Publish the feature results
         feature_file = SINGLE_MOUSE_V6_FEATURES.out[0].collect()
         fecal_boli = SINGLE_MOUSE_V6_FEATURES.out[1].collect()
-        feature_outputs = feature_file.map { feature_file ->
+        feature_outputs = NOURL_JABS(feature_file).map { feature_file ->
             tuple(feature_file, "features.csv")
         }
         PUBLISH_SM_V6_FEATURES(feature_outputs)
-        fecal_boli_outputs = fecal_boli.map { fecal_boli ->
+        fecal_boli_outputs = NOURL_FBOLI(fecal_boli).map { fecal_boli ->
             tuple(fecal_boli, "fecal_boli.csv")
         }
         PUBLISH_FBOLI(fecal_boli_outputs)
+
+        v6_poses_renamed = v6_with_corners.map { video, pose ->
+            tuple(pose, "results/${video.baseName.replace("%20", "/")}_pose_est_v6.h5")
+        }
+        PUBLISH_SM_POSE_V6(v6_poses_renamed)
+        // Corners that failed are placed in a separate folder with url-ified names
+        v6_no_corners_renamed = v6_without_corners.map { video, pose ->
+            tuple(pose, "failed_corners/${file(video).baseName}_pose_est_v6.h5")
+        }
+        PUBLISH_SM_POSE_V6_NOCORN(v6_no_corners_renamed)
 
         v6_with_corners.view() { println "WITH CORNERS: $it" }
         v6_without_corners.view() { println "WITHOUT CORNERS: $it" }

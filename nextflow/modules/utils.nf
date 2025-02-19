@@ -48,6 +48,19 @@ process URLIFY_FILE {
     """
 }
 
+process REMOVE_URLIFY_FIELDS {
+    input:
+    path urlified_file
+
+    output:
+    path "${urlified_file.baseName}_no_urls${urlified_file.extension}", emit: file
+
+    script:
+    """
+    sed -e 's:%20:/:g' ${urlified_file} > "${urlified_file.baseName}_no_urls${urlified_file.extension}"
+    """
+}
+
 process MERGE_FEATURE_ROWS {
     input:
     path feature_files
