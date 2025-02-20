@@ -130,6 +130,20 @@ process SELECT_COLUMNS {
     """
 }
 
+process DELETE_ROW {
+    input:
+    path file_to_delete_from
+    val row_to_delete
+
+    output:
+    path "${file_to_delete_from.baseName}_no_${row_to_delete}${file_to_delete_from.extension}", emit: file
+
+    script:
+    """
+    grep -v "${row_to_delete}" ${file_to_delete_from} > "${file_to_delete_from.baseName}_no_${row_to_delete}${file_to_delete_from.extension}"
+    """
+}
+
 process SUBSET_PATH_BY_VAR {
     input:
     path all_files

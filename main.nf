@@ -30,7 +30,9 @@ include { SELECT_COLUMNS;
           REMOVE_URLIFY_FIELDS as NOURL_JABS;
           REMOVE_URLIFY_FIELDS as NOURL_GAIT;
           REMOVE_URLIFY_FIELDS as NOURL_MORPH;
-          REMOVE_URLIFY_FIELDS as NOURL_FBOLI } from './nextflow/modules/utils'
+          REMOVE_URLIFY_FIELDS as NOURL_FBOLI;
+          DELETE_ROW as DELETE_DEFAULT_JABS;
+          DELETE_ROW as DELETE_DEFAULT_FBOLI } from './nextflow/modules/utils'
 
 /*
  * Combine input_data and input_batch into a single list
@@ -111,11 +113,11 @@ workflow{
         // Publish the feature results
         feature_file = SINGLE_MOUSE_V6_FEATURES.out[0].collect()
         fecal_boli = SINGLE_MOUSE_V6_FEATURES.out[1].collect()
-        feature_outputs = NOURL_JABS(feature_file).map { feature_file ->
+        feature_outputs = NOURL_JABS(DELETE_DEFAULT_JABS(feature_file, "${file(params.default_feature_input[0]).baseName}")).map { feature_file ->
             tuple(feature_file, "features.csv")
         }
         PUBLISH_SM_V6_FEATURES(feature_outputs)
-        fecal_boli_outputs = NOURL_FBOLI(fecal_boli).map { fecal_boli ->
+        fecal_boli_outputs = NOURL_FBOLI(DELETE_DEFAULT_FBOLI(fecal_boli, "${file(params.default_feature_input[0]).baseName}")).map { fecal_boli ->
             tuple(fecal_boli, "fecal_boli.csv")
         }
         PUBLISH_FBOLI(fecal_boli_outputs)
@@ -137,6 +139,7 @@ workflow{
             tuple(sleap_file, "manual_corner_correction.slp")
         }
         PUBLISH_SM_MANUAL_CORRECT(manual_correction_output)
+        println "Workflow commit ID: ${workflow.commitId ?: 'N/A'}"
     }
     if (params.workflow == "multi-mouse"){
         MULTI_MOUSE_TRACKING(PREPARE_DATA.out.video_file, params.num_mice)
