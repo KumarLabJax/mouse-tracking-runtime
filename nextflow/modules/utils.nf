@@ -130,6 +130,21 @@ process SELECT_COLUMNS {
     """
 }
 
+process ADD_COLUMN {
+    input:
+    path file_to_add_to
+    val column_name
+    val column_data
+
+    output:
+    path "${file_to_add_to.baseName}_with_${column_name}${file_to_add_to.extension}", emit: file
+
+    script:
+    """
+    awk 'BEGIN {FS=OFS=","} NR==1 {print \$0, "${column_name}"} NR>1 {print \$0, "${column_data}"}' ${file_to_add_to} > ${file_to_add_to.baseName}_with_${column_name}${file_to_add_to.extension}
+    """
+}
+
 process DELETE_ROW {
     input:
     path file_to_delete_from

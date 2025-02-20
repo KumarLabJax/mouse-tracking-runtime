@@ -32,7 +32,12 @@ include { SELECT_COLUMNS;
           REMOVE_URLIFY_FIELDS as NOURL_MORPH;
           REMOVE_URLIFY_FIELDS as NOURL_FBOLI;
           DELETE_ROW as DELETE_DEFAULT_JABS;
-          DELETE_ROW as DELETE_DEFAULT_FBOLI } from './nextflow/modules/utils'
+          DELETE_ROW as DELETE_DEFAULT_FBOLI;
+          ADD_COLUMN as ADD_VERSION_QC;
+          ADD_COLUMN as ADD_VERSION_JABS;
+          ADD_COLUMN as ADD_VERSION_GAIT;
+          ADD_COLUMN as ADD_VERSION_MORPH;
+          ADD_COLUMN as ADD_VERSION_FBOLI; } from './nextflow/modules/utils'
 
 /*
  * Combine input_data and input_batch into a single list
@@ -54,6 +59,8 @@ if (all_files.size() == 0){
  * Run the selected workflow
  */
 workflow{
+    workflow_version = "${workflow.commitId ?: 'N/A'}"
+
     // Download the data locally if necessary
     PREPARE_DATA(Channel.fromList(all_files), params.location)
 
@@ -65,7 +72,7 @@ workflow{
         all_v6_outputs = SINGLE_MOUSE_TRACKING.out[1].collect()
         QC_SINGLE_MOUSE(all_v6_outputs, params.clip_duration, params.batch_name)
         qc_output = QC_SINGLE_MOUSE.out.qc_file
-        PUBLISH_SM_QC(NOURL_QC(qc_output).map { file -> tuple(file, "qc_${params.batch_name}.csv") })
+        PUBLISH_SM_QC(NOURL_QC(ADD_VERSION_QC(qc_output, "nextflow_version", workflow_version)).map { file -> tuple(file, "qc_${params.batch_name}.csv") })
 
         // Publish the pose results
         trimmed_video_files = all_v2_outputs.map { video, pose ->
@@ -79,11 +86,11 @@ workflow{
 
         // Pose v2 branch calculations
         pose_v2_results = SINGLE_MOUSE_V2_FEATURES(all_v2_outputs)
-        gait_outputs = NOURL_GAIT(pose_v2_results[0]).map { feature_file ->
+        gait_outputs = NOURL_GAIT(ADD_VERSION_GAIT(pose_v2_results[0], "nextflow_version", workflow_version)).map { feature_file ->
             tuple(feature_file, "gait.csv")
         }
         PUBLISH_GAIT(gait_outputs)
-        morphometric_outputs = NOURL_MORPH(pose_v2_results[1]).map { feature_file ->
+        morphometric_outputs = NOURL_MORPH(ADD_VERSION_MORPH(pose_v2_results[1], "nextflow_version", workflow_version)).map { feature_file ->
             tuple(feature_file, "morphometrics.csv")
         }
         PUBLISH_MORPHOMETRICS(morphometric_outputs)
@@ -113,11 +120,11 @@ workflow{
         // Publish the feature results
         feature_file = SINGLE_MOUSE_V6_FEATURES.out[0].collect()
         fecal_boli = SINGLE_MOUSE_V6_FEATURES.out[1].collect()
-        feature_outputs = NOURL_JABS(DELETE_DEFAULT_JABS(feature_file, "${file(params.default_feature_input[0]).baseName}")).map { feature_file ->
+        feature_outputs = NOURL_JABS(ADD_VERSION_JABS(DELETE_DEFAULT_JABS(feature_file, "${file(params.default_feature_input[0]).baseName}"), "nextflow_version", workflow_version)).map { feature_file ->
             tuple(feature_file, "features.csv")
         }
         PUBLISH_SM_V6_FEATURES(feature_outputs)
-        fecal_boli_outputs = NOURL_FBOLI(DELETE_DEFAULT_FBOLI(fecal_boli, "${file(params.default_feature_input[0]).baseName}")).map { fecal_boli ->
+        fecal_boli_outputs = NOURL_FBOLI(ADD_VERSION_FBOLI(DELETE_DEFAULT_FBOLI(fecal_boli, "${file(params.default_feature_input[0]).baseName}"), "nextflow_version", workflow_version)).map { fecal_boli ->
             tuple(fecal_boli, "fecal_boli.csv")
         }
         PUBLISH_FBOLI(fecal_boli_outputs)
