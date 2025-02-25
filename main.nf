@@ -53,13 +53,19 @@ workflow{
         // Manual corner correction
         manual_output = MANUALLY_CORRECT_CORNERS(v6_without_corners, params.corner_frame)
     }
-    if (params.workflow == "corner-corrected-features"){
+    if (params.workflow == "single-mouse-corrected-corners"){
         // Integrate annotations back into pose files
         INTEGRATE_CORNER_ANNOTATIONS(Channel.fromList(all_files), params.sleap_file)
         ADD_DUMMY_VIDEO(INTEGRATE_SLEAP_CORNER_ANNOTATIONS.out)
         paired_video_and_pose = ADD_DUMMY_VIDEO.out[0].collect()
 
         // Pose v6 features
+        SINGLE_MOUSE_V6_FEATURES(paired_video_and_pose)
+    }
+    if (params.workflow == "single-mouse-v6-features"){
+        // Generate features from pose_v6 files
+        ADD_DUMMY_VIDEO(Channel.fromList(all_files))
+        paired_video_and_pose = ADD_DUMMY_VIDEO.out[0].collect()
         SINGLE_MOUSE_V6_FEATURES(paired_video_and_pose)
     }
     if (params.workflow == "multi-mouse"){
