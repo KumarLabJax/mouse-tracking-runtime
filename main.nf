@@ -11,8 +11,8 @@ if (!params.workflow) {
 include { SINGLE_MOUSE_TRACKING } from './nextflow/workflows/single_mouse_pipeline'
 include { SINGLE_MOUSE_V2_FEATURES; SINGLE_MOUSE_V6_FEATURES } from './nextflow/workflows/feature_generation'
 include { MULTI_MOUSE_TRACKING } from './nextflow/workflows/multi_mouse_pipeline'
-include { MANUALLY_CORRECT_CORNERS } from './nextflow/workflows/sleap_manual_correction'
-include { PUBLISH_RESULT_FILE as PUBLISH_SM_MANUAL_CORRECT } from './nextflow/modules/utils'
+include { MANUALLY_CORRECT_CORNERS; INTEGRATE_CORNER_ANNOTATIONS } from './nextflow/workflows/sleap_manual_correction'
+include { ADD_DUMMY_VIDEO } from './nextflow/modules/utils'
 
 /*
  * Combine input_data and input_batch into a single list
@@ -49,10 +49,18 @@ workflow{
 
         // Pose v6 features
         SINGLE_MOUSE_V6_FEATURES(v6_with_corners)
-        feature_file = SINGLE_MOUSE_V6_FEATURES.out[0].collect()
-        fecal_boli = SINGLE_MOUSE_V6_FEATURES.out[1].collect()
 
+        // Manual corner correction
         manual_output = MANUALLY_CORRECT_CORNERS(v6_without_corners, params.corner_frame)
+    }
+    if (params.workflow == "corner-corrected-features"){
+        // Integrate annotations back into pose files
+        INTEGRATE_CORNER_ANNOTATIONS(Channel.fromList(all_files), params.sleap_file)
+        ADD_DUMMY_VIDEO(INTEGRATE_SLEAP_CORNER_ANNOTATIONS.out)
+        paired_video_and_pose = ADD_DUMMY_VIDEO.out[0].collect()
+
+        // Pose v6 features
+        SINGLE_MOUSE_V6_FEATURES(paired_video_and_pose)
     }
     if (params.workflow == "multi-mouse"){
         MULTI_MOUSE_TRACKING(PREPARE_DATA.out.video_file, params.num_mice)

@@ -207,3 +207,17 @@ process GET_WORKFLOW_VERSION {
     echo "Workflow version: ${workflow.commitId ?: 'N/A'}"
     """
 }
+
+process ADD_DUMMY_VIDEO {
+    input:
+    path pose_file
+    val n_frames
+
+    output:
+    tuple(path("${pose_file.baseName.replaceFirst(/_pose_est_v[0-9]+/, "")}.mp4"), pose_file), emit: files
+
+    script:
+    """
+    ffmpeg -f lavfi -i color=size=480x480:rate=30:color=black -vframes "${n_frames}" "${pose_file.baseName.replaceFirst(/_pose_est_v[0-9]+/, "")}.mp4"
+    """
+}
