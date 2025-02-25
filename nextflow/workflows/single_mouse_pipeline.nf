@@ -1,7 +1,18 @@
 include { PREDICT_SINGLE_MOUSE_SEGMENTATION; PREDICT_SINGLE_MOUSE_KEYPOINTS; CLIP_VIDEO_AND_POSE } from "./../../nextflow/modules/single_mouse"
 include { PREDICT_ARENA_CORNERS } from "./../../nextflow/modules/static_objects"
 include { PREDICT_FECAL_BOLI } from "./../../nextflow/modules/fecal_boli"
-include { VIDEO_TO_POSE } from "./../../nextflow/modules/utils"
+include { QC_SINGLE_MOUSE } from './../../nextflow/modules/single_mouse'
+include { VIDEO_TO_POSE;
+          GET_WORKFLOW_VERSION;
+          SELECT_COLUMNS;
+          PUBLISH_RESULT_FILE as PUBLISH_SM_QC;
+          REMOVE_URLIFY_FIELDS as NOURL_QC;
+          ADD_COLUMN as ADD_VERSION_QC;
+          PUBLISH_RESULT_FILE as PUBLISH_SM_TRIMMED_VID;
+          PUBLISH_RESULT_FILE as PUBLISH_SM_POSE_V2;
+          PUBLISH_RESULT_FILE as PUBLISH_SM_POSE_V6;
+          PUBLISH_RESULT_FILE as PUBLISH_SM_POSE_V6_NOCORN;
+ } from "./../../nextflow/modules/utils"
 
 workflow SINGLE_MOUSE_TRACKING {
     take:
@@ -9,7 +20,6 @@ workflow SINGLE_MOUSE_TRACKING {
 
     main:
     // Generate pose files
-    // input_video.view()
     pose_init = VIDEO_TO_POSE(input_video).files
     // Pose v2 is output from this step
     pose_v2_data = PREDICT_SINGLE_MOUSE_KEYPOINTS(pose_init).files
@@ -21,7 +31,54 @@ workflow SINGLE_MOUSE_TRACKING {
     pose_with_corners = PREDICT_ARENA_CORNERS(pose_and_seg_data).files
     pose_v6_data = PREDICT_FECAL_BOLI(pose_with_corners).files
 
+    // QC the results
+    QC_SINGLE_MOUSE(pose_v6_data, params.clip_duration, params.batch_name)
+    qc_output = QC_SINGLE_MOUSE.out.qc_file
+    workflow_version = GET_WORKFLOW_VERSION().version
+    PUBLISH_SM_QC(NOURL_QC(ADD_VERSION_QC(qc_output, "nextflow_version", workflow_version)).map { file -> tuple(file, "qc_${params.batch_name}.csv") })
+
+    // Publish the pose results
+    trimmed_video_files = pose_v2_data.map { video, pose ->
+        tuple(video, "results/${video.name.replace("%20", "/")}")
+    }
+    PUBLISH_SM_TRIMMED_VID(trimmed_video_files)
+    v2_poses_renamed = pose_v2_data.map { video, pose ->
+        tuple(pose, "results/${video.baseName.replace("%20", "/")}_pose_est_v2.h5")
+    }
+    PUBLISH_SM_POSE_V2(v2_poses_renamed)
+
+    // Only continue processing files that generate corners
+    joined_channel = SELECT_COLUMNS(QC_SINGLE_MOUSE.out, 'pose_file', 'corners_present')
+        .splitCsv(header: true, sep: ',')
+        .map(row -> [row.pose_file, row.corners_present])
+    // Split qc filenames into present and missing
+    split_channel = joined_channel.branch { v, c ->
+        present: c.contains("True")
+            return v
+        missing: c.contains("False")
+            return v
+    }
+    // Split path channel with defaults
+    branched = pose_v6_data.branch { video, pose ->
+        present: split_channel.present.ifEmpty("INVALID_POSE_FILE").toList().contains(pose.toString())
+        missing: split_channel.missing.ifEmpty("INVALID_POSE_FILE").toList().contains(pose.toString())
+    }
+    v6_with_corners = branched.present.ifEmpty(params.default_feature_input)
+    v6_without_corners = branched.missing.ifEmpty(params.default_manual_correction_input)
+
+    // Publish the pose files
+    v6_poses_renamed = v6_with_corners.map { video, pose ->
+        tuple(pose, "results/${video.baseName.replace("%20", "/")}_pose_est_v6.h5")
+    }
+    PUBLISH_SM_POSE_V6(v6_poses_renamed)
+    // Corners that failed are placed in a separate folder with url-ified names
+    v6_no_corners_renamed = v6_without_corners.map { video, pose ->
+        tuple(pose, "failed_corners/${file(video).baseName}_pose_est_v6.h5")
+    }
+    PUBLISH_SM_POSE_V6_NOCORN(v6_no_corners_renamed)
+
     emit:
     pose_v2_data
-    pose_v6_data
+    v6_with_corners
+    v6_without_corners
 }

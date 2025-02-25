@@ -1,4 +1,5 @@
 include { EXTRACT_VIDEO_FRAME; ADD_EXAMPLES_TO_SLEAP; INTEGRATE_SLEAP_CORNER_ANNOTATIONS } from "./../../nextflow/modules/manual_correction"
+include { PUBLISH_RESULT_FILE as PUBLISH_SM_MANUAL_CORRECT } from "./../../nextflow/modules/utils"
 
 workflow MANUALLY_CORRECT_CORNERS {
     take:
@@ -8,6 +9,10 @@ workflow MANUALLY_CORRECT_CORNERS {
     main:
     video_frames = EXTRACT_VIDEO_FRAME(input_files, frame_index).frame
     sleap_file = ADD_EXAMPLES_TO_SLEAP(video_frames.collect()).sleap_file
+    manual_correction_output = sleap_file.map { sleap_filename ->
+        tuple(sleap_filename, "manual_corner_correction.slp")
+    }
+    PUBLISH_SM_MANUAL_CORRECT(manual_correction_output)
 
     emit:
     sleap_file

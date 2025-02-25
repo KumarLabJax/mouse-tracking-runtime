@@ -197,3 +197,13 @@ process PUBLISH_RESULT_FILE {
     fi
     """
 }
+
+process GET_WORKFLOW_VERSION {
+    output:
+    val "${workflow.commitId ?: 'N/A'}", emit: version
+
+    script:
+    """
+    echo "Workflow version: ${workflow.commitId ?: 'N/A'}"
+    """
+}

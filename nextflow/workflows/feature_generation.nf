@@ -1,12 +1,27 @@
 include { GENERATE_GAIT_H5; GENERATE_GAIT_BIN } from "./../../nextflow/modules/gait"
 include { GENERATE_FLEXIBILITY_INDEX; GENERATE_REAR_PAW_WIDTH } from "./../../nextflow/modules/flexibility"
-include { MERGE_FEATURE_ROWS as MERGE_GAIT;
+include { GET_WORKFLOW_VERSION;
+          MERGE_FEATURE_ROWS as MERGE_GAIT;
           MERGE_FEATURE_ROWS as MERGE_ANGLES;
           MERGE_FEATURE_ROWS as MERGE_DIST_AC;
           MERGE_FEATURE_ROWS as MERGE_DIST_B;
           MERGE_FEATURE_ROWS as MERGE_REAR_PAW_WIDTHS;
           MERGE_FEATURE_ROWS as MERGE_FECAL_BOLI;
-          MERGE_FEATURE_COLS } from "./../../nextflow/modules/utils"
+          MERGE_FEATURE_COLS;
+          DELETE_ROW as DELETE_DEFAULT_JABS;
+          DELETE_ROW as DELETE_DEFAULT_FBOLI;
+          PUBLISH_RESULT_FILE as PUBLISH_SM_V6_FEATURES;
+          PUBLISH_RESULT_FILE as PUBLISH_FBOLI;
+          PUBLISH_RESULT_FILE as PUBLISH_GAIT;
+          PUBLISH_RESULT_FILE as PUBLISH_MORPHOMETRICS;
+          REMOVE_URLIFY_FIELDS as NOURL_JABS;
+          REMOVE_URLIFY_FIELDS as NOURL_FBOLI;
+          REMOVE_URLIFY_FIELDS as NOURL_GAIT;
+          REMOVE_URLIFY_FIELDS as NOURL_MORPH;
+          ADD_COLUMN as ADD_VERSION_GAIT;
+          ADD_COLUMN as ADD_VERSION_MORPH;
+          ADD_COLUMN as ADD_VERSION_JABS;
+          ADD_COLUMN as ADD_VERSION_FBOLI; } from "./../../nextflow/modules/utils"
 include { GENERATE_FEATURE_CACHE;
           PREDICT_CLASSIFIERS;
           GENERATE_BEHAVIOR_TABLES;
@@ -38,6 +53,17 @@ workflow SINGLE_MOUSE_V2_FEATURES {
     all_morphometrics = combined_angle_results.concat(combined_ac_results, combined_b_results, combined_rearpaw_results).collect()
 
     morphometrics_results = MERGE_FEATURE_COLS(all_morphometrics, "NetworkFilename", "morphometrics")
+
+    // Publish the results
+    workflow_version = GET_WORKFLOW_VERSION().version
+    gait_outputs = NOURL_GAIT(ADD_VERSION_GAIT(gait_results, "nextflow_version", workflow_version)).map { feature_file ->
+        tuple(feature_file, "gait.csv")
+    }
+    PUBLISH_GAIT(gait_outputs)
+    morphometric_outputs = NOURL_MORPH(ADD_VERSION_MORPH(morphometrics_results, "nextflow_version", workflow_version)).map { feature_file ->
+        tuple(feature_file, "morphometrics.csv")
+    }
+    PUBLISH_MORPHOMETRICS(morphometric_outputs)
 
     emit:
     gait_results
@@ -74,6 +100,17 @@ workflow SINGLE_MOUSE_V6_FEATURES {
     // Fecal Boli Extraction
     individual_fecal_boli = EXTRACT_FECAL_BOLI_BINS(input_pose_v6_batch)
     fecal_boli_table = MERGE_FECAL_BOLI(individual_fecal_boli.fecal_boli.collect(), "fecal_boli", 1)
+
+    // Publish results
+    workflow_version = GET_WORKFLOW_VERSION().version
+    feature_outputs = NOURL_JABS(ADD_VERSION_JABS(DELETE_DEFAULT_JABS(all_behavior_features, "${file(params.default_feature_input[0]).baseName}"), "nextflow_version", workflow_version)).map { feature_file ->
+        tuple(feature_file, "features.csv")
+    }
+    PUBLISH_SM_V6_FEATURES(feature_outputs)
+    fecal_boli_outputs = NOURL_FBOLI(ADD_VERSION_FBOLI(DELETE_DEFAULT_FBOLI(fecal_boli_table, "${file(params.default_feature_input[0]).baseName}"), "nextflow_version", workflow_version)).map { fecal_boli ->
+        tuple(fecal_boli, "fecal_boli.csv")
+    }
+    PUBLISH_FBOLI(fecal_boli_outputs)
 
     emit:
     all_behavior_features
