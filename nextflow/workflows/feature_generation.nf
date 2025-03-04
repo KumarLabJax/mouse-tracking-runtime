@@ -7,6 +7,7 @@ include { GET_WORKFLOW_VERSION;
           MERGE_FEATURE_ROWS as MERGE_DIST_B;
           MERGE_FEATURE_ROWS as MERGE_REAR_PAW_WIDTHS;
           MERGE_FEATURE_ROWS as MERGE_FECAL_BOLI;
+          MERGE_FEATURE_ROWS as MERGE_JABS;
           MERGE_FEATURE_COLS;
           DELETE_ROW as DELETE_DEFAULT_JABS;
           DELETE_ROW as DELETE_DEFAULT_FBOLI;
@@ -21,7 +22,9 @@ include { GET_WORKFLOW_VERSION;
           ADD_COLUMN as ADD_VERSION_GAIT;
           ADD_COLUMN as ADD_VERSION_MORPH;
           ADD_COLUMN as ADD_VERSION_JABS;
-          ADD_COLUMN as ADD_VERSION_FBOLI; } from "./../../nextflow/modules/utils"
+          ADD_COLUMN as ADD_VERSION_FBOLI;
+          FEATURE_TO_LONG;
+          LONG_TO_WIDE; } from "./../../nextflow/modules/utils"
 include { GENERATE_FEATURE_CACHE;
           PREDICT_CLASSIFIERS;
           GENERATE_BEHAVIOR_TABLES;
@@ -86,7 +89,7 @@ workflow SINGLE_MOUSE_V6_FEATURES {
     available_classifiers = params.single_mouse_classifiers.keySet()
     classifier_objects = available_classifiers.collect { params.exported_classifier_folder + it + params.classifier_artifact_suffix }
     classifier_predictions = PREDICT_CLASSIFIERS(cached_features, classifier_objects)
-    classifier_tables = GENERATE_BEHAVIOR_TABLES(classifier_predictions.collect(), available_classifiers)
+    classifier_tables = GENERATE_BEHAVIOR_TABLES(classifier_predictions, available_classifiers)
 
     // Combine table data into feature file
     all_summary_tables = heuristic_tables
@@ -95,7 +98,11 @@ workflow SINGLE_MOUSE_V6_FEATURES {
         .flatten()
         .combine(params.feature_bins)
     individual_behavior_features = BEHAVIOR_TABLE_TO_FEATURES(all_summary_tables)
-    all_behavior_features = MERGE_FEATURE_COLS(individual_behavior_features.collect(), "MouseID", "behavior_features")
+    // Features are named columns (wide) split across multiple files
+    // Transform them into long format so that we can row-concat without sorting
+    long_feature_data = FEATURE_TO_LONG(individual_behavior_features, "MouseID")
+    combined_long_features = MERGE_JABS(long_feature_data.collect(), "jabs_features", 1)
+    wide_jabs_features = LONG_TO_WIDE(combined_long_features, "MouseID", "feature_name", "value")
 
     // Fecal Boli Extraction
     individual_fecal_boli = EXTRACT_FECAL_BOLI_BINS(input_pose_v6_batch)
@@ -103,7 +110,7 @@ workflow SINGLE_MOUSE_V6_FEATURES {
 
     // Publish results
     workflow_version = GET_WORKFLOW_VERSION().version
-    feature_outputs = NOURL_JABS(ADD_VERSION_JABS(DELETE_DEFAULT_JABS(all_behavior_features, "${file(params.default_feature_input[0]).baseName}"), "nextflow_version", workflow_version)).map { feature_file ->
+    feature_outputs = NOURL_JABS(ADD_VERSION_JABS(DELETE_DEFAULT_JABS(wide_jabs_features, "${file(params.default_feature_input[0]).baseName}"), "nextflow_version", workflow_version)).map { feature_file ->
         tuple(feature_file, "features.csv")
     }
     PUBLISH_SM_V6_FEATURES(feature_outputs)
@@ -113,6 +120,6 @@ workflow SINGLE_MOUSE_V6_FEATURES {
     PUBLISH_FBOLI(fecal_boli_outputs)
 
     emit:
-    all_behavior_features
+    wide_jabs_features
     fecal_boli_table
 }

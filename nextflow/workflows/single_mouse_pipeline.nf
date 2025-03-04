@@ -31,13 +31,7 @@ workflow SINGLE_MOUSE_TRACKING {
     pose_with_corners = PREDICT_ARENA_CORNERS(pose_and_seg_data).files
     pose_v6_data = PREDICT_FECAL_BOLI(pose_with_corners).files
 
-    // QC the results
-    QC_SINGLE_MOUSE(pose_v6_data, params.clip_duration, params.batch_name)
-    qc_output = QC_SINGLE_MOUSE.out.qc_file
-    workflow_version = GET_WORKFLOW_VERSION().version
-    PUBLISH_SM_QC(NOURL_QC(ADD_VERSION_QC(qc_output, "nextflow_version", workflow_version)).map { file -> tuple(file, "qc_${params.batch_name}.csv") })
-
-    // Publish the pose results
+    // Publish the pose v2 results
     trimmed_video_files = pose_v2_data.map { video, pose ->
         tuple(video, "results/${video.name.replace("%20", "/")}")
     }
@@ -47,7 +41,24 @@ workflow SINGLE_MOUSE_TRACKING {
     }
     PUBLISH_SM_POSE_V2(v2_poses_renamed)
 
-    // Only continue processing files that generate corners
+    emit:
+    pose_v2_data
+    pose_v6_data
+}
+
+workflow SPLIT_BY_CORNERS {
+    take:
+    input_pose_v6_batch
+
+    main:
+    // QC the results
+    input_poses = input_pose_v6_batch.map { video, pose -> pose }.collect()
+    QC_SINGLE_MOUSE(input_poses, params.clip_duration, params.batch_name)
+    qc_output = QC_SINGLE_MOUSE.out.qc_file
+    workflow_version = GET_WORKFLOW_VERSION().version
+    PUBLISH_SM_QC(NOURL_QC(ADD_VERSION_QC(qc_output, "nextflow_version", workflow_version)).map { file -> tuple(file, "qc_${params.batch_name}.csv") })
+
+    // Split based on corners being present
     joined_channel = SELECT_COLUMNS(QC_SINGLE_MOUSE.out, 'pose_file', 'corners_present')
         .splitCsv(header: true, sep: ',')
         .map(row -> [row.pose_file, row.corners_present])
@@ -59,7 +70,7 @@ workflow SINGLE_MOUSE_TRACKING {
             return v
     }
     // Split path channel with defaults
-    branched = pose_v6_data.branch { video, pose ->
+    branched = input_pose_v6_batch.branch { video, pose ->
         present: split_channel.present.ifEmpty("INVALID_POSE_FILE").toList().contains(pose.toString())
         missing: split_channel.missing.ifEmpty("INVALID_POSE_FILE").toList().contains(pose.toString())
     }
@@ -78,7 +89,6 @@ workflow SINGLE_MOUSE_TRACKING {
     PUBLISH_SM_POSE_V6_NOCORN(v6_no_corners_renamed)
 
     emit:
-    pose_v2_data
     v6_with_corners
     v6_without_corners
 }

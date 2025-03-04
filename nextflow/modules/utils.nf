@@ -72,10 +72,11 @@ process MERGE_FEATURE_ROWS {
 
     script:
     """
-    head -n${header_size} ${feature_files[0]} > ${out_filename}.csv
-    for feature_file in ${feature_files};
+    feature_files_array=(${feature_files.collect { element -> "\"${element.toString()}\"" }.join(' ')})
+    head -n${header_size} "\${feature_files_array[0]}" > ${out_filename}.csv
+    for feature_file in "\${feature_files_array[@]}";
     do
-        tail -n+\$((${header_size}+1)) \${feature_file} >> ${out_filename}.csv
+        tail -n\$((${header_size}+1)) "\$feature_file" >> ${out_filename}.csv
     done
     """
 }
@@ -159,6 +160,52 @@ process DELETE_ROW {
     """
 }
 
+process FEATURE_TO_LONG {
+    // Any environment with pandas installed should work here.
+    label "tracking"
+
+    input:
+    path feature_file
+    val id_col
+
+    output:
+    path "${feature_file.baseName}_long.csv", emit: long_file
+
+    script:
+    """
+    #!/usr/bin/env python3
+
+    import pandas as pd
+    read_data = pd.read_csv("${feature_file.toString()}")
+    melted_data = pd.melt(read_data, id_vars="${id_col}", var_name="feature_name", value_name="value")
+    melted_data.to_csv("${feature_file.baseName.toString()}_long.csv", index=False)
+    """
+}
+
+process LONG_TO_WIDE {
+    // Any environment with pandas installed should work here.
+    label "tracking"
+
+    input:
+    path long_file
+    val id_col
+    val feature_col
+    val value_col
+
+    output:
+    path "${long_file.baseName}_wide.csv", emit: wide_file
+
+    script:
+    """
+    #!/usr/bin/env python3
+
+    import pandas as pd
+    read_data = pd.read_csv("${long_file.toString()}")
+    wide_data = read_data.pivot(index="${id_col}", columns="feature_name", values="value").reset_index()
+    wide_data.to_csv("${long_file.baseName.toString()}_wide.csv", index=False)
+    """
+}
+
 process SUBSET_PATH_BY_VAR {
     input:
     path all_files
@@ -209,6 +256,9 @@ process GET_WORKFLOW_VERSION {
 }
 
 process ADD_DUMMY_VIDEO {
+    // Any environment with ffmpeg installed should work here.
+    label "tracking"
+
     input:
     path pose_file
     val n_frames

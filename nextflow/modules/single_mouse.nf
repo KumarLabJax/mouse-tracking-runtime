@@ -36,7 +36,7 @@ process QC_SINGLE_MOUSE {
     label "tracking"
 
     input:
-    tuple path(in_video), path(in_pose_file)
+    path(in_pose_file)
     val(clip_duration)
     val(batch_name)
 

@@ -8,7 +8,7 @@ if (!params.workflow) {
     println "Missing workflow parameter"
     System.exit(1)
 }
-include { SINGLE_MOUSE_TRACKING } from './nextflow/workflows/single_mouse_pipeline'
+include { SINGLE_MOUSE_TRACKING; SPLIT_BY_CORNERS } from './nextflow/workflows/single_mouse_pipeline'
 include { SINGLE_MOUSE_V2_FEATURES; SINGLE_MOUSE_V6_FEATURES } from './nextflow/workflows/feature_generation'
 include { MULTI_MOUSE_TRACKING } from './nextflow/workflows/multi_mouse_pipeline'
 include { MANUALLY_CORRECT_CORNERS; INTEGRATE_CORNER_ANNOTATIONS } from './nextflow/workflows/sleap_manual_correction'
@@ -40,12 +40,15 @@ workflow{
     // Generate pose files
     if (params.workflow == "single-mouse"){
         SINGLE_MOUSE_TRACKING(PREPARE_DATA.out.out_file)
-        all_v2_outputs = SINGLE_MOUSE_TRACKING.out[0].collect()
-        v6_with_corners = SINGLE_MOUSE_TRACKING.out[1].collect()
-        v6_without_corners = SINGLE_MOUSE_TRACKING.out[2].collect()
+        v2_outputs = SINGLE_MOUSE_TRACKING.out[0]
+        all_v6_outputs = SINGLE_MOUSE_TRACKING.out[1]
+        // Split and publish pose_v6 files depending on if corners were successful
+        SPLIT_BY_CORNERS(all_v6_outputs)
+        v6_with_corners = SPLIT_BY_CORNERS.out[0]
+        v6_without_corners = SPLIT_BY_CORNERS.out[1]
 
         // Pose v2 features
-        pose_v2_results = SINGLE_MOUSE_V2_FEATURES(all_v2_outputs)
+        pose_v2_results = SINGLE_MOUSE_V2_FEATURES(v2_outputs)
 
         // Pose v6 features
         SINGLE_MOUSE_V6_FEATURES(v6_with_corners)
@@ -57,7 +60,7 @@ workflow{
         // Integrate annotations back into pose files
         INTEGRATE_CORNER_ANNOTATIONS(Channel.fromList(all_files), params.sleap_file)
         ADD_DUMMY_VIDEO(INTEGRATE_SLEAP_CORNER_ANNOTATIONS.out)
-        paired_video_and_pose = ADD_DUMMY_VIDEO.out[0].collect()
+        paired_video_and_pose = ADD_DUMMY_VIDEO.out[0].collect(flat:false)
 
         // Pose v6 features
         SINGLE_MOUSE_V6_FEATURES(paired_video_and_pose)
@@ -65,7 +68,7 @@ workflow{
     if (params.workflow == "single-mouse-v6-features"){
         // Generate features from pose_v6 files
         ADD_DUMMY_VIDEO(Channel.fromList(all_files))
-        paired_video_and_pose = ADD_DUMMY_VIDEO.out[0].collect()
+        paired_video_and_pose = ADD_DUMMY_VIDEO.out[0].collect(flat:false)
         SINGLE_MOUSE_V6_FEATURES(paired_video_and_pose)
     }
     if (params.workflow == "multi-mouse"){
