@@ -76,7 +76,7 @@ process MERGE_FEATURE_ROWS {
     head -n${header_size} "\${feature_files_array[0]}" > ${out_filename}.csv
     for feature_file in "\${feature_files_array[@]}";
     do
-        tail -n\$((${header_size}+1)) "\$feature_file" >> ${out_filename}.csv
+        tail -n+\$((${header_size}+1)) "\$feature_file" >> ${out_filename}.csv
     done
     """
 }
