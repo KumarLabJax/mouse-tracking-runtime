@@ -9,12 +9,13 @@ import argparse
 import sys
 
 
-def aggregate_folder_data(folder: str, depth: int = 2):
+def aggregate_folder_data(folder: str, depth: int = 2, num_bins: int = -1):
 	"""Aggregates fecal boli data in a folder into a table.
 
 	Args:
 		folder: project folder
 		depth: expected subfolder depth
+		num_bins: number of bins to read in (value < 0 reads all)
 
 	Returns:
 		pd.DataFrame containing the fecal boli counts over time
@@ -31,10 +32,18 @@ def aggregate_folder_data(folder: str, depth: int = 2):
 	"""
 	pose_files = glob.glob(folder + '/' + '*/' * depth + '*_pose_est_v6.h5')
 
+	max_bin_count = None if num_bins < 0 else num_bins
+
 	read_data = []
 	for cur_file in pose_files:
 		with h5py.File(cur_file, 'r') as f:
-			counts = f['dynamic_objects/fecal_boli/counts'][:]
+			counts = f['dynamic_objects/fecal_boli/counts'][:].flatten().astype(float)
+			# Clip the number of bins if requested
+			if max_bin_count is not None:
+				if len(counts) > max_bin_count:
+					counts = counts[:max_bin_count]
+				elif len(counts) < max_bin_count:
+					counts = np.pad(counts, (0, max_bin_count - len(counts)), 'constant', constant_values=np.nan)
 		new_df = pd.DataFrame(counts, columns=['count'])
 		new_df['minute'] = np.arange(len(new_df))
 		new_df['NetworkFilename'] = cur_file[len(folder):len(cur_file) - 15] + '.avi'
@@ -50,11 +59,12 @@ def main(argv):
 	parser = argparse.ArgumentParser(description='Script that generates a basic table of fecal boli counts for a project directory.')
 	parser.add_argument('--folder', help='Folder containing the fecal boli prediction data', required=True)
 	parser.add_argument('--folder_depth', help='Depth of the folder to search', type=int, default=2)
+	parser.add_argument('--num_bins', help='Number of fecal boli bins to read in (default all)', type=int, default=-1)
 	parser.add_argument('--output', help='Output table filename', default=f'FecalBoliCounts_{datetime.now().strftime("%Y%m%d_%H%M%S")}.csv')
 
 	args = parser.parse_args()
-	df = aggregate_folder_data(args.folder, args.folder_depth)
-	df.to_csv(args.output, index=False)
+	df = aggregate_folder_data(args.folder, args.folder_depth, args.num_bins)
+	df.to_csv(args.output, index=False, na_rep='NA')
 
 
 if __name__ == '__main__':
