@@ -41,7 +41,8 @@ workflow SINGLE_MOUSE_V2_FEATURES {
     // Gait features
     gait_h5_files = GENERATE_GAIT_H5(input_pose_v2_batch).gait_file
     gait_bins = [10, 15, 20, 25]
-    binned_gait_results = GENERATE_GAIT_BIN(gait_h5_files, Channel.fromList(gait_bins)).gait_bin_csv.collect()
+    gait_combinations = gait_h5_files.combine(Channel.fromList(gait_bins))
+    binned_gait_results = GENERATE_GAIT_BIN(gait_combinations).gait_bin_csv.collect()
     gait_results = MERGE_GAIT(binned_gait_results, "gait", 1)
 
     // Morphometrics features

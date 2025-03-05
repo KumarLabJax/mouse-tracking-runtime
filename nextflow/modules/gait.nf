@@ -27,8 +27,7 @@ process GENERATE_GAIT_BIN {
     label "gait"
 
     input:
-    path(gait_file)
-    val(speed_bin)
+    tuple path(gait_file), val(speed_bin)
 
     output:
     path("${gait_file.baseName}_gait_out_${speed_bin}cm.csv"), emit: gait_bin_csv
