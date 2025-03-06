@@ -11,4 +11,5 @@
 __pycache__
 models
 work
+tests
 !mouse-tracking-runtime/models
