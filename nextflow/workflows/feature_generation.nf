@@ -87,10 +87,8 @@ workflow SINGLE_MOUSE_V6_FEATURES {
 
     // JABS Behavior Classifiers
     // We let the inner prediction loop over classifiers because they write to a single file
-    available_classifiers = params.single_mouse_classifiers.keySet()
-    classifier_objects = available_classifiers.collect { params.exported_classifier_folder + it + params.classifier_artifact_suffix }
-    classifier_predictions = PREDICT_CLASSIFIERS(cached_features, classifier_objects)
-    classifier_tables = GENERATE_BEHAVIOR_TABLES(classifier_predictions, available_classifiers)
+    classifier_predictions = PREDICT_CLASSIFIERS(cached_features, params.single_mouse_classifiers)
+    classifier_tables = GENERATE_BEHAVIOR_TABLES(classifier_predictions, params.single_mouse_classifiers)
 
     // Combine table data into feature file
     all_summary_tables = heuristic_tables
