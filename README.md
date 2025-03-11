@@ -21,7 +21,11 @@ See [model docs](docs/models.md) for information about available models.
 
 Pipelines are run using nextflow. For a list of all available parameters, see [nextflow parameters](nextflow.config). Not all parameters will affect all pipeline workflows.
 
+If you are running the pipeline on the HPC, you should submit the workflow as a job. You can use the example test as a starting template: [test-nextflow.sh](test-nextflow.sh).
+
 ## Single Mouse Pipelines
+
+See [docs/pipelines.md](docs/pipelines.md) for more specific information about the structure of the pipeline.
 
 ### Video to Features
 
