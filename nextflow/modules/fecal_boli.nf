@@ -26,7 +26,7 @@ process EXTRACT_FECAL_BOLI_BINS {
 
     script:
     """
-    if [ ! -z "${video_file.baseName}_pose_est_v6.h5" ]; then
+    if [ ! -f "${video_file.baseName}_pose_est_v6.h5" ]; then
         ln -s ${in_pose} "${video_file.baseName}_pose_est_v6.h5"
     fi
     python3 ${params.tracking_code_dir}/aggregate_fecal_boli.py --folder . --folder_depth 0 --num_bins ${params.clip_duration.intdiv(1800)} --output ${video_file.baseName}_fecal_boli.csv

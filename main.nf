@@ -59,7 +59,7 @@ workflow{
     if (params.workflow == "single-mouse-corrected-corners"){
         // Integrate annotations back into pose files
         INTEGRATE_CORNER_ANNOTATIONS(Channel.fromList(all_files), params.sleap_file)
-        ADD_DUMMY_VIDEO(INTEGRATE_SLEAP_CORNER_ANNOTATIONS.out)
+        ADD_DUMMY_VIDEO(INTEGRATE_CORNER_ANNOTATIONS.out)
         paired_video_and_pose = ADD_DUMMY_VIDEO.out[0].collect(flat:false)
 
         // Pose v6 features

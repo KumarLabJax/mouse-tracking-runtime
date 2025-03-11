@@ -40,7 +40,7 @@ process PREDICT_MULTI_MOUSE_IDENTITY {
     tuple path(video_file), path(in_pose)
 
     output:
-    tuple poath(video_file), path("${video_file.baseName}_pose_est_v3_with_id.h5"), emit: files
+    tuple path(video_file), path("${video_file.baseName}_pose_est_v3_with_id.h5"), emit: files
 
     script:
     """

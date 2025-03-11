@@ -15,5 +15,5 @@ from: python:3.10-bookworm
 	
 	# Install python dependencies
 	pip install "sleap-io==0.2.0"
-    # NWB needs write access to the site-packages folder on first load.
-    python -c "import sleap_io; print(sleap_io.__version__)"
+	# NWB needs write access to the site-packages folder on first load.
+	python -c "import sleap_io; print(sleap_io.__version__)"

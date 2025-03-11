@@ -98,7 +98,7 @@ def main(argv):
         raise ValueError(msg)
 
     video = corrected_annotations.videos[matched_video_idx[0]]
-    data = jabs.conver_labels(corrected_annotations, video)
+    data = jabs.convert_labels(corrected_annotations, video)
     write_static_objects(data, args.pose_file)
     write_px_per_cm(data, args.pose_file)
 

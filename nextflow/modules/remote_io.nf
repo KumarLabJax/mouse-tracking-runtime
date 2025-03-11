@@ -40,7 +40,7 @@ process GET_DATA_FROM_DROPBOX {
 
     script:
     """
-    !/bin/bash
+    #!/bin/bash
 
     rclone ls \$DROPBOX_PREFIX/\$video_filename > \$WORK_DIR/video_file_remote_stats.txt"
     h5_filename=${video_file.baseName}_pose_est_v6.h5

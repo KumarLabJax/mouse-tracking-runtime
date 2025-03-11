@@ -24,7 +24,7 @@ workflow INTEGRATE_CORNER_ANNOTATIONS {
     sleap_file
 
     main:
-    corrected_poses = INTEGRATE_SLEAP_CORNER_ANNOTATIONS(pose_files, sleap_files).pose_file
+    corrected_poses = INTEGRATE_SLEAP_CORNER_ANNOTATIONS(pose_files, sleap_file).pose_file
 
     emit:
     corrected_poses
