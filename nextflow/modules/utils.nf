@@ -264,7 +264,7 @@ process ADD_DUMMY_VIDEO {
     val n_frames
 
     output:
-    tuple(path("${pose_file.baseName.replaceFirst(/_pose_est_v[0-9]+/, "")}.mp4"), pose_file), emit: files
+    tuple path("${pose_file.baseName.replaceFirst(/_pose_est_v[0-9]+/, "")}.mp4"), path(pose_file), emit: files
 
     script:
     """

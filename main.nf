@@ -58,17 +58,19 @@ workflow{
     }
     if (params.workflow == "single-mouse-corrected-corners"){
         // Integrate annotations back into pose files
+        // This branch requires files to be local and already url-ified
+        // Use a channel of `all_files` instead of `PREPARE_DATA.out.out_file`
         INTEGRATE_CORNER_ANNOTATIONS(Channel.fromList(all_files), params.sleap_file)
-        ADD_DUMMY_VIDEO(INTEGRATE_CORNER_ANNOTATIONS.out)
-        paired_video_and_pose = ADD_DUMMY_VIDEO.out[0].collect(flat:false)
+        ADD_DUMMY_VIDEO(INTEGRATE_CORNER_ANNOTATIONS.out, params.clip_duration)
+        paired_video_and_pose = ADD_DUMMY_VIDEO.out[0]
 
         // Pose v6 features
         SINGLE_MOUSE_V6_FEATURES(paired_video_and_pose)
     }
     if (params.workflow == "single-mouse-v6-features"){
         // Generate features from pose_v6 files
-        ADD_DUMMY_VIDEO(Channel.fromList(all_files))
-        paired_video_and_pose = ADD_DUMMY_VIDEO.out[0].collect(flat:false)
+        ADD_DUMMY_VIDEO(PREPARE_DATA.out.out_file, params.clip_duration)
+        paired_video_and_pose = ADD_DUMMY_VIDEO.out[0]
         SINGLE_MOUSE_V6_FEATURES(paired_video_and_pose)
     }
     if (params.workflow == "multi-mouse"){
