@@ -89,16 +89,18 @@ def main(argv):
     # Load SLEAP annotations
     corrected_annotations = slp.read_labels(args.sleap_annotations)
     # Search for annotations for the requested pose file
-    corrected_frame_names = [x.backend.source_filename for x in  corrected_annotations.videos]
-    expected_corrected_prefix = [Path(x).name for x in corrected_frame_names]
+    corrected_frame_names = [x.backend.filename[0] for x in  corrected_annotations.videos]
+    expected_corrected_prefix = [Path(x).stem for x in corrected_frame_names]
 
-    matched_video_idx = [i for i, x in enumerate(expected_corrected_prefix) if Path(args.pose_file).name.startswith(x)]
+    matched_video_idx = [i for i, x in enumerate(expected_corrected_prefix) if Path(args.pose_file).stem.startswith(x)]
     if len(matched_video_idx) == 0:
         msg = f"Couldn't find annotations for {args.pose_file}."
         raise ValueError(msg)
 
     video = corrected_annotations.videos[matched_video_idx[0]]
     data = jabs.convert_labels(corrected_annotations, video)
+    # SLEAP uses 'arena_corners' key, while JABS just uses 'corners'
+    data['static_objects']['corners'] = data['static_objects'].pop('arena_corners')
     write_static_objects(data, args.pose_file)
     write_px_per_cm(data, args.pose_file)
 

@@ -49,7 +49,7 @@ process ADD_EXAMPLES_TO_SLEAP {
 }
 
 process INTEGRATE_SLEAP_CORNER_ANNOTATIONS {
-    label "sleap-io"
+    label "sleap_io"
 
     input:
     path pose_file
