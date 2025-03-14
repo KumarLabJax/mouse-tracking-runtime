@@ -47,7 +47,7 @@ Output:
  * `fecal_boli.csv` prediction file containing fecal boli counts for each video, used in growth curve modeling.
 
 Example Command:
-`nextflow -c nextflow.config -c nextflow/configs/profiles/development.config run main.nf --input_batch /path/to/batch.txt --workflow single-mouse --pubdir /path/to/output_folder`
+`nextflow -c nextflow.config -c nextflow/configs/profiles/development.config run main.nf --input_batch /path/to/video_batch.txt --workflow single-mouse --pubdir /path/to/output_folder`
 
 ### Corner Correction to Features
 
@@ -78,4 +78,4 @@ Output:
  * `fecal_boli.csv` prediction file containing fecal boli counts for each video, used in growth curve modeling.
 
 Example Command:
-TODO
+`nextflow -c nextflow.config -c nextflow/configs/profiles/development.config run main.nf --input_batch /path/to/pose_v6_batch.txt --workflow single-mouse-v6-features --pubdir /path/to/output_folder`
