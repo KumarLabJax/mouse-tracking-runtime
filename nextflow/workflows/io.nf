@@ -1,6 +1,6 @@
-include { CHECK_FILE; URLIFY_FILE } from './../../nextflow/modules/utils'
-include { GET_DATA_FROM_T2; PUT_DATA_TO_T2 } from './../../nextflow/modules/remote_io'
-include { GET_DATA_FROM_DROPBOX; PUT_DATA_TO_DROPBOX } from './../../nextflow/modules/remote_io'
+include { CHECK_FILE; URLIFY_FILE } from "${projectDir}/nextflow/modules/utils"
+include { GET_DATA_FROM_T2; PUT_DATA_TO_T2 } from "${projectDir}/nextflow/modules/remote_io"
+include { GET_DATA_FROM_DROPBOX; PUT_DATA_TO_DROPBOX } from "${projectDir}/nextflow/modules/remote_io"
 
 workflow PREPARE_DATA {
     take:

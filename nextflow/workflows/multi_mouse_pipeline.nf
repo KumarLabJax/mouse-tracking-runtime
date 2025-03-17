@@ -1,5 +1,5 @@
-include { PREDICT_MULTI_MOUSE_SEGMENTATION; PREDICT_MULTI_MOUSE_KEYPOINTS; PREDICT_MULTI_MOUSE_IDENTITY; GENERATE_MULTI_MOUSE_TRACKLETS } from "./../../nextflow/modules/multi_mouse"
-include { VIDEO_TO_POSE } from "./../../nextflow/modules/utils"
+include { PREDICT_MULTI_MOUSE_SEGMENTATION; PREDICT_MULTI_MOUSE_KEYPOINTS; PREDICT_MULTI_MOUSE_IDENTITY; GENERATE_MULTI_MOUSE_TRACKLETS } from "${projectDir}/nextflow/modules/multi_mouse"
+include { VIDEO_TO_POSE } from "${projectDir}/nextflow/modules/utils"
 
 workflow MULTI_MOUSE_TRACKING {
     take:

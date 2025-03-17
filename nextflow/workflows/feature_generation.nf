@@ -1,5 +1,5 @@
-include { GENERATE_GAIT_H5; GENERATE_GAIT_BIN } from "./../../nextflow/modules/gait"
-include { GENERATE_FLEXIBILITY_INDEX; GENERATE_REAR_PAW_WIDTH } from "./../../nextflow/modules/flexibility"
+include { GENERATE_GAIT_H5; GENERATE_GAIT_BIN } from "${projectDir}/nextflow/modules/gait"
+include { GENERATE_FLEXIBILITY_INDEX; GENERATE_REAR_PAW_WIDTH } from "${projectDir}/nextflow/modules/flexibility"
 include { GET_WORKFLOW_VERSION;
           MERGE_FEATURE_ROWS as MERGE_GAIT;
           MERGE_FEATURE_ROWS as MERGE_ANGLES;
@@ -24,13 +24,13 @@ include { GET_WORKFLOW_VERSION;
           ADD_COLUMN as ADD_VERSION_JABS;
           ADD_COLUMN as ADD_VERSION_FBOLI;
           FEATURE_TO_LONG;
-          LONG_TO_WIDE; } from "./../../nextflow/modules/utils"
+          LONG_TO_WIDE; } from "${projectDir}/nextflow/modules/utils"
 include { GENERATE_FEATURE_CACHE;
           PREDICT_CLASSIFIERS;
           GENERATE_BEHAVIOR_TABLES;
           PREDICT_HEURISTICS;
-          BEHAVIOR_TABLE_TO_FEATURES } from "./../../nextflow/modules/jabs_classifiers"
-include { EXTRACT_FECAL_BOLI_BINS } from "./../../nextflow/modules/fecal_boli"
+          BEHAVIOR_TABLE_TO_FEATURES } from "${projectDir}/nextflow/modules/jabs_classifiers"
+include { EXTRACT_FECAL_BOLI_BINS } from "${projectDir}/nextflow/modules/fecal_boli"
 
 workflow SINGLE_MOUSE_V2_FEATURES {
     take:

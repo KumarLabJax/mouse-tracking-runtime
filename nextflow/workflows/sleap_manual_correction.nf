@@ -1,5 +1,5 @@
-include { EXTRACT_VIDEO_FRAME; ADD_EXAMPLES_TO_SLEAP; INTEGRATE_SLEAP_CORNER_ANNOTATIONS } from "./../../nextflow/modules/manual_correction"
-include { PUBLISH_RESULT_FILE as PUBLISH_SM_MANUAL_CORRECT } from "./../../nextflow/modules/utils"
+include { EXTRACT_VIDEO_FRAME; ADD_EXAMPLES_TO_SLEAP; INTEGRATE_SLEAP_CORNER_ANNOTATIONS } from "${projectDir}/nextflow/modules/manual_correction"
+include { PUBLISH_RESULT_FILE as PUBLISH_SM_MANUAL_CORRECT } from "${projectDir}/nextflow/modules/utils"
 
 workflow MANUALLY_CORRECT_CORNERS {
     take:

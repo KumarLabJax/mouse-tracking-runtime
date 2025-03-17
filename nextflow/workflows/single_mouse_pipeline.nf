@@ -1,7 +1,7 @@
-include { PREDICT_SINGLE_MOUSE_SEGMENTATION; PREDICT_SINGLE_MOUSE_KEYPOINTS; CLIP_VIDEO_AND_POSE } from "./../../nextflow/modules/single_mouse"
-include { PREDICT_ARENA_CORNERS } from "./../../nextflow/modules/static_objects"
-include { PREDICT_FECAL_BOLI } from "./../../nextflow/modules/fecal_boli"
-include { QC_SINGLE_MOUSE } from './../../nextflow/modules/single_mouse'
+include { PREDICT_SINGLE_MOUSE_SEGMENTATION; PREDICT_SINGLE_MOUSE_KEYPOINTS; CLIP_VIDEO_AND_POSE } from "${projectDir}/nextflow/modules/single_mouse"
+include { PREDICT_ARENA_CORNERS } from "${projectDir}/nextflow/modules/static_objects"
+include { PREDICT_FECAL_BOLI } from "${projectDir}/nextflow/modules/fecal_boli"
+include { QC_SINGLE_MOUSE } from "${projectDir}/nextflow/modules/single_mouse"
 include { VIDEO_TO_POSE;
           GET_WORKFLOW_VERSION;
           SELECT_COLUMNS;
@@ -12,7 +12,7 @@ include { VIDEO_TO_POSE;
           PUBLISH_RESULT_FILE as PUBLISH_SM_POSE_V2;
           PUBLISH_RESULT_FILE as PUBLISH_SM_POSE_V6;
           PUBLISH_RESULT_FILE as PUBLISH_SM_POSE_V6_NOCORN;
- } from "./../../nextflow/modules/utils"
+ } from "${projectDir}/nextflow/modules/utils"
 
 workflow SINGLE_MOUSE_TRACKING {
     take:
