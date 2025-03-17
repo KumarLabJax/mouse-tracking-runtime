@@ -15,12 +15,9 @@ include { MANUALLY_CORRECT_CORNERS; INTEGRATE_CORNER_ANNOTATIONS } from './nextf
 include { ADD_DUMMY_VIDEO } from './nextflow/modules/utils'
 
 /*
- * Combine input_data and input_batch into a single list
+ * Convert input_batch into a single list
  */
 all_files = []
-if (params.input_data != null){
-    all_files.add(params.input_data)
-}
 if (params.input_batch != null){
     all_files.addAll(file(params.input_batch).text.readLines())
 }
@@ -73,8 +70,8 @@ workflow{
         paired_video_and_pose = ADD_DUMMY_VIDEO.out[0]
         SINGLE_MOUSE_V6_FEATURES(paired_video_and_pose)
     }
-    if (params.workflow == "multi-mouse"){
-        MULTI_MOUSE_TRACKING(PREPARE_DATA.out.video_file, params.num_mice)
-    }
+    // if (params.workflow == "multi-mouse"){
+    //     MULTI_MOUSE_TRACKING(PREPARE_DATA.out.video_file, params.num_mice)
+    // }
 }
 

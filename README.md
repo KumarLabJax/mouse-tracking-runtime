@@ -23,6 +23,8 @@ Pipelines are run using nextflow. For a list of all available parameters, see [n
 
 If you are running the pipeline on the HPC, you should submit the workflow as a job. You can use the example test as a starting template: [test-nextflow.sh](test-nextflow.sh).
 
+Input files should include the full path. An easy way to generate the list of inputs for `input_batch` is to run `find $(pwd) -name '*.avi' > video_batch.txt`.
+
 ## Single Mouse Pipelines
 
 See [docs/pipelines.md](docs/pipelines.md) for more specific information about the structure of the pipeline.
@@ -63,7 +65,7 @@ Output:
  * `fecal_boli.csv` prediction file containing fecal boli counts for each video, used in growth curve modeling.
 
 Example Command:
-TODO
+`nextflow -c nextflow.config -c nextflow/configs/profiles/development.config run main.nf --input_batch /path/to/pose_v6_batch.txt --sleap_file /path/to/corner-correction.slp --workflow single-mouse-corrected-corners --pubdir /path/to/output_folder`
 
 ### Pose File (v6) to Features
 
