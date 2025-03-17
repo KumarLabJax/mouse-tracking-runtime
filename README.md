@@ -37,6 +37,7 @@ Input:
 * Video Files
 
 Output:
+* `workflow_version.txt` information related to the specific workflow run.
 * Folder named `results` with clipped videos, pose_v2 predictions, and pose_v6 predictions with corners.
 * Folder named `failed_corners` with pose_v6 predictions that failed corners.
 * `manual_corner_corrections.slp` sleap file containing frames to manually correct corners.
@@ -60,6 +61,7 @@ Input:
 * Folder containing pose_v6 predictions to add corners
 
 Output:
+* `workflow_version.txt` information related to the specific workflow run.
 * pose_v6 related features
  * `features.csv` feature file containing JABS-related features.
  * `fecal_boli.csv` prediction file containing fecal boli counts for each video, used in growth curve modeling.
@@ -75,6 +77,7 @@ Input:
 * Pose files (arena corners required!)
 
 Output:
+* `workflow_version.txt` information related to the specific workflow run.
 * pose_v6 related features
  * `features.csv` feature file containing JABS-related features.
  * `fecal_boli.csv` prediction file containing fecal boli counts for each video, used in growth curve modeling.
