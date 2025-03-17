@@ -246,12 +246,18 @@ process PUBLISH_RESULT_FILE {
 }
 
 process GET_WORKFLOW_VERSION {
+    publishDir "${params.pubdir}", mode:'copy', overwrite: false
+
     output:
-    val "${workflow.commitId ?: 'N/A'}", emit: version
+    val "${workflow.commitId ?: 'UNSET'}", emit: version
+    path "workflow_version.txt", emit: version_file
 
     script:
     """
-    echo "Workflow version: ${workflow.commitId ?: 'N/A'}"
+    echo "nextflow_revision=${workflow.commitId ?: 'UNSET'}" > workflow_version.txt
+    echo "workflow_version=${workflow.manifest.version ?: 'UNSET'}" >> workflow_version.txt
+    echo "git_head=\$(git rev-parse HEAD)" >> workflow_version.txt
+    echo "date_run=\$(date +%F)" >> workflow_version.txt
     """
 }
 
