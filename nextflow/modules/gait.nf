@@ -1,5 +1,6 @@
 process GENERATE_GAIT_H5 {
     label "gait"
+    label "cpu"
     
     input:
     tuple path(video_file) , path(pose_file)
@@ -25,6 +26,7 @@ process GENERATE_GAIT_H5 {
 
 process GENERATE_GAIT_BIN {
     label "gait"
+    label "cpu"
 
     input:
     tuple path(gait_file), val(speed_bin)
