@@ -1,0 +1,19 @@
+Bootstrap: docker
+from: python:3.10-bookworm
+
+%setup
+	mkdir -p ${SINGULARITY_ROOTFS}/mouse-tracking-runtime/support_code/
+
+%files
+	static-object-correct.py /mouse-tracking-runtime/support_code/.
+
+%post
+	apt-get update
+	export DEBIAN_FRONTEND=noninteractive TZ=Etc/UTC
+	# Base ubuntu getting image formats + ffmpeg
+	apt-get install -y ffmpeg libsm6 libxext6 libjpeg62-turbo-dev zlib1g-dev
+	
+	# Install python dependencies
+	pip install "sleap-io==0.2.0"
+	# NWB needs write access to the site-packages folder on first load.
+	python -c "import sleap_io; print(sleap_io.__version__)"
