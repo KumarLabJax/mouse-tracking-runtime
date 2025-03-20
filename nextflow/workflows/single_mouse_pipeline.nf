@@ -70,9 +70,15 @@ workflow SPLIT_BY_CORNERS {
             return v
     }
     // Split path channel with defaults
+    // Note that the `.val` is necessary for branch to recognize it as a conditional
+    // rather than a groovy statement
+    present_filenames = split_channel.present.ifEmpty("INVALID_POSE_FILE").toList()
+    missing_filenames = split_channel.missing.ifEmpty("INVALID_POSE_FILE").toList()
     branched = input_pose_v6_batch.branch { video, pose ->
-        present: split_channel.present.ifEmpty("INVALID_POSE_FILE").toList().contains(pose.toString())
-        missing: split_channel.missing.ifEmpty("INVALID_POSE_FILE").toList().contains(pose.toString())
+        present: present_filenames.val.contains(pose.toString())
+            return tuple(video, pose)
+        missing: missing_filenames.val.contains(pose.toString())
+            return tuple(video, pose)
     }
     v6_with_corners = branched.present.ifEmpty(params.default_feature_input)
     v6_without_corners = branched.missing.ifEmpty(params.default_manual_correction_input)
