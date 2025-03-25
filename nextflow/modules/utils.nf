@@ -256,7 +256,7 @@ process GET_WORKFLOW_VERSION {
     """
     echo "nextflow_revision=${workflow.commitId ?: 'UNSET'}" > workflow_version.txt
     echo "workflow_version=${workflow.manifest.version ?: 'UNSET'}" >> workflow_version.txt
-    echo "git_head=\$(git rev-parse HEAD)" >> workflow_version.txt
+    echo "git_head=${params.git_hash}" >> workflow_version.txt
     echo "date_run=\$(date +%F)" >> workflow_version.txt
     """
 }
