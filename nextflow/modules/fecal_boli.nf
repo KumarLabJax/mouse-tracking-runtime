@@ -1,6 +1,7 @@
 process PREDICT_FECAL_BOLI {
     label "gpu"
     label "tracking"
+    label "r_fboli_predict"
 
     input:
     tuple path(video_file), path(in_pose)
@@ -17,6 +18,7 @@ process PREDICT_FECAL_BOLI {
 
 process EXTRACT_FECAL_BOLI_BINS {
     label "tracking"
+    label "r_fboli_extract"
 
     input:
     tuple path(video_file), path(in_pose)

@@ -1,6 +1,7 @@
 process PREDICT_SINGLE_MOUSE_SEGMENTATION {
     label "gpu"
     label "tracking"
+    label "r_single_seg"
     
     input:
     tuple path(video_file), path(in_pose_file)
@@ -18,6 +19,7 @@ process PREDICT_SINGLE_MOUSE_SEGMENTATION {
 process PREDICT_SINGLE_MOUSE_KEYPOINTS {
     label "gpu"
     label "tracking"
+    label "r_single_keypoints"
     
     input:
     tuple path(video_file), path(in_pose_file)
@@ -34,6 +36,7 @@ process PREDICT_SINGLE_MOUSE_KEYPOINTS {
 
 process QC_SINGLE_MOUSE {
     label "tracking"
+    label "r_single_qc"
 
     input:
     path(in_pose_file)
@@ -54,6 +57,7 @@ process QC_SINGLE_MOUSE {
 
 process CLIP_VIDEO_AND_POSE {
     label "tracking"
+    label "r_clip_video"
 
     input:
     tuple path(in_video), path(in_pose_file)
