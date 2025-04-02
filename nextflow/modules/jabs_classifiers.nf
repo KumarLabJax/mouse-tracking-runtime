@@ -1,6 +1,7 @@
 process GENERATE_FEATURE_CACHE {
     // This process will correct pose pathing to a v6 file
     label "jabs_classify"
+    label "cpu"
 
     input:
     tuple path(video_file), path(in_pose)
@@ -23,6 +24,7 @@ process GENERATE_FEATURE_CACHE {
 
 process PREDICT_CLASSIFIERS {
     label "jabs_classify"
+    label "cpu"
 
     input:
     // Pose file must be of form "${video_file.baseName}_pose_est_v[0-9]+.h5"
@@ -44,6 +46,7 @@ process PREDICT_CLASSIFIERS {
 
 process GENERATE_BEHAVIOR_TABLES {
     label "jabs_postprocess"
+    label "cpu"
 
     input:
     tuple path(in_pose), path(feature_cache), path(behavior_files)
@@ -61,6 +64,7 @@ process GENERATE_BEHAVIOR_TABLES {
 
 process PREDICT_HEURISTICS {
     label "jabs_postprocess"
+    label "cpu"
 
     input:
     // Pose file must be of form "${video_file.baseName}_pose_est_v[0-9]+.h5"

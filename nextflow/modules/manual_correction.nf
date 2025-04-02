@@ -10,7 +10,7 @@ process EXTRACT_VIDEO_FRAME {
 
     script:
     """
-    ffmpeg -i ${video} -vf "select=gte(n\\,${frame_index}),setpts=PTS-STARTPTS" -vframes 1 ${video.baseName}.png
+    ffmpeg -i ${video} -vf "select=gte(n\\,${frame_index}),setpts=PTS-STARTPTS" -vframes 1 ${video.getBaseName().replaceAll('%', '%%')}.png
     """
 }
 
