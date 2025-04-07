@@ -11,6 +11,7 @@ process VIDEO_TO_POSE {
     script:
     """
     touch "${video_file.baseName}_pose_est_v0.h5"
+    sleep 10
     """
 }
 
@@ -34,6 +35,7 @@ process CHECK_FILE {
         echo "File does not exist"
         exit 1
     fi
+    sleep 10
     """
 }
 
@@ -51,6 +53,7 @@ process URLIFY_FILE {
     script:
     """
     ln -s ${file_to_urlify} "${file_to_urlify.split('/')[-1-depth..-1].join('%20')}"
+    sleep 10
     """
 }
 
@@ -66,6 +69,7 @@ process REMOVE_URLIFY_FIELDS {
     script:
     """
     sed -e 's:%20:/:g' ${urlified_file} > "${urlified_file.baseName}_no_urls${urlified_file.extension}"
+    sleep 10
     """
 }
 
@@ -88,6 +92,7 @@ process MERGE_FEATURE_ROWS {
     do
         tail -n+\$((${header_size}+1)) "\$feature_file" >> ${out_filename}.csv
     done
+    sleep 10
     """
 }
 
@@ -141,6 +146,7 @@ process SELECT_COLUMNS {
         print \$(f["${key_1}"]), \$(f["${key_2}"])
     }
     ' OFS=',' ${qc_file} > "${qc_file.baseName}_${key_1}_${key_2}.csv"
+    sleep 10
     """
 }
 
@@ -158,6 +164,7 @@ process ADD_COLUMN {
     script:
     """
     awk 'BEGIN {FS=OFS=","} NR==1 {print \$0, "${column_name}"} NR>1 {print \$0, "${column_data}"}' ${file_to_add_to} > ${file_to_add_to.baseName}_with_${column_name}${file_to_add_to.extension}
+    sleep 10
     """
 }
 
@@ -174,6 +181,7 @@ process DELETE_ROW {
     script:
     """
     grep -v "${row_to_delete}" ${file_to_delete_from} > "${file_to_delete_from.baseName}_no_${row_to_delete}${file_to_delete_from.extension}"
+    sleep 10
     """
 }
 
@@ -243,6 +251,7 @@ process SUBSET_PATH_BY_VAR {
     do
         ln -s \$(pwd)/\${file} ${dir}/\$(basename \${file})
     done
+    sleep 10
     """
 }
 
@@ -265,6 +274,7 @@ process PUBLISH_RESULT_FILE {
         fi
         ln -s \$(pwd)/${result_file} ${publish_filename}
     fi
+    sleep 10
     """
 }
 
@@ -283,6 +293,7 @@ process GET_WORKFLOW_VERSION {
     echo "workflow_version=${workflow.manifest.version ?: 'UNSET'}" >> workflow_version.txt
     echo "git_head=\$(git rev-parse HEAD)" >> workflow_version.txt
     echo "date_run=\$(date +%F)" >> workflow_version.txt
+    sleep 10
     """
 }
 
