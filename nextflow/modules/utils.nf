@@ -1,4 +1,6 @@
 process VIDEO_TO_POSE {
+    label "r_util"
+
     // Generates a dummy pose file such that the pipeline can start at any step
     input:
     path video_file
@@ -13,6 +15,8 @@ process VIDEO_TO_POSE {
 }
 
 process CHECK_FILE {
+    label "r_util"
+
     input:
     val file_to_check
 
@@ -34,6 +38,8 @@ process CHECK_FILE {
 }
 
 process URLIFY_FILE {
+    label "r_util"
+
     // WARNING: This process will fail if depth > actual file depth
     input:
     val file_to_urlify
@@ -49,6 +55,8 @@ process URLIFY_FILE {
 }
 
 process REMOVE_URLIFY_FIELDS {
+    label "r_util"
+
     input:
     path urlified_file
 
@@ -62,6 +70,8 @@ process REMOVE_URLIFY_FIELDS {
 }
 
 process MERGE_FEATURE_ROWS {
+    label "r_util"
+
     input:
     path feature_files
     val out_filename
@@ -84,6 +94,7 @@ process MERGE_FEATURE_ROWS {
 process MERGE_FEATURE_COLS {
     // Any environment with pandas installed should work here.
     label "tracking"
+    label "r_util"
 
     input:
     path feature_files
@@ -108,6 +119,8 @@ process MERGE_FEATURE_COLS {
 }
 
 process SELECT_COLUMNS {
+    label "r_util"
+
     input:
     path(qc_file)
     val key_1
@@ -132,6 +145,8 @@ process SELECT_COLUMNS {
 }
 
 process ADD_COLUMN {
+    label "r_util"
+
     input:
     path file_to_add_to
     val column_name
@@ -147,6 +162,8 @@ process ADD_COLUMN {
 }
 
 process DELETE_ROW {
+    label "r_util"
+
     input:
     path file_to_delete_from
     val row_to_delete
@@ -163,6 +180,7 @@ process DELETE_ROW {
 process FEATURE_TO_LONG {
     // Any environment with pandas installed should work here.
     label "tracking"
+    label "r_util"
 
     input:
     path feature_file
@@ -185,6 +203,7 @@ process FEATURE_TO_LONG {
 process LONG_TO_WIDE {
     // Any environment with pandas installed should work here.
     label "tracking"
+    label "r_util"
 
     input:
     path long_file
@@ -207,6 +226,8 @@ process LONG_TO_WIDE {
 }
 
 process SUBSET_PATH_BY_VAR {
+    label "r_util"
+
     input:
     path all_files
     val subset_files
@@ -226,6 +247,8 @@ process SUBSET_PATH_BY_VAR {
 }
 
 process PUBLISH_RESULT_FILE {
+    label "r_util"
+
     publishDir "${params.pubdir}", mode:'copy'
 
     input:
@@ -246,6 +269,8 @@ process PUBLISH_RESULT_FILE {
 }
 
 process GET_WORKFLOW_VERSION {
+    label "r_util"
+
     publishDir "${params.pubdir}", mode:'copy', overwrite: false
 
     output:
@@ -264,6 +289,7 @@ process GET_WORKFLOW_VERSION {
 process ADD_DUMMY_VIDEO {
     // Any environment with ffmpeg installed should work here.
     label "tracking"
+    label "r_gen_vid"
 
     input:
     path pose_file
