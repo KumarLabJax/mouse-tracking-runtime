@@ -32,6 +32,9 @@ def parse_trace(file: Path, delimiter: str = "\t") -> pd.DataFrame:
         If script is included, you will need to remove newlines and tabs from this column.
         nextflow log [nextflow_job_id] -f task_id,process,duration,start,complete,pcpu,peak_rss,script > trace.tsv
         awk 'BEGIN {FS="\t";OFS="|"} { if (NF==8) { print LASTROW, SCRIPT; LASTROW=$1 OFS $2 OFS $3 OFS $4 OFS $5 OFS $6 OFS $7; SCRIPT=$8} else {ADD_SCRIPT=$0; SCRIPT=SCRIPT FS ADD_SCRIPT }} END { print LASTROW, SCRIPT }' trace.tsv  > trace_tabbed.csv
+
+    Todo:
+        Add proper error handling for missing columns.
     """
     # Read the CSV file into a DataFrame
     return_df = pd.read_csv(file, sep=delimiter)
