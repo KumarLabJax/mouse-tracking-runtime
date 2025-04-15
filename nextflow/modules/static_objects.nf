@@ -1,6 +1,7 @@
 process PREDICT_ARENA_CORNERS {
     label "gpu"
     label "tracking"
+    label "r_arena_corners"
     
     input:
     tuple path(video_file), path(in_pose)
@@ -18,6 +19,7 @@ process PREDICT_ARENA_CORNERS {
 process PREDICT_FOOD_HOPPER {
     label "gpu"
     label "tracking"
+    label "r_food_hopper"
     
     input:
     tuple path(video_file), path(in_pose)
@@ -35,6 +37,7 @@ process PREDICT_FOOD_HOPPER {
 process PREDICT_LIXIT {
     label "gpu"
     label "tracking"
+    label "r_lixit"
     
     input:
     tuple path(video_file), path(in_pose)

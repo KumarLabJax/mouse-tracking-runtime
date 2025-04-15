@@ -1,6 +1,7 @@
 process GENERATE_FLEXIBILITY_INDEX {
     label "frailty"
     label "cpu"
+    label "r_flexibility"
 
     input:
     tuple path(video_file), path(pose_file)
@@ -34,6 +35,7 @@ process GENERATE_FLEXIBILITY_INDEX {
 process GENERATE_REAR_PAW_WIDTH {
     label "frailty"
     label "cpu"
+    label "r_rearpaw"
 
     input:
     tuple path(video_file), path(pose_file)
