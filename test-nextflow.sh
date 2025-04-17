@@ -10,8 +10,8 @@
 cd /projects/kumar-lab/multimouse-pipeline/nextflow-code/
 
 # LOAD NEXTFLOW
-module use --append /projects/omics_share/meta/modules
-module load nextflow/24.04.4
+module use --append /projects/kumar-lab/meta/modules
+module load nextflow/stable
 
 # RUN TEST PIPELINE
 nextflow run main.nf \
