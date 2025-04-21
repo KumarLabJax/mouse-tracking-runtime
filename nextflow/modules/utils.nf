@@ -314,3 +314,37 @@ process ADD_DUMMY_VIDEO {
     ffmpeg -f lavfi -i color=size=480x480:rate=30:color=black -vframes "${n_frames}" "${pose_file.baseName.replaceFirst(/_pose_est_v[0-9]+/, "")}.mp4"
     """
 }
+
+/**
+ * Validates input files based on specified criteria
+ *
+ * @param file_path The path to the file that needs validation
+ * @return A boolean indicating if the file is valid and an error message if it's not
+ */
+def validateInputFile(String file_path) {
+    def file = file(file_path)
+    def valid_extensions = ['.avi', '.mp4', '.h5']
+    def extension = file_path.substring(file_path.lastIndexOf('.'))
+    
+    // Check if file exists
+    if (!file.exists()) {
+        return [false, "File does not exist: ${file_path}"]
+    }
+    
+    // Check if file is readable
+    if (!file.canRead()) {
+        return [false, "File is not readable: ${file_path}"]
+    }
+    
+    // Check if file is non-empty
+    if (file.size() == 0) {
+        return [false, "File is empty: ${file_path}"]
+    }
+    
+    // Check file extension
+    if (!valid_extensions.contains(extension.toLowerCase())) {
+        return [false, "Invalid file extension: ${extension}. Expected one of: ${valid_extensions}"]
+    }
+    
+    return [true, ""]
+}
