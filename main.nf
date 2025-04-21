@@ -42,6 +42,12 @@ if (params.input_batch != null) {
             println "  - ${error_message}"
         }
         
+        if (!params.ignore_invalid_inputs) {
+            println "Please check the input files and try again."
+            println "If you want to ignore invalid inputs, please set the parameter ignore_invalid_inputs to true."
+            System.exit(1)
+        }
+
         // If all files are invalid, exit
         if (valid_files.size() == 0) {
             println "No valid files to process. Exiting."
