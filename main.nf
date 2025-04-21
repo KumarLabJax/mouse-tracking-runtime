@@ -12,7 +12,7 @@ include { SINGLE_MOUSE_TRACKING; SPLIT_BY_CORNERS } from './nextflow/workflows/s
 include { SINGLE_MOUSE_V2_FEATURES; SINGLE_MOUSE_V6_FEATURES } from './nextflow/workflows/feature_generation'
 include { MULTI_MOUSE_TRACKING } from './nextflow/workflows/multi_mouse_pipeline'
 include { MANUALLY_CORRECT_CORNERS; INTEGRATE_CORNER_ANNOTATIONS } from './nextflow/workflows/sleap_manual_correction'
-include { ADD_DUMMY_VIDEO, validateInputFile } from './nextflow/modules/utils'
+include { ADD_DUMMY_VIDEO; validateInputFile } from './nextflow/modules/utils'
 
 /*
  * Convert input_batch into a single list
@@ -23,7 +23,7 @@ valid_files = []
 
 if (params.input_batch != null) {
     def batch_lines = file(params.input_batch).text.readLines()
-    
+
     // Validate each file in the batch
     batch_lines.each { file_path ->
         def (is_valid, error_message) = validateInputFile(file_path)
