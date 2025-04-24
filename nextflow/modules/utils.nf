@@ -316,14 +316,26 @@ process ADD_DUMMY_VIDEO {
 }
 
 /**
- * Validates input files based on specified criteria
+ * Validates input files based on specified criteria and pipeline type
  *
  * @param file_path The path to the file that needs validation
+ * @param pipeline_type The type of pipeline being run (e.g. 'single-mouse', 'single-mouse-corrected-corners', etc.)
  * @return A boolean indicating if the file is valid and an error message if it's not
  */
-def validateInputFile(String file_path) {
+def validateInputFile(String file_path, String pipeline_type) {
     def file = file(file_path)
-    def valid_extensions = ['.avi', '.mp4', '.h5']
+    def valid_extensions = [
+        'single-mouse': ['.avi', '.mp4'],
+        'single-mouse-corrected-corners': ['.h5'],
+        'single-mouse-v6-features': ['.h5'],
+        'multi-mouse': ['.avi', '.mp4']
+    ]
+    
+    // Check if pipeline type is valid
+    if (!valid_extensions.containsKey(pipeline_type)) {
+        return [false, "Invalid pipeline type: ${pipeline_type}. Expected one of: ${valid_extensions.keySet()}"]
+    }
+    
     def extension = file_path.substring(file_path.lastIndexOf('.'))
     
     // Check if file exists
@@ -341,9 +353,9 @@ def validateInputFile(String file_path) {
         return [false, "File is empty: ${file_path}"]
     }
     
-    // Check file extension
-    if (!valid_extensions.contains(extension.toLowerCase())) {
-        return [false, "Invalid file extension: ${extension}. Expected one of: ${valid_extensions}"]
+    // Check file extension against allowed extensions for pipeline type
+    if (!valid_extensions[pipeline_type].contains(extension.toLowerCase())) {
+        return [false, "Invalid file extension: ${extension}. For pipeline ${pipeline_type}, expected one of: ${valid_extensions[pipeline_type]}"]
     }
     
     return [true, ""]
