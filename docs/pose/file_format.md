@@ -11,106 +11,201 @@ Each video has a corresponding HDF5 file with the same name as the corresponding
 ### Core Pose Datasets
 
 - `poseest/points`
-  - Dataset with size (#frames x maximum # instances x #keypoints x 2)
-  - #keypoints is 12 following the mouse body part indexing scheme
-  - The last dimension of size 2 holds the pixel (y, x) position
-  - Datatype is 16-bit unsigned integer
+  - Description: Keypoint pose information.
+  - Shape: (#frames x #instance x #keypoints x 2)
+    - #frames: the frame index of the video
+    - #instance: the prediction instance (single animal) within the frame
+    - #keypoints: the 12 keypoints described below in keypoint mapping section
+    - 2: the pixel (y, x) position of the keypoint
+  - Type: 16-bit unsigned integer
+  - Padding: 0
+  - Attributes:
+    - `config`: details the name of the configuration file used during inference
+    - `model`: details the saved model file used during inference
+  - Notes:
+    - Not all frames must have the same number of predicted instances. Padded instances are always the last indices in #instance dimension.
+    - Not all instances must have all keypoints predicted. Padded keypoints will simply contain the padding value.
 
 - `poseest/confidence`
-  - Dataset with size (#frames x maximum # instances x #keypoints)
-  - Assigns a confidence value to each of the 12 points
-  - Values of 0 indicate a missing point; anything higher than 0 indicates a valid point
-  - Datatype is 32-bit floating point
+  - Description: Confidence values (value of the peak on prediction heatmap) associated with keypoint pose data.
+  - Shape: (#frames x #instances x #keypoints)
+    - #frames: the frame index of the video
+    - #instance: the prediction instance (single animal) within the frame
+    - #keypoints: the 12 keypoints described below in keypoint mapping section
+  - Type: 32-bit floating point
+  - Padding: 0
+  - Notes:
+    - Index in this field corresponds to index in `poseest/points` field.
+    - Anything higher than 0 indicates a valid point.
 
 - `poseest/instance_count`
-  - Dataset with size (#frames)
-  - Gives the instance count for every frame
-  - Datatype is 8-bit unsigned integer
+  - Description: Number of per-frame valid instances contained in `poseest/points` field.
+  - Shape: (#frames)
+    - #frames: the frame index of the video
+  - Type: 8-bit unsigned integer
+  - Padding: None
+  - Notes:
+    - This field provides a simplified view of when an instance only contains 0 confidence keypoints.
 
 - `poseest/instance_embedding`
-  - Dataset with size (#frames x maximum # instances x #keypoints)
-  - Contains the instance embedding for the respective instance at the respective frame and point
-  - Datatype is 32-bit floating point
+  - Description: Associative embedding value for keypoints.
+  - Shape: (#frames x #instances x #keypoints)
+    - #frames: the frame index of the video
+    - #instance: the prediction instance (single animal) within the frame
+    - #keypoints: the 12 keypoints described below in keypoint mapping section
+  - Type: 32-bit floating point
+  - Padding: 0
+  - Notes:
+    - This field is only typically used for bottom-up multi-mouse pose.
 
 - `poseest/instance_track_id`
-  - Dataset with size (#frames x maximum # instances)
-  - Contains the instance_track_id for each instance index on a per-frame basis
-  - Tracklets are continuous blocks (no breaks/gaps)
+  - Description: Resolved tracklet key for an animal over time.
+  - Shape: (#frames x #instances)
+    - #frames: the frame index of the video
+    - #instance: the prediction instance (single animal) within the frame
+  - Type: 32-bit unsigned integer
+  - Padding: 0
+  - Notes:
+    - Tracklets are continuous blocks of frames (no breaks/gaps).
+    - Tracklets can start at index 0, meaning padded values must be masked with `poseest/instance_count` field.
 
 ### Identity Embedding Datasets
 
 - `poseest/id_mask`
-  - Dataset with size (#frames x maximum # instances)
-  - Contains a 0 or 1 depending upon if the instance_embed_id is usable
-  - Uses numpy masking convention, where 0 means "good data" and 1 means "data to ignore"
-  - Instances marked as "good data" only include instances assigned a long-term ID
-  - Instances marked as "data to ignore" include both invalid instances and instances not assigned a long-term ID
+  - Description: Mask matrix for `poseest/instance_embed_id` field.
+  - Shape: (#frames x #instances)
+    - #frames: the frame index of the video
+    - #instance: the prediction instance (single animal) within the frame
+  - Type: bool
+  - Padding: None
+  - Notes:
+    - Contains a 0 or 1 depending upon if the instance_embed_id is usable
+    - Uses numpy masking convention, where 0 means "good data" and 1 means "data to ignore"
+    - Instances marked as "good data" only include instances assigned a long-term ID
+    - Instances marked as "data to ignore" include both invalid instances and instances not assigned a long-term ID
 
 - `poseest/identity_embeds`
-  - Dataset with size (#frames x maximum # instances x embedded dimension)
-  - Contains the embedded identity location for each pose
+  - Description: Identity embeding value for each pose.
+  - Shape: (#frames x #instances x embedded dimension)
+    - #frames: the frame index of the video
+    - #instance: the prediction instance (single animal) within the frame
+    - embedded dimension: Size of bottleneck in identity embedding network
+  - Type: 32-bit floating point
+  - Padding: 0
+  - Attributes:
+    - `config`: details the name of the configuration file used during inference
+    - `model`: details the saved model file used during inference
 
 - `poseest/instance_embed_id`
-  - Dataset with size (#frames x maximum # instances)
-  - A corrected "poseest/instance_track_id"
-  - Can be used with "posest/id_mask" to hide instances that were not assigned a long-term ID
-  - Values of 0 are reserved for "non-valid" instances
-  - Values of 1-# clusters are long-term IDs
-  - Values greater than # clusters are valid instances/tracks that were not assigned an identity
-  - Optional attributes store information about the method used for generation:
-    - `version` = current version of the code run
-    - `tracklet_gen` = algorithm used for generating the tracklets
-    - `tracklet_stitch` = algorithm used for stitching together multiple tracklets
+  - Description: Resolved longterm identity for an animal over time.
+  - Shape: (#frames x #instances)
+    - #frames: the frame index of the video
+    - #instance: the prediction instance (single animal) within the frame
+  - Type: 32-bit unsigned integer
+  - Padding: 0
+  - Attributes:
+    - `version`: version of the identity resolving code that generated these values
+    - `tracklet_gen`: algorithm used for generating tracklets
+    - `tracklet_stitch`: algorithm used for stitching together multiple tracklets
+  - Notes:
+    - number of clusters is indicated by shape of `poseest/instance_id_center`
+    - Values of 0 are reserved for "non-valid" instances
+    - Values of 1-number of clusters are long-term IDs
+    - Values greater than number of clusters are valid instances/tracks that were not assigned an identity
+    - Can be used with `posest/id_mask` to hide instances that were not assigned a long-term ID
 
 - `poseest/instance_id_center`
-  - Dataset with size (# clusters x embedded dimension)
-  - Contains the embedded locations of the clusters
-  - Typically used for linking together identities over multiple videos
+  - Description: Center embedding location for each identity
+  - Shape: (#clusters x embedded dimension)
+    - #clusters: Number of identities assigned
+    - embedded dimension: Size of bottleneck in identity embedding network
+  - Type: 32-bit floating point
+  - Padding: 0
+  - Notes:
+    - This field is used for linking together identities over multiple videos
 
 ### Static Object Datasets
 
 - `static_objects/corners`
-  - Dataset with shape (4, 2), dtype=16-bit unsigned integer
-  - Contains x,y coordinates of the 4 arena corners
-  - Corners do not guarantee any sorting
+  - Description: Arena corner keypoints.
+  - Shape: (4, 2)
+    - 4: Keypoint index
+    - 2: the pixel (x, y) position of the keypoint
+  - Type: 16-bit unsigned integer
+  - Padding: Field optional
+  - Notes:
+    - Corners do not guarantee any sorting
 
 - `static_objects/lixit`
-  - Dataset with shape (n, 2), dtype=32-bit float
-  - Contains y,x coordinates for each of n lixit water spouts
+  - Description: Keypoint location of the tip of drinking water spouts.
+  - Shape: (#lixit, 2)
+    - #lixit: Lixit instance
+    - 2: the pixel (y, x) position of the keypoint
+  - Type: 32-bit floating point
+  - Padding: Field optional
 
 - `static_objects/food_hopper`
-  - Dataset with shape (4,2), dtype=16-bit unsigned integer
-  - Contains y,x coordinates for the 4 detected corners of the food hopper
-  - Corners are sorted to produce a valid polygon (e.g., clockwise ordering)
+  - Description: Food hopper corner keypoints.
+  - Shape: (4, 2)
+  - Type: 16-bit unsigned integer
+  - Padding: Field optional
+  - Notes:
+    - Corners are sorted to produce a valid polygon (e.g., clockwise ordering)
 
 ### Segmentation Datasets
 
 - `poseest/seg_data`
-  - Dataset with size (#frames, #max_animals, #max_contours, #max_contour_length, 2)
-  - Dataset type is int32
-  - Dataset is padded with -1s to complete the tensor, since not all contours may exist or be the same size
-  - For dimension 3, each animal can be described as multiple contours (external or internal)
-  - Attribute `config` details the name of the configuration file used during inference
-  - Attribute `model` details the saved model file used during inference
+  - Description: Segmentation predictions, stored in a compressed contour format
+  - Size: (#frames, #instances, #max_contours, #max_contour_length, 2)
+    - #frames: the frame index of the video
+    - #instance: the prediction instance (single animal) within the frame
+    - #max_contours: list of contours used to describe an instance
+    - #max_contour_length: sequence of points in a contour
+    - 2: the pixel (x, y) position of the contour point
+  - Type: 32-bit signed integer
+  - Padding: -1
+  - Attributes:
+    - `config`: details the name of the configuration file used during inference
+    - `model`: details the saved model file used during inference
+  - Notes:
+    - This storage follows opencv convention for the last 3 dimensions.
+    - Contour data is padded with -1s because these are invalid contour points.
 
 - `poseest/seg_external_flag`
-  - Dataset with size (#frames, #max_animals, #max_contours)
-  - Dataset type is bool
-  - Dataset stores whether or not a given contour is external (True) or internal (False)
+  - Description: Flag indicating if a segmentation is internal or external.
+  - Shape: (#frames, #instances, #max_contours)
+    - #frames: the frame index of the video
+    - #instance: the prediction instance (single animal) within the frame
+    - #max_contours: list of contours used to describe an instance
+  - Type: bool
+  - Padding: False
+  - Notes:
+    - Dataset stores whether or not a given contour in `poseest/seg_data` is external (True) or internal (False)
 
 ### Segmentation Linking Datasets
 Fields are only available if segmentation linking was applied.
 
 - `poseest/instance_seg_id`
-  - Dataset with size (#frames, #max_animals)
-  - Represents tracklets generated for segmentations
-  - Values the same across both this field and "instance_track_id" identify animals with BOTH a pose prediction and a segmentation prediction
+  - Description: Segmentation data that has been matched with pose track data.
+  - Size: (#frames, #instance)
+    - #frames: the frame index of the video
+    - #instance: the prediction instance (single animal) within the frame
+  - Type: 32-bit unsigned integer
+  - Padding: 0
+  - Notes:
+    - For each frame, values in this field and `poseest/instance_track_id` are matched for identity.
+    - Segmentation that is not matched to a keypoint pose is not considered valid.
 
 - `poseest/longterm_seg_id`
-  - Dataset with size (#frames, #max_animals)
-  - Represents corrected tracklets
-  - Values the same across both this field and "instance_embed_id" identify animals with BOTH a pose prediction and a segmentation prediction
-  - Relates to `poseest/instance_id_center`
+  - Description: Segmentation data that has been matched with pose longterm identity data.
+  - Size: (#frames, #instance)
+    - #frames: the frame index of the video
+    - #instance: the prediction instance (single animal) within the frame
+  - Type: 32-bit unsigned integer
+  - Padding: 0
+  - Notes:
+    - For each frame, values in this field and `poseest/instance_embed_id` are matched for identity.
+    - Segmentation that is not matched to a keypoint pose is not considered valid.
 
 ### Dynamic Objects Datasets
 Objects that change over time.
@@ -125,18 +220,28 @@ Characteristic of predictions:
 - Predictions are not made every single frame. While the objects may be dynamic, they shouldn’t be as active as the mouse.
 
 - `dynamic_objects/[object_name]/counts`
-  - Count of valid objects
-
+  - Description: Count of valid objects
+  - Shape: (#frames)
 - `dynamic_objects/[object_name]/points`
-  - Point data describing the object
-  - x,y or y,x sorting may be different per-static object
-
+  - Description: Point data describing the object
+  - Shape: (#frames, #objects, [#points to describe object], 2)
+    - #frames: the frame index of `dynamic_objects/[object_name]/sample_indices`
+    - #objects: instance of the object
+    - #points to describe object: Optional, if more than 1 keypoint is necessary to describe the object
+    - 2: x,y or y,x sorting may be different per-static object
 - `dynamic_objects/[object_name]/sample_indices`
-  - Frame indices when each prediction was made
+  - Description: Frame indices when each prediction was made
+  - Shape: (#frames)
+
+List of current dynamic objects:
+
+- `fecal_boli`
+  - Each object is described with 1 keypoint.
+  - Object is stored in (y, x) location
 
 ## Attributes
 
-The "poseest" group can have these attributes:
+The `poseest` group can have these attributes:
 
 - `cm_per_pixel` (optional)
   - Defines how many centimeters a pixel of open field represents
