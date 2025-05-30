@@ -43,4 +43,3 @@ def single_pose():
 @app.command()
 def single_segmentation():
     """Run single-segmentation inference."""
-

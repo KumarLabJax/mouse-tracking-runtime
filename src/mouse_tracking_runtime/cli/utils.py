@@ -21,7 +21,6 @@ def version_callback(value: bool) -> None:
         raise typer.Exit()
 
 
-
 @app.command()
 def aggregate_fecal_boli():
     """

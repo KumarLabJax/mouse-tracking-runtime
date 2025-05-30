@@ -7,6 +7,7 @@ from mouse_tracking_runtime.cli import infer, qa, utils
 
 app = typer.Typer()
 
+
 @app.callback()
 def callback(
     version: Annotated[
@@ -20,9 +21,15 @@ def callback(
     """Mouse Tracking Runtime CLI"""
 
 
-app.add_typer(infer.app, name="infer", help="Inference commands for mouse tracking runtime")
-app.add_typer(qa.app, name="qa", help="Quality assurance commands for mouse tracking runtime")
-app.add_typer(utils.app, name="utils", help="Utility commands for mouse tracking runtime")
+app.add_typer(
+    infer.app, name="infer", help="Inference commands for mouse tracking runtime"
+)
+app.add_typer(
+    qa.app, name="qa", help="Quality assurance commands for mouse tracking runtime"
+)
+app.add_typer(
+    utils.app, name="utils", help="Utility commands for mouse tracking runtime"
+)
 
 
 if __name__ == "__main__":
