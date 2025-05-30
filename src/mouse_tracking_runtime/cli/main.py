@@ -5,7 +5,7 @@ from typing import Annotated
 from mouse_tracking_runtime.cli.utils import version_callback
 from mouse_tracking_runtime.cli import infer, qa, utils
 
-app = typer.Typer()
+app = typer.Typer(no_args_is_help=True)
 
 
 @app.callback()

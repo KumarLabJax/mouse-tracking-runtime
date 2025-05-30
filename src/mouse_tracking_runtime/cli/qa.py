@@ -12,4 +12,4 @@ def single_pose():
 
 @app.command()
 def multi_pose():
-    """Run single pose quality assurance."""
+    """Run multi pose quality assurance."""
