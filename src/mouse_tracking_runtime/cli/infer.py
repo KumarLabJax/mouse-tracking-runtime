@@ -89,7 +89,7 @@ def arena_corner(
         typer.echo(f"Error: Input file '{input_source}' does not exist.", err=True)
         raise typer.Exit(1)
 
-    # Create args object compatible with existing inference function
+    # Create args object (temporary) compatible with existing inference function
     class InferenceArgs:
         """Arguments container for compatibility with existing inference code."""
 
@@ -108,11 +108,10 @@ def arena_corner(
 
     # Execute inference based on runtime
     if runtime == "tfs":
-        # Import and call the actual inference function
+        # TODO: Import and call the actual inference function
         # from tfs_inference import infer_arena_corner_model as infer_tfs
         # infer_tfs(args)
 
-        # For demonstration, just print what would happen
         input_type = "video" if video else "frame"
         typer.echo(f"Running TFS inference on {input_type}: {input_source}")
         typer.echo(f"Model: {model}")
@@ -206,7 +205,7 @@ def fecal_boli(
         typer.echo(f"Error: Input file '{input_source}' does not exist.", err=True)
         raise typer.Exit(1)
 
-    # Create args object compatible with existing inference function
+    # Create args object (temporary) compatible with existing inference function
     class InferenceArgs:
         """Arguments container for compatibility with existing inference code."""
 
@@ -225,11 +224,10 @@ def fecal_boli(
 
     # Execute inference based on runtime
     if runtime == "pytorch":
-        # Import and call the actual inference function
+        # TODO: Import and call the actual inference function
         # from pytorch_inference import infer_fecal_boli_model as infer_pytorch
         # infer_pytorch(args)
 
-        # For demonstration, just print what would happen
         input_type = "video" if video else "frame"
         typer.echo(f"Running PyTorch inference on {input_type}: {input_source}")
         typer.echo(f"Model: {model}")
@@ -322,7 +320,7 @@ def food_hopper(
         typer.echo(f"Error: Input file '{input_source}' does not exist.", err=True)
         raise typer.Exit(1)
 
-    # Create args object compatible with existing inference function
+    # Create args object (temporary) compatible with existing inference function
     class InferenceArgs:
         """Arguments container for compatibility with existing inference code."""
 
@@ -341,11 +339,10 @@ def food_hopper(
 
     # Execute inference based on runtime
     if runtime == "tfs":
-        # Import and call the actual inference function
+        # TODO: Import and call the actual inference function
         # from tfs_inference import infer_food_hopper_model as infer_tfs
         # infer_tfs(args)
 
-        # For demonstration, just print what would happen
         input_type = "video" if video else "frame"
         typer.echo(f"Running TFS inference on {input_type}: {input_source}")
         typer.echo(f"Model: {model}")
@@ -438,7 +435,7 @@ def lixit(
         typer.echo(f"Error: Input file '{input_source}' does not exist.", err=True)
         raise typer.Exit(1)
 
-    # Create args object compatible with existing inference function
+    # Create args object (temporary) compatible with existing inference function
     class InferenceArgs:
         """Arguments container for compatibility with existing inference code."""
 
@@ -457,11 +454,10 @@ def lixit(
 
     # Execute inference based on runtime
     if runtime == "tfs":
-        # Import and call the actual inference function
+        # TODO: Import and call the actual inference function
         # from tfs_inference import infer_lixit_model as infer_tfs
         # infer_tfs(args)
 
-        # For demonstration, just print what would happen
         input_type = "video" if video else "frame"
         typer.echo(f"Running TFS inference on {input_type}: {input_source}")
         typer.echo(f"Model: {model}")
@@ -536,7 +532,7 @@ def multi_identity(
         typer.echo(f"Error: Input file '{input_source}' does not exist.", err=True)
         raise typer.Exit(1)
 
-    # Create args object compatible with existing inference function
+    # Create args object (temporary) compatible with existing inference function
     class InferenceArgs:
         """Arguments container for compatibility with existing inference code."""
 
@@ -551,11 +547,10 @@ def multi_identity(
 
     # Execute inference based on runtime
     if runtime == "tfs":
-        # Import and call the actual inference function
+        # TODO: Import and call the actual inference function
         # from tfs_inference import infer_multi_identity_model as infer_tfs
         # infer_tfs(args)
 
-        # For demonstration, just print what would happen
         input_type = "video" if video else "frame"
         typer.echo(f"Running TFS inference on {input_type}: {input_source}")
         typer.echo(f"Model: {model}")
@@ -635,7 +630,7 @@ def multi_pose(
         typer.echo(f"Error: Input file '{input_source}' does not exist.", err=True)
         raise typer.Exit(1)
 
-    # Create args object compatible with existing inference function
+    # Create args object (temporary) compatible with existing inference function
     class InferenceArgs:
         """Arguments container for compatibility with existing inference code."""
 
@@ -652,11 +647,10 @@ def multi_pose(
 
     # Execute inference based on runtime
     if runtime == "pytorch":
-        # Import and call the actual inference function
+        # TODO: Import and call the actual inference function
         # from pytorch_inference import infer_multi_pose_model as infer_pytorch
         # infer_pytorch(args)
 
-        # For demonstration, just print what would happen
         input_type = "video" if video else "frame"
         typer.echo(f"Running PyTorch inference on {input_type}: {input_source}")
         typer.echo(f"Model: {model}")
@@ -739,7 +733,7 @@ def single_pose(
         typer.echo(f"Error: Input file '{input_source}' does not exist.", err=True)
         raise typer.Exit(1)
 
-    # Create args object compatible with existing inference function
+    # Create args object (temporary) compatible with existing inference function
     class InferenceArgs:
         """Arguments container for compatibility with existing inference code."""
 
@@ -756,11 +750,10 @@ def single_pose(
 
     # Execute inference based on runtime
     if runtime == "pytorch":
-        # Import and call the actual inference function
+        # TODO: Import and call the actual inference function
         # from pytorch_inference import infer_single_pose_model as infer_pytorch
         # infer_pytorch(args)
 
-        # For demonstration, just print what would happen
         input_type = "video" if video else "frame"
         typer.echo(f"Running PyTorch inference on {input_type}: {input_source}")
         typer.echo(f"Model: {model}")
@@ -838,7 +831,7 @@ def single_segmentation(
         typer.echo(f"Error: Input file '{input_source}' does not exist.", err=True)
         raise typer.Exit(1)
 
-    # Create args object compatible with existing inference function
+    # Create args object (temporary) compatible with existing inference function
     class InferenceArgs:
         """Arguments container for compatibility with existing inference code."""
 
@@ -854,11 +847,10 @@ def single_segmentation(
 
     # Execute inference based on runtime
     if runtime == "tfs":
-        # Import and call the actual inference function
+        # TODO: Import and call the actual inference function
         # from tfs_inference import infer_single_segmentation_model as infer_tfs
         # infer_tfs(args)
 
-        # For demonstration, just print what would happen
         input_type = "video" if video else "frame"
         typer.echo(f"Running TFS inference on {input_type}: {input_source}")
         typer.echo(f"Model: {model}")
