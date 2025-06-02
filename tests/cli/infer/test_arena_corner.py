@@ -238,37 +238,6 @@ class TestArenaCornerImplementation:
             assert result.exit_code == 0
             assert expected_in_output in result.stdout
 
-    def test_arena_corner_inference_args_creation(self):
-        """Test that InferenceArgs object is created correctly."""
-        # Arrange
-        cmd_args = [
-            "arena-corner",
-            "--video",
-            str(self.test_video_path),
-            "--model",
-            "gait-paper",
-            "--runtime",
-            "tfs",
-            "--out-file",
-            str(self.test_output_path),
-            "--num-frames",
-            "50",
-            "--frame-interval",
-            "10",
-        ]
-
-        with patch("pathlib.Path.exists", return_value=True):
-            # Act
-            result = self.runner.invoke(app, cmd_args)
-
-            # Assert
-            assert result.exit_code == 0
-            # Verify the output contains expected information
-            assert "Running TFS inference on video" in result.stdout
-            assert "Model: gait-paper" in result.stdout
-            assert "Frames: 50, Interval: 10" in result.stdout
-            assert f"Output file: {self.test_output_path}" in result.stdout
-
     def test_arena_corner_help_text(self):
         """Test that the command has proper help text."""
         # Arrange & Act

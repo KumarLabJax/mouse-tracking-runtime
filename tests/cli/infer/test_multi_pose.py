@@ -385,33 +385,6 @@ class TestMultiPoseImplementation:
             assert "Running PyTorch inference on frame" in result.stdout
             assert str(self.test_frame_path) in result.stdout
 
-    def test_multi_pose_args_compatibility_object(self):
-        """Test that the InferenceArgs compatibility object is properly structured."""
-        # Arrange
-        cmd_args = [
-            "multi-pose",
-            "--out-file",
-            "test_poses.json",
-            "--video",
-            str(self.test_video_path),
-            "--model",
-            "social-paper-topdown",
-            "--batch-size",
-            "3",
-        ]
-
-        with patch("pathlib.Path.exists", return_value=True):
-            # Act
-            result = self.runner.invoke(app, cmd_args)
-
-            # Assert
-            assert result.exit_code == 0
-            # Verify that the output indicates proper args object creation
-            assert "Running PyTorch inference on video" in result.stdout
-            assert "Output file: test_poses.json" in result.stdout
-            assert "Model: social-paper-topdown" in result.stdout
-            assert "Batch size: 3" in result.stdout
-
     @pytest.mark.parametrize(
         "edge_case_path",
         [

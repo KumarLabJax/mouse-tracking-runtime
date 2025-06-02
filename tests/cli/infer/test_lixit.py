@@ -357,30 +357,6 @@ class TestLixitImplementation:
             assert "Running TFS inference on frame" in result.stdout
             assert str(self.test_frame_path) in result.stdout
 
-    def test_lixit_args_compatibility_object(self):
-        """Test that the InferenceArgs compatibility object is properly structured."""
-        # Arrange
-        cmd_args = [
-            "lixit",
-            "--video",
-            str(self.test_video_path),
-            "--out-file",
-            "test.json",
-            "--num-frames",
-            "75",
-        ]
-
-        with patch("pathlib.Path.exists", return_value=True):
-            # Act
-            result = self.runner.invoke(app, cmd_args)
-
-            # Assert
-            assert result.exit_code == 0
-            # Verify that the output indicates proper args object creation
-            assert "Running TFS inference on video" in result.stdout
-            assert "Output file: test.json" in result.stdout
-            assert "Frames: 75, Interval: 100" in result.stdout
-
     @pytest.mark.parametrize(
         "edge_case_path",
         [

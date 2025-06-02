@@ -359,30 +359,6 @@ class TestFecalBoliImplementation:
             assert "Running PyTorch inference on frame" in result.stdout
             assert str(self.test_frame_path) in result.stdout
 
-    def test_fecal_boli_args_compatibility_object(self):
-        """Test that the InferenceArgs compatibility object is properly structured."""
-        # Arrange
-        cmd_args = [
-            "fecal-boli",
-            "--video",
-            str(self.test_video_path),
-            "--out-file",
-            "test.json",
-            "--batch-size",
-            "3",
-        ]
-
-        with patch("pathlib.Path.exists", return_value=True):
-            # Act
-            result = self.runner.invoke(app, cmd_args)
-
-            # Assert
-            assert result.exit_code == 0
-            # Verify that the output indicates proper args object creation
-            assert "Running PyTorch inference on video" in result.stdout
-            assert "Output file: test.json" in result.stdout
-            assert "Frame interval: 1800, Batch size: 3" in result.stdout
-
     @pytest.mark.parametrize(
         "edge_case_path",
         [

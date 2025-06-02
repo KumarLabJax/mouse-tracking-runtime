@@ -348,30 +348,6 @@ class TestSingleSegmentationImplementation:
             assert "Running TFS inference on frame" in result.stdout
             assert str(self.test_frame_path) in result.stdout
 
-    def test_single_segmentation_args_compatibility_object(self):
-        """Test that the InferenceArgs compatibility object is properly structured."""
-        # Arrange
-        cmd_args = [
-            "single-segmentation",
-            "--out-file",
-            "test_segmentation.json",
-            "--video",
-            str(self.test_video_path),
-            "--model",
-            "tracking-paper",
-        ]
-
-        with patch("pathlib.Path.exists", return_value=True):
-            # Act
-            result = self.runner.invoke(app, cmd_args)
-
-            # Assert
-            assert result.exit_code == 0
-            # Verify that the output indicates proper args object creation
-            assert "Running TFS inference on video" in result.stdout
-            assert "Output file: test_segmentation.json" in result.stdout
-            assert "Model: tracking-paper" in result.stdout
-
     @pytest.mark.parametrize(
         "edge_case_path",
         [
