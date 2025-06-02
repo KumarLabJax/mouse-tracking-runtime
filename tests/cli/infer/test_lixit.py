@@ -1,16 +1,17 @@
 """Unit tests for lixit Typer implementation."""
 
-import pytest
 from pathlib import Path
-from typer.testing import CliRunner
 from unittest.mock import patch
+
+import pytest
+from typer.testing import CliRunner
 
 from mouse_tracking_runtime.cli.infer import app
 
 
 class TestLixitImplementation:
     """Test suite for lixit Typer implementation."""
-    
+
     def setup_method(self):
         """Set up test fixtures before each test method."""
         self.runner = CliRunner()
@@ -28,17 +29,15 @@ class TestLixitImplementation:
         ],
         ids=[
             "video_only_success",
-            "frame_only_success", 
+            "frame_only_success",
             "both_specified_error",
             "neither_specified_error",
         ],
     )
-    def test_lixit_input_validation(
-        self, video_arg, frame_arg, expected_success
-    ):
+    def test_lixit_input_validation(self, video_arg, frame_arg, expected_success):
         """
         Test input validation for lixit implementation.
-        
+
         Args:
             video_arg: Video argument flag or None
             frame_arg: Frame argument flag or None
@@ -46,17 +45,17 @@ class TestLixitImplementation:
         """
         # Arrange
         cmd_args = ["lixit"]
-        
+
         # Mock file existence for successful cases
         with patch("pathlib.Path.exists", return_value=True):
             if video_arg:
                 cmd_args.extend([video_arg, str(self.test_video_path)])
             if frame_arg:
                 cmd_args.extend([frame_arg, str(self.test_frame_path)])
-            
+
             # Act
             result = self.runner.invoke(app, cmd_args)
-            
+
             # Assert
             if expected_success:
                 assert result.exit_code == 0
@@ -79,7 +78,7 @@ class TestLixitImplementation:
     ):
         """
         Test model and runtime choice validation.
-        
+
         Args:
             model_choice: Model choice to test
             runtime_choice: Runtime choice to test
@@ -88,15 +87,18 @@ class TestLixitImplementation:
         # Arrange
         cmd_args = [
             "lixit",
-            "--video", str(self.test_video_path),
-            "--model", model_choice,
-            "--runtime", runtime_choice,
+            "--video",
+            str(self.test_video_path),
+            "--model",
+            model_choice,
+            "--runtime",
+            runtime_choice,
         ]
-        
+
         with patch("pathlib.Path.exists", return_value=True):
             # Act
             result = self.runner.invoke(app, cmd_args)
-            
+
             # Assert
             if expected_success:
                 assert result.exit_code == 0
@@ -115,18 +117,18 @@ class TestLixitImplementation:
     def test_lixit_file_existence_validation(self, file_exists, expected_success):
         """
         Test file existence validation.
-        
+
         Args:
             file_exists: Whether the input file should exist
             expected_success: Whether the command should succeed
         """
         # Arrange
         cmd_args = ["lixit", "--video", str(self.test_video_path)]
-        
+
         with patch("pathlib.Path.exists", return_value=file_exists):
             # Act
             result = self.runner.invoke(app, cmd_args)
-            
+
             # Assert
             if expected_success:
                 assert result.exit_code == 0
@@ -143,20 +145,20 @@ class TestLixitImplementation:
             (None, "output.png", None, ["Output image: output.png"]),
             (None, None, "output.mp4", ["Output video: output.mp4"]),
             (
-                "output.json", 
-                "output.png", 
+                "output.json",
+                "output.png",
                 "output.mp4",
                 [
                     "Output file: output.json",
-                    "Output image: output.png", 
-                    "Output video: output.mp4"
-                ]
+                    "Output image: output.png",
+                    "Output video: output.mp4",
+                ],
             ),
         ],
         ids=[
             "no_outputs",
             "file_output_only",
-            "image_output_only", 
+            "image_output_only",
             "video_output_only",
             "all_outputs",
         ],
@@ -166,7 +168,7 @@ class TestLixitImplementation:
     ):
         """
         Test output options functionality.
-        
+
         Args:
             out_file: Output file path or None
             out_image: Output image path or None
@@ -175,18 +177,18 @@ class TestLixitImplementation:
         """
         # Arrange
         cmd_args = ["lixit", "--video", str(self.test_video_path)]
-        
+
         if out_file:
             cmd_args.extend(["--out-file", out_file])
         if out_image:
             cmd_args.extend(["--out-image", out_image])
         if out_video:
             cmd_args.extend(["--out-video", out_video])
-        
+
         with patch("pathlib.Path.exists", return_value=True):
             # Act
             result = self.runner.invoke(app, cmd_args)
-            
+
             # Assert
             assert result.exit_code == 0
             for expected_output in expected_outputs:
@@ -202,12 +204,10 @@ class TestLixitImplementation:
         ],
         ids=["default_values", "custom_values", "minimal_values", "large_values"],
     )
-    def test_lixit_frame_options(
-        self, num_frames, frame_interval, expected_in_output
-    ):
+    def test_lixit_frame_options(self, num_frames, frame_interval, expected_in_output):
         """
         Test frame number and interval options.
-        
+
         Args:
             num_frames: Number of frames to process
             frame_interval: Frame interval
@@ -216,15 +216,18 @@ class TestLixitImplementation:
         # Arrange
         cmd_args = [
             "lixit",
-            "--video", str(self.test_video_path),
-            "--num-frames", str(num_frames),
-            "--frame-interval", str(frame_interval),
+            "--video",
+            str(self.test_video_path),
+            "--num-frames",
+            str(num_frames),
+            "--frame-interval",
+            str(frame_interval),
         ]
-        
+
         with patch("pathlib.Path.exists", return_value=True):
             # Act
             result = self.runner.invoke(app, cmd_args)
-            
+
             # Assert
             assert result.exit_code == 0
             assert expected_in_output in result.stdout
@@ -233,11 +236,11 @@ class TestLixitImplementation:
         """Test that lixit uses the correct default values."""
         # Arrange
         cmd_args = ["lixit", "--video", str(self.test_video_path)]
-        
+
         with patch("pathlib.Path.exists", return_value=True):
             # Act
             result = self.runner.invoke(app, cmd_args)
-            
+
             # Assert
             assert result.exit_code == 0
             assert "Model: social-2022-pipeline" in result.stdout
@@ -248,7 +251,7 @@ class TestLixitImplementation:
         """Test that the lixit command has proper help text."""
         # Arrange & Act
         result = self.runner.invoke(app, ["lixit", "--help"])
-        
+
         # Assert
         assert result.exit_code == 0
         assert "Run lixit inference" in result.stdout
@@ -257,25 +260,29 @@ class TestLixitImplementation:
     def test_lixit_error_handling_comprehensive(self):
         """Test comprehensive error handling scenarios."""
         # Test case 1: Both video and frame specified
-        result = self.runner.invoke(app, [
-            "lixit",
-            "--video", str(self.test_video_path),
-            "--frame", str(self.test_frame_path)
-        ])
+        result = self.runner.invoke(
+            app,
+            [
+                "lixit",
+                "--video",
+                str(self.test_video_path),
+                "--frame",
+                str(self.test_frame_path),
+            ],
+        )
         assert result.exit_code == 1
         assert "Cannot specify both --video and --frame" in result.stdout
-        
+
         # Test case 2: Neither video nor frame specified
         result = self.runner.invoke(app, ["lixit"])
         assert result.exit_code == 1
         assert "Must specify either --video or --frame" in result.stdout
-        
+
         # Test case 3: File doesn't exist
         with patch("pathlib.Path.exists", return_value=False):
-            result = self.runner.invoke(app, [
-                "lixit",
-                "--video", str(self.test_video_path)
-            ])
+            result = self.runner.invoke(
+                app, ["lixit", "--video", str(self.test_video_path)]
+            )
             assert result.exit_code == 1
             assert "does not exist" in result.stdout
 
@@ -284,23 +291,31 @@ class TestLixitImplementation:
         # Arrange
         cmd_args = [
             "lixit",
-            "--video", str(self.test_video_path),
-            "--model", "social-2022-pipeline",
-            "--runtime", "tfs",
-            "--out-file", "output.json",
-            "--out-image", "output.png",
-            "--out-video", "output.mp4",
-            "--num-frames", "25",
-            "--frame-interval", "5",
+            "--video",
+            str(self.test_video_path),
+            "--model",
+            "social-2022-pipeline",
+            "--runtime",
+            "tfs",
+            "--out-file",
+            "output.json",
+            "--out-image",
+            "output.png",
+            "--out-video",
+            "output.mp4",
+            "--num-frames",
+            "25",
+            "--frame-interval",
+            "5",
         ]
-        
+
         with patch("pathlib.Path.exists", return_value=True):
             # Act
             result = self.runner.invoke(app, cmd_args)
-            
+
             # Assert
             assert result.exit_code == 0
-            
+
             # Verify all expected outputs are in the result
             expected_messages = [
                 "Running TFS inference on video",
@@ -310,7 +325,7 @@ class TestLixitImplementation:
                 "Output image: output.png",
                 "Output video: output.mp4",
             ]
-            
+
             for message in expected_messages:
                 assert message in result.stdout
 
@@ -318,11 +333,11 @@ class TestLixitImplementation:
         """Test lixit specifically with video input."""
         # Arrange
         cmd_args = ["lixit", "--video", str(self.test_video_path)]
-        
+
         with patch("pathlib.Path.exists", return_value=True):
             # Act
             result = self.runner.invoke(app, cmd_args)
-            
+
             # Assert
             assert result.exit_code == 0
             assert "Running TFS inference on video" in result.stdout
@@ -332,11 +347,11 @@ class TestLixitImplementation:
         """Test lixit specifically with frame input."""
         # Arrange
         cmd_args = ["lixit", "--frame", str(self.test_frame_path)]
-        
+
         with patch("pathlib.Path.exists", return_value=True):
             # Act
             result = self.runner.invoke(app, cmd_args)
-            
+
             # Assert
             assert result.exit_code == 0
             assert "Running TFS inference on frame" in result.stdout
@@ -347,15 +362,18 @@ class TestLixitImplementation:
         # Arrange
         cmd_args = [
             "lixit",
-            "--video", str(self.test_video_path),
-            "--out-file", "test.json",
-            "--num-frames", "75",
+            "--video",
+            str(self.test_video_path),
+            "--out-file",
+            "test.json",
+            "--num-frames",
+            "75",
         ]
-        
+
         with patch("pathlib.Path.exists", return_value=True):
             # Act
             result = self.runner.invoke(app, cmd_args)
-            
+
             # Assert
             assert result.exit_code == 0
             # Verify that the output indicates proper args object creation
@@ -367,7 +385,7 @@ class TestLixitImplementation:
         "edge_case_path",
         [
             "/path/with spaces/video.mp4",
-            "/path/with-dashes/video.mp4", 
+            "/path/with-dashes/video.mp4",
             "/path/with_underscores/video.mp4",
             "/path/with.dots/video.mp4",
             "relative/path/video.mp4",
@@ -375,7 +393,7 @@ class TestLixitImplementation:
         ids=[
             "path_with_spaces",
             "path_with_dashes",
-            "path_with_underscores", 
+            "path_with_underscores",
             "path_with_dots",
             "relative_path",
         ],
@@ -383,18 +401,15 @@ class TestLixitImplementation:
     def test_lixit_edge_case_paths(self, edge_case_path):
         """
         Test lixit with edge case file paths.
-        
+
         Args:
             edge_case_path: Path with special characters to test
         """
         # Arrange
         with patch("pathlib.Path.exists", return_value=True):
             # Act
-            result = self.runner.invoke(app, [
-                "lixit",
-                "--video", edge_case_path
-            ])
-            
+            result = self.runner.invoke(app, ["lixit", "--video", edge_case_path])
+
             # Assert
             assert result.exit_code == 0
             assert "Running TFS inference" in result.stdout
@@ -403,24 +418,28 @@ class TestLixitImplementation:
         """Test lixit with edge case frame counts."""
         # Arrange & Act - very small frame count
         with patch("pathlib.Path.exists", return_value=True):
-            result = self.runner.invoke(app, [
-                "lixit",
-                "--video", str(self.test_video_path),
-                "--num-frames", "1"
-            ])
-            
+            result = self.runner.invoke(
+                app,
+                ["lixit", "--video", str(self.test_video_path), "--num-frames", "1"],
+            )
+
             # Assert
             assert result.exit_code == 0
             assert "Frames: 1, Interval: 100" in result.stdout
-        
+
         # Arrange & Act - large frame count
         with patch("pathlib.Path.exists", return_value=True):
-            result = self.runner.invoke(app, [
-                "lixit",
-                "--video", str(self.test_video_path),
-                "--num-frames", "10000"
-            ])
-            
+            result = self.runner.invoke(
+                app,
+                [
+                    "lixit",
+                    "--video",
+                    str(self.test_video_path),
+                    "--num-frames",
+                    "10000",
+                ],
+            )
+
             # Assert
             assert result.exit_code == 0
             assert "Frames: 10000, Interval: 100" in result.stdout
@@ -431,15 +450,18 @@ class TestLixitImplementation:
         # Arrange
         cmd_args = [
             "lixit",
-            "--video", str(self.test_video_path),
-            "--model", "social-2022-pipeline",
-            "--runtime", "tfs",
+            "--video",
+            str(self.test_video_path),
+            "--model",
+            "social-2022-pipeline",
+            "--runtime",
+            "tfs",
         ]
-        
+
         with patch("pathlib.Path.exists", return_value=True):
             # Act
             result = self.runner.invoke(app, cmd_args)
-            
+
             # Assert
             assert result.exit_code == 0
             # Should use same model and runtime as food_hopper
@@ -450,24 +472,28 @@ class TestLixitImplementation:
         """Test that num_frames and frame_interval work independently."""
         # Arrange & Act - only num_frames changed
         with patch("pathlib.Path.exists", return_value=True):
-            result = self.runner.invoke(app, [
-                "lixit",
-                "--video", str(self.test_video_path),
-                "--num-frames", "200"
-            ])
-            
+            result = self.runner.invoke(
+                app,
+                ["lixit", "--video", str(self.test_video_path), "--num-frames", "200"],
+            )
+
             # Assert
             assert result.exit_code == 0
             assert "Frames: 200, Interval: 100" in result.stdout
-        
+
         # Arrange & Act - only frame_interval changed
         with patch("pathlib.Path.exists", return_value=True):
-            result = self.runner.invoke(app, [
-                "lixit",
-                "--video", str(self.test_video_path),
-                "--frame-interval", "50"
-            ])
-            
+            result = self.runner.invoke(
+                app,
+                [
+                    "lixit",
+                    "--video",
+                    str(self.test_video_path),
+                    "--frame-interval",
+                    "50",
+                ],
+            )
+
             # Assert
             assert result.exit_code == 0
             assert "Frames: 100, Interval: 50" in result.stdout
@@ -477,16 +503,20 @@ class TestLixitImplementation:
         # Arrange
         cmd_args = [
             "lixit",
-            "--video", str(self.test_video_path),
-            "--model", "social-2022-pipeline",
-            "--runtime", "tfs",
-            "--out-file", "lixit_detection.json",
+            "--video",
+            str(self.test_video_path),
+            "--model",
+            "social-2022-pipeline",
+            "--runtime",
+            "tfs",
+            "--out-file",
+            "lixit_detection.json",
         ]
-        
+
         with patch("pathlib.Path.exists", return_value=True):
             # Act
             result = self.runner.invoke(app, cmd_args)
-            
+
             # Assert
             assert result.exit_code == 0
             assert "Running TFS inference on video" in result.stdout
@@ -497,11 +527,11 @@ class TestLixitImplementation:
         """Test lixit with minimal required configuration."""
         # Arrange
         cmd_args = ["lixit", "--frame", str(self.test_frame_path)]
-        
+
         with patch("pathlib.Path.exists", return_value=True):
             # Act
             result = self.runner.invoke(app, cmd_args)
-            
+
             # Assert
             assert result.exit_code == 0
             assert "Running TFS inference on frame" in result.stdout
@@ -513,23 +543,31 @@ class TestLixitImplementation:
         # Arrange
         cmd_args = [
             "lixit",
-            "--video", str(self.test_video_path),
-            "--model", "social-2022-pipeline",
-            "--runtime", "tfs",
-            "--out-file", "lixit_output.json",
-            "--out-image", "lixit_render.png",
-            "--out-video", "lixit_video.mp4",
-            "--num-frames", "500",
-            "--frame-interval", "20",
+            "--video",
+            str(self.test_video_path),
+            "--model",
+            "social-2022-pipeline",
+            "--runtime",
+            "tfs",
+            "--out-file",
+            "lixit_output.json",
+            "--out-image",
+            "lixit_render.png",
+            "--out-video",
+            "lixit_video.mp4",
+            "--num-frames",
+            "500",
+            "--frame-interval",
+            "20",
         ]
-        
+
         with patch("pathlib.Path.exists", return_value=True):
             # Act
             result = self.runner.invoke(app, cmd_args)
-            
+
             # Assert
             assert result.exit_code == 0
-            
+
             # Verify all options are processed correctly
             expected_in_output = [
                 "Running TFS inference on video",
@@ -539,6 +577,6 @@ class TestLixitImplementation:
                 "Output image: lixit_render.png",
                 "Output video: lixit_video.mp4",
             ]
-            
+
             for expected in expected_in_output:
-                assert expected in result.stdout 
+                assert expected in result.stdout

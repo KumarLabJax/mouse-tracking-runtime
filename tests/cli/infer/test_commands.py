@@ -1,9 +1,10 @@
 """Tests for inference command registration and basic functionality."""
 
-import pytest
-from typer.testing import CliRunner
 from pathlib import Path
 from unittest.mock import patch
+
+import pytest
+from typer.testing import CliRunner
 
 from mouse_tracking_runtime.cli.infer import app
 
@@ -76,7 +77,7 @@ def test_infer_commands_list():
     assert result.exit_code == 0
     expected_commands = [
         "arena-corner",
-        "fecal-boli", 
+        "fecal-boli",
         "food-hopper",
         "lixit",
         "multi-identity",
@@ -84,7 +85,7 @@ def test_infer_commands_list():
         "single-pose",
         "single-segmentation",
     ]
-    
+
     for command in expected_commands:
         assert command in result.stdout
 
@@ -96,7 +97,7 @@ def test_infer_commands_help_structure():
     commands = [
         "arena-corner",
         "fecal-boli",
-        "food-hopper", 
+        "food-hopper",
         "lixit",
         "multi-identity",
         "multi-pose",
@@ -285,7 +286,7 @@ def test_infer_commands_require_input_validation():
         "food-hopper",
         "lixit",
         "multi-identity",
-        "multi-pose", 
+        "multi-pose",
         "single-pose",
         "single-segmentation",
     ]
@@ -303,18 +304,18 @@ def test_infer_commands_with_minimal_valid_inputs():
     runner = CliRunner()
     test_video = Path("/tmp/test.mp4")
     test_output = Path("/tmp/output.json")
-    
+
     commands_with_optional_outfile = [
         "arena-corner",
-        "fecal-boli", 
+        "fecal-boli",
         "food-hopper",
         "lixit",
     ]
-    
+
     commands_with_required_outfile = [
         "multi-identity",
         "multi-pose",
-        "single-pose", 
+        "single-pose",
         "single-segmentation",
     ]
 
@@ -323,10 +324,13 @@ def test_infer_commands_with_minimal_valid_inputs():
         for command in commands_with_optional_outfile:
             result = runner.invoke(app, [command, "--video", str(test_video)])
             assert result.exit_code == 0
-            
+
         # Test commands with required out-file
         for command in commands_with_required_outfile:
-            result = runner.invoke(app, [command, "--out-file", str(test_output), "--video", str(test_video)])
+            result = runner.invoke(
+                app,
+                [command, "--out-file", str(test_output), "--video", str(test_video)],
+            )
             assert result.exit_code == 0
 
 
@@ -337,11 +341,11 @@ def test_infer_commands_mutually_exclusive_validation():
     test_video = Path("/tmp/test.mp4")
     test_frame = Path("/tmp/test.jpg")
     test_output = Path("/tmp/output.json")
-    
+
     commands = [
         "arena-corner",
         "fecal-boli",
-        "food-hopper", 
+        "food-hopper",
         "lixit",
         ("multi-identity", ["--out-file", str(test_output)]),
         ("multi-pose", ["--out-file", str(test_output)]),
@@ -355,9 +359,15 @@ def test_infer_commands_mutually_exclusive_validation():
                 command, extra_args = command_info
             else:
                 command, extra_args = command_info, []
-                
+
             # Test both video and frame specified - should fail
-            cmd_args = [command, "--video", str(test_video), "--frame", str(test_frame)] + extra_args
+            cmd_args = [
+                command,
+                "--video",
+                str(test_video),
+                "--frame",
+                str(test_frame),
+            ] + extra_args
             result = runner.invoke(app, cmd_args)
             assert result.exit_code == 1
             assert "Cannot specify both --video and --frame" in result.stdout

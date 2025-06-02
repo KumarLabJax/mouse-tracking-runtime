@@ -1,16 +1,17 @@
 """Unit tests for fecal boli Typer implementation."""
 
-import pytest
 from pathlib import Path
-from typer.testing import CliRunner
 from unittest.mock import patch
+
+import pytest
+from typer.testing import CliRunner
 
 from mouse_tracking_runtime.cli.infer import app
 
 
 class TestFecalBoliImplementation:
     """Test suite for fecal boli Typer implementation."""
-    
+
     def setup_method(self):
         """Set up test fixtures before each test method."""
         self.runner = CliRunner()
@@ -28,17 +29,15 @@ class TestFecalBoliImplementation:
         ],
         ids=[
             "video_only_success",
-            "frame_only_success", 
+            "frame_only_success",
             "both_specified_error",
             "neither_specified_error",
         ],
     )
-    def test_fecal_boli_input_validation(
-        self, video_arg, frame_arg, expected_success
-    ):
+    def test_fecal_boli_input_validation(self, video_arg, frame_arg, expected_success):
         """
         Test input validation for fecal boli implementation.
-        
+
         Args:
             video_arg: Video argument flag or None
             frame_arg: Frame argument flag or None
@@ -46,17 +45,17 @@ class TestFecalBoliImplementation:
         """
         # Arrange
         cmd_args = ["fecal-boli"]
-        
+
         # Mock file existence for successful cases
         with patch("pathlib.Path.exists", return_value=True):
             if video_arg:
                 cmd_args.extend([video_arg, str(self.test_video_path)])
             if frame_arg:
                 cmd_args.extend([frame_arg, str(self.test_frame_path)])
-            
+
             # Act
             result = self.runner.invoke(app, cmd_args)
-            
+
             # Assert
             if expected_success:
                 assert result.exit_code == 0
@@ -79,7 +78,7 @@ class TestFecalBoliImplementation:
     ):
         """
         Test model and runtime choice validation.
-        
+
         Args:
             model_choice: Model choice to test
             runtime_choice: Runtime choice to test
@@ -88,15 +87,18 @@ class TestFecalBoliImplementation:
         # Arrange
         cmd_args = [
             "fecal-boli",
-            "--video", str(self.test_video_path),
-            "--model", model_choice,
-            "--runtime", runtime_choice,
+            "--video",
+            str(self.test_video_path),
+            "--model",
+            model_choice,
+            "--runtime",
+            runtime_choice,
         ]
-        
+
         with patch("pathlib.Path.exists", return_value=True):
             # Act
             result = self.runner.invoke(app, cmd_args)
-            
+
             # Assert
             if expected_success:
                 assert result.exit_code == 0
@@ -115,18 +117,18 @@ class TestFecalBoliImplementation:
     def test_fecal_boli_file_existence_validation(self, file_exists, expected_success):
         """
         Test file existence validation.
-        
+
         Args:
             file_exists: Whether the input file should exist
             expected_success: Whether the command should succeed
         """
         # Arrange
         cmd_args = ["fecal-boli", "--video", str(self.test_video_path)]
-        
+
         with patch("pathlib.Path.exists", return_value=file_exists):
             # Act
             result = self.runner.invoke(app, cmd_args)
-            
+
             # Assert
             if expected_success:
                 assert result.exit_code == 0
@@ -143,20 +145,20 @@ class TestFecalBoliImplementation:
             (None, "output.png", None, ["Output image: output.png"]),
             (None, None, "output.mp4", ["Output video: output.mp4"]),
             (
-                "output.json", 
-                "output.png", 
+                "output.json",
+                "output.png",
                 "output.mp4",
                 [
                     "Output file: output.json",
-                    "Output image: output.png", 
-                    "Output video: output.mp4"
-                ]
+                    "Output image: output.png",
+                    "Output video: output.mp4",
+                ],
             ),
         ],
         ids=[
             "no_outputs",
             "file_output_only",
-            "image_output_only", 
+            "image_output_only",
             "video_output_only",
             "all_outputs",
         ],
@@ -166,7 +168,7 @@ class TestFecalBoliImplementation:
     ):
         """
         Test output options functionality.
-        
+
         Args:
             out_file: Output file path or None
             out_image: Output image path or None
@@ -175,18 +177,18 @@ class TestFecalBoliImplementation:
         """
         # Arrange
         cmd_args = ["fecal-boli", "--video", str(self.test_video_path)]
-        
+
         if out_file:
             cmd_args.extend(["--out-file", out_file])
         if out_image:
             cmd_args.extend(["--out-image", out_image])
         if out_video:
             cmd_args.extend(["--out-video", out_video])
-        
+
         with patch("pathlib.Path.exists", return_value=True):
             # Act
             result = self.runner.invoke(app, cmd_args)
-            
+
             # Assert
             assert result.exit_code == 0
             for expected_output in expected_outputs:
@@ -207,7 +209,7 @@ class TestFecalBoliImplementation:
     ):
         """
         Test frame interval and batch size options.
-        
+
         Args:
             frame_interval: Frame interval to test
             batch_size: Batch size to test
@@ -216,15 +218,18 @@ class TestFecalBoliImplementation:
         # Arrange
         cmd_args = [
             "fecal-boli",
-            "--video", str(self.test_video_path),
-            "--frame-interval", str(frame_interval),
-            "--batch-size", str(batch_size),
+            "--video",
+            str(self.test_video_path),
+            "--frame-interval",
+            str(frame_interval),
+            "--batch-size",
+            str(batch_size),
         ]
-        
+
         with patch("pathlib.Path.exists", return_value=True):
             # Act
             result = self.runner.invoke(app, cmd_args)
-            
+
             # Assert
             assert result.exit_code == 0
             assert expected_in_output in result.stdout
@@ -233,11 +238,11 @@ class TestFecalBoliImplementation:
         """Test that fecal boli uses the correct default values."""
         # Arrange
         cmd_args = ["fecal-boli", "--video", str(self.test_video_path)]
-        
+
         with patch("pathlib.Path.exists", return_value=True):
             # Act
             result = self.runner.invoke(app, cmd_args)
-            
+
             # Assert
             assert result.exit_code == 0
             assert "Model: fecal-boli" in result.stdout
@@ -248,7 +253,7 @@ class TestFecalBoliImplementation:
         """Test that the fecal boli command has proper help text."""
         # Arrange & Act
         result = self.runner.invoke(app, ["fecal-boli", "--help"])
-        
+
         # Assert
         assert result.exit_code == 0
         assert "Run fecal boli inference" in result.stdout
@@ -257,25 +262,29 @@ class TestFecalBoliImplementation:
     def test_fecal_boli_error_handling_comprehensive(self):
         """Test comprehensive error handling scenarios."""
         # Test case 1: Both video and frame specified
-        result = self.runner.invoke(app, [
-            "fecal-boli",
-            "--video", str(self.test_video_path),
-            "--frame", str(self.test_frame_path)
-        ])
+        result = self.runner.invoke(
+            app,
+            [
+                "fecal-boli",
+                "--video",
+                str(self.test_video_path),
+                "--frame",
+                str(self.test_frame_path),
+            ],
+        )
         assert result.exit_code == 1
         assert "Cannot specify both --video and --frame" in result.stdout
-        
+
         # Test case 2: Neither video nor frame specified
         result = self.runner.invoke(app, ["fecal-boli"])
         assert result.exit_code == 1
         assert "Must specify either --video or --frame" in result.stdout
-        
+
         # Test case 3: File doesn't exist
         with patch("pathlib.Path.exists", return_value=False):
-            result = self.runner.invoke(app, [
-                "fecal-boli",
-                "--video", str(self.test_video_path)
-            ])
+            result = self.runner.invoke(
+                app, ["fecal-boli", "--video", str(self.test_video_path)]
+            )
             assert result.exit_code == 1
             assert "does not exist" in result.stdout
 
@@ -284,23 +293,31 @@ class TestFecalBoliImplementation:
         # Arrange
         cmd_args = [
             "fecal-boli",
-            "--video", str(self.test_video_path),
-            "--model", "fecal-boli",
-            "--runtime", "pytorch",
-            "--out-file", "output.json",
-            "--out-image", "output.png",
-            "--out-video", "output.mp4",
-            "--frame-interval", "3600",
-            "--batch-size", "4",
+            "--video",
+            str(self.test_video_path),
+            "--model",
+            "fecal-boli",
+            "--runtime",
+            "pytorch",
+            "--out-file",
+            "output.json",
+            "--out-image",
+            "output.png",
+            "--out-video",
+            "output.mp4",
+            "--frame-interval",
+            "3600",
+            "--batch-size",
+            "4",
         ]
-        
+
         with patch("pathlib.Path.exists", return_value=True):
             # Act
             result = self.runner.invoke(app, cmd_args)
-            
+
             # Assert
             assert result.exit_code == 0
-            
+
             # Verify all expected outputs are in the result
             expected_messages = [
                 "Running PyTorch inference on video",
@@ -310,7 +327,7 @@ class TestFecalBoliImplementation:
                 "Output image: output.png",
                 "Output video: output.mp4",
             ]
-            
+
             for message in expected_messages:
                 assert message in result.stdout
 
@@ -318,11 +335,11 @@ class TestFecalBoliImplementation:
         """Test fecal boli specifically with video input."""
         # Arrange
         cmd_args = ["fecal-boli", "--video", str(self.test_video_path)]
-        
+
         with patch("pathlib.Path.exists", return_value=True):
             # Act
             result = self.runner.invoke(app, cmd_args)
-            
+
             # Assert
             assert result.exit_code == 0
             assert "Running PyTorch inference on video" in result.stdout
@@ -332,11 +349,11 @@ class TestFecalBoliImplementation:
         """Test fecal boli specifically with frame input."""
         # Arrange
         cmd_args = ["fecal-boli", "--frame", str(self.test_frame_path)]
-        
+
         with patch("pathlib.Path.exists", return_value=True):
             # Act
             result = self.runner.invoke(app, cmd_args)
-            
+
             # Assert
             assert result.exit_code == 0
             assert "Running PyTorch inference on frame" in result.stdout
@@ -347,15 +364,18 @@ class TestFecalBoliImplementation:
         # Arrange
         cmd_args = [
             "fecal-boli",
-            "--video", str(self.test_video_path),
-            "--out-file", "test.json",
-            "--batch-size", "3",
+            "--video",
+            str(self.test_video_path),
+            "--out-file",
+            "test.json",
+            "--batch-size",
+            "3",
         ]
-        
+
         with patch("pathlib.Path.exists", return_value=True):
             # Act
             result = self.runner.invoke(app, cmd_args)
-            
+
             # Assert
             assert result.exit_code == 0
             # Verify that the output indicates proper args object creation
@@ -367,7 +387,7 @@ class TestFecalBoliImplementation:
         "edge_case_path",
         [
             "/path/with spaces/video.mp4",
-            "/path/with-dashes/video.mp4", 
+            "/path/with-dashes/video.mp4",
             "/path/with_underscores/video.mp4",
             "/path/with.dots/video.mp4",
             "relative/path/video.mp4",
@@ -375,7 +395,7 @@ class TestFecalBoliImplementation:
         ids=[
             "path_with_spaces",
             "path_with_dashes",
-            "path_with_underscores", 
+            "path_with_underscores",
             "path_with_dots",
             "relative_path",
         ],
@@ -383,18 +403,15 @@ class TestFecalBoliImplementation:
     def test_fecal_boli_edge_case_paths(self, edge_case_path):
         """
         Test fecal boli with edge case file paths.
-        
+
         Args:
             edge_case_path: Path with special characters to test
         """
         # Arrange
         with patch("pathlib.Path.exists", return_value=True):
             # Act
-            result = self.runner.invoke(app, [
-                "fecal-boli",
-                "--video", edge_case_path
-            ])
-            
+            result = self.runner.invoke(app, ["fecal-boli", "--video", edge_case_path])
+
             # Assert
             assert result.exit_code == 0
             assert "Running PyTorch inference" in result.stdout
@@ -403,24 +420,34 @@ class TestFecalBoliImplementation:
         """Test fecal boli with edge case batch sizes."""
         # Arrange & Act - very small batch size
         with patch("pathlib.Path.exists", return_value=True):
-            result = self.runner.invoke(app, [
-                "fecal-boli",
-                "--video", str(self.test_video_path),
-                "--batch-size", "0"
-            ])
-            
+            result = self.runner.invoke(
+                app,
+                [
+                    "fecal-boli",
+                    "--video",
+                    str(self.test_video_path),
+                    "--batch-size",
+                    "0",
+                ],
+            )
+
             # Assert
             assert result.exit_code == 0
             assert "Batch size: 0" in result.stdout
-        
+
         # Arrange & Act - large batch size
         with patch("pathlib.Path.exists", return_value=True):
-            result = self.runner.invoke(app, [
-                "fecal-boli",
-                "--video", str(self.test_video_path),
-                "--batch-size", "100"
-            ])
-            
+            result = self.runner.invoke(
+                app,
+                [
+                    "fecal-boli",
+                    "--video",
+                    str(self.test_video_path),
+                    "--batch-size",
+                    "100",
+                ],
+            )
+
             # Assert
             assert result.exit_code == 0
-            assert "Batch size: 100" in result.stdout 
+            assert "Batch size: 100" in result.stdout

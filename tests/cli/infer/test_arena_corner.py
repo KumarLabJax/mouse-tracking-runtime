@@ -1,16 +1,17 @@
 """Unit tests for arena corner Typer implementation."""
 
-import pytest
 from pathlib import Path
-from typer.testing import CliRunner
 from unittest.mock import patch
+
+import pytest
+from typer.testing import CliRunner
 
 from mouse_tracking_runtime.cli.infer import app
 
 
 class TestArenaCornerImplementation:
     """Test suite for arena corner Typer implementation."""
-    
+
     def setup_method(self):
         """Set up test fixtures before each test method."""
         self.runner = CliRunner()
@@ -28,7 +29,7 @@ class TestArenaCornerImplementation:
         ],
         ids=[
             "video_only_success",
-            "frame_only_success", 
+            "frame_only_success",
             "both_specified_error",
             "neither_specified_error",
         ],
@@ -38,7 +39,7 @@ class TestArenaCornerImplementation:
     ):
         """
         Test input validation for arena corner implementation.
-        
+
         Args:
             video_arg: Video argument flag or None
             frame_arg: Frame argument flag or None
@@ -46,17 +47,17 @@ class TestArenaCornerImplementation:
         """
         # Arrange
         cmd_args = ["arena-corner"]
-        
+
         # Mock file existence for successful cases
         with patch("pathlib.Path.exists", return_value=True):
             if video_arg:
                 cmd_args.extend([video_arg, str(self.test_video_path)])
             if frame_arg:
                 cmd_args.extend([frame_arg, str(self.test_frame_path)])
-            
+
             # Act
             result = self.runner.invoke(app, cmd_args)
-            
+
             # Assert
             if expected_success:
                 assert result.exit_code == 0
@@ -79,7 +80,7 @@ class TestArenaCornerImplementation:
     ):
         """
         Test model and runtime choice validation.
-        
+
         Args:
             model_choice: Model choice to test
             runtime_choice: Runtime choice to test
@@ -88,15 +89,18 @@ class TestArenaCornerImplementation:
         # Arrange
         cmd_args = [
             "arena-corner",
-            "--video", str(self.test_video_path),
-            "--model", model_choice,
-            "--runtime", runtime_choice,
+            "--video",
+            str(self.test_video_path),
+            "--model",
+            model_choice,
+            "--runtime",
+            runtime_choice,
         ]
-        
+
         with patch("pathlib.Path.exists", return_value=True):
             # Act
             result = self.runner.invoke(app, cmd_args)
-            
+
             # Assert
             if expected_success:
                 assert result.exit_code == 0
@@ -112,21 +116,23 @@ class TestArenaCornerImplementation:
         ],
         ids=["file_exists", "file_not_exists"],
     )
-    def test_arena_corner_file_existence_validation(self, file_exists, expected_success):
+    def test_arena_corner_file_existence_validation(
+        self, file_exists, expected_success
+    ):
         """
         Test file existence validation.
-        
+
         Args:
             file_exists: Whether the input file should exist
             expected_success: Whether the command should succeed
         """
         # Arrange
         cmd_args = ["arena-corner", "--video", str(self.test_video_path)]
-        
+
         with patch("pathlib.Path.exists", return_value=file_exists):
             # Act
             result = self.runner.invoke(app, cmd_args)
-            
+
             # Assert
             if expected_success:
                 assert result.exit_code == 0
@@ -143,20 +149,20 @@ class TestArenaCornerImplementation:
             (None, "output.png", None, ["Output image: output.png"]),
             (None, None, "output.mp4", ["Output video: output.mp4"]),
             (
-                "output.json", 
-                "output.png", 
+                "output.json",
+                "output.png",
                 "output.mp4",
                 [
                     "Output file: output.json",
-                    "Output image: output.png", 
-                    "Output video: output.mp4"
-                ]
+                    "Output image: output.png",
+                    "Output video: output.mp4",
+                ],
             ),
         ],
         ids=[
             "no_outputs",
             "file_output_only",
-            "image_output_only", 
+            "image_output_only",
             "video_output_only",
             "all_outputs",
         ],
@@ -166,7 +172,7 @@ class TestArenaCornerImplementation:
     ):
         """
         Test output options functionality.
-        
+
         Args:
             out_file: Output file path or None
             out_image: Output image path or None
@@ -175,18 +181,18 @@ class TestArenaCornerImplementation:
         """
         # Arrange
         cmd_args = ["arena-corner", "--video", str(self.test_video_path)]
-        
+
         if out_file:
             cmd_args.extend(["--out-file", out_file])
         if out_image:
             cmd_args.extend(["--out-image", out_image])
         if out_video:
             cmd_args.extend(["--out-video", out_video])
-        
+
         with patch("pathlib.Path.exists", return_value=True):
             # Act
             result = self.runner.invoke(app, cmd_args)
-            
+
             # Assert
             assert result.exit_code == 0
             for expected_output in expected_outputs:
@@ -207,7 +213,7 @@ class TestArenaCornerImplementation:
     ):
         """
         Test frame number and interval options.
-        
+
         Args:
             num_frames: Number of frames to process
             frame_interval: Frame interval
@@ -216,15 +222,18 @@ class TestArenaCornerImplementation:
         # Arrange
         cmd_args = [
             "arena-corner",
-            "--video", str(self.test_video_path),
-            "--num-frames", str(num_frames),
-            "--frame-interval", str(frame_interval),
+            "--video",
+            str(self.test_video_path),
+            "--num-frames",
+            str(num_frames),
+            "--frame-interval",
+            str(frame_interval),
         ]
-        
+
         with patch("pathlib.Path.exists", return_value=True):
             # Act
             result = self.runner.invoke(app, cmd_args)
-            
+
             # Assert
             assert result.exit_code == 0
             assert expected_in_output in result.stdout
@@ -234,18 +243,24 @@ class TestArenaCornerImplementation:
         # Arrange
         cmd_args = [
             "arena-corner",
-            "--video", str(self.test_video_path),
-            "--model", "gait-paper",
-            "--runtime", "tfs",
-            "--out-file", str(self.test_output_path),
-            "--num-frames", "50",
-            "--frame-interval", "10",
+            "--video",
+            str(self.test_video_path),
+            "--model",
+            "gait-paper",
+            "--runtime",
+            "tfs",
+            "--out-file",
+            str(self.test_output_path),
+            "--num-frames",
+            "50",
+            "--frame-interval",
+            "10",
         ]
-        
+
         with patch("pathlib.Path.exists", return_value=True):
             # Act
             result = self.runner.invoke(app, cmd_args)
-            
+
             # Assert
             assert result.exit_code == 0
             # Verify the output contains expected information
@@ -258,7 +273,7 @@ class TestArenaCornerImplementation:
         """Test that the command has proper help text."""
         # Arrange & Act
         result = self.runner.invoke(app, ["arena-corner", "--help"])
-        
+
         # Assert
         assert result.exit_code == 0
         assert "Infer an onnx single mouse pose model" in result.stdout
@@ -267,25 +282,29 @@ class TestArenaCornerImplementation:
     def test_arena_corner_error_handling_comprehensive(self):
         """Test comprehensive error handling scenarios."""
         # Test case 1: Both video and frame specified
-        result = self.runner.invoke(app, [
-            "arena-corner",
-            "--video", str(self.test_video_path),
-            "--frame", str(self.test_frame_path)
-        ])
+        result = self.runner.invoke(
+            app,
+            [
+                "arena-corner",
+                "--video",
+                str(self.test_video_path),
+                "--frame",
+                str(self.test_frame_path),
+            ],
+        )
         assert result.exit_code == 1
         assert "Cannot specify both --video and --frame" in result.stdout
-        
+
         # Test case 2: Neither video nor frame specified
         result = self.runner.invoke(app, ["arena-corner"])
         assert result.exit_code == 1
         assert "Must specify either --video or --frame" in result.stdout
-        
+
         # Test case 3: File doesn't exist
         with patch("pathlib.Path.exists", return_value=False):
-            result = self.runner.invoke(app, [
-                "arena-corner",
-                "--video", str(self.test_video_path)
-            ])
+            result = self.runner.invoke(
+                app, ["arena-corner", "--video", str(self.test_video_path)]
+            )
             assert result.exit_code == 1
             assert "does not exist" in result.stdout
 
@@ -294,23 +313,31 @@ class TestArenaCornerImplementation:
         # Arrange
         cmd_args = [
             "arena-corner",
-            "--video", str(self.test_video_path),
-            "--model", "gait-paper",
-            "--runtime", "tfs",
-            "--out-file", "output.json",
-            "--out-image", "output.png",
-            "--out-video", "output.mp4",
-            "--num-frames", "25",
-            "--frame-interval", "5",
+            "--video",
+            str(self.test_video_path),
+            "--model",
+            "gait-paper",
+            "--runtime",
+            "tfs",
+            "--out-file",
+            "output.json",
+            "--out-image",
+            "output.png",
+            "--out-video",
+            "output.mp4",
+            "--num-frames",
+            "25",
+            "--frame-interval",
+            "5",
         ]
-        
+
         with patch("pathlib.Path.exists", return_value=True):
             # Act
             result = self.runner.invoke(app, cmd_args)
-            
+
             # Assert
             assert result.exit_code == 0
-            
+
             # Verify all expected outputs are in the result
             expected_messages = [
                 "Running TFS inference on video",
@@ -320,7 +347,7 @@ class TestArenaCornerImplementation:
                 "Output image: output.png",
                 "Output video: output.mp4",
             ]
-            
+
             for message in expected_messages:
                 assert message in result.stdout
 
@@ -328,14 +355,13 @@ class TestArenaCornerImplementation:
         """Test proper Path object handling in the implementation."""
         # Arrange
         video_path = Path("/some/path/to/video.mp4")
-        
+
         with patch("pathlib.Path.exists", return_value=True):
             # Act
-            result = self.runner.invoke(app, [
-                "arena-corner",
-                "--video", str(video_path)
-            ])
-            
+            result = self.runner.invoke(
+                app, ["arena-corner", "--video", str(video_path)]
+            )
+
             # Assert
             assert result.exit_code == 0
             assert str(video_path) in result.stdout
@@ -344,7 +370,7 @@ class TestArenaCornerImplementation:
         "edge_case_path",
         [
             "/path/with spaces/video.mp4",
-            "/path/with-dashes/video.mp4", 
+            "/path/with-dashes/video.mp4",
             "/path/with_underscores/video.mp4",
             "/path/with.dots/video.mp4",
             "relative/path/video.mp4",
@@ -352,7 +378,7 @@ class TestArenaCornerImplementation:
         ids=[
             "path_with_spaces",
             "path_with_dashes",
-            "path_with_underscores", 
+            "path_with_underscores",
             "path_with_dots",
             "relative_path",
         ],
@@ -360,18 +386,17 @@ class TestArenaCornerImplementation:
     def test_arena_corner_edge_case_paths(self, edge_case_path):
         """
         Test arena corner with edge case file paths.
-        
+
         Args:
             edge_case_path: Path with special characters to test
         """
         # Arrange
         with patch("pathlib.Path.exists", return_value=True):
             # Act
-            result = self.runner.invoke(app, [
-                "arena-corner",
-                "--video", edge_case_path
-            ])
-            
+            result = self.runner.invoke(
+                app, ["arena-corner", "--video", edge_case_path]
+            )
+
             # Assert
             assert result.exit_code == 0
             assert "Running TFS inference" in result.stdout
@@ -380,11 +405,11 @@ class TestArenaCornerImplementation:
         """Test arena corner specifically with video input."""
         # Arrange
         cmd_args = ["arena-corner", "--video", str(self.test_video_path)]
-        
+
         with patch("pathlib.Path.exists", return_value=True):
             # Act
             result = self.runner.invoke(app, cmd_args)
-            
+
             # Assert
             assert result.exit_code == 0
             assert "Running TFS inference on video" in result.stdout
@@ -394,11 +419,11 @@ class TestArenaCornerImplementation:
         """Test arena corner specifically with frame input."""
         # Arrange
         cmd_args = ["arena-corner", "--frame", str(self.test_frame_path)]
-        
+
         with patch("pathlib.Path.exists", return_value=True):
             # Act
             result = self.runner.invoke(app, cmd_args)
-            
+
             # Assert
             assert result.exit_code == 0
             assert "Running TFS inference on frame" in result.stdout
@@ -410,16 +435,18 @@ class TestArenaCornerImplementation:
         # Arrange
         cmd_args = [
             "arena-corner",
-            "--video", str(self.test_video_path),
-            "--out-file", "test.json",
+            "--video",
+            str(self.test_video_path),
+            "--out-file",
+            "test.json",
         ]
-        
+
         with patch("pathlib.Path.exists", return_value=True):
             # Act
             result = self.runner.invoke(app, cmd_args)
-            
+
             # Assert
             assert result.exit_code == 0
             # Verify that the output indicates proper args object creation
             assert "Running TFS inference on video" in result.stdout
-            assert "Output file: test.json" in result.stdout 
+            assert "Output file: test.json" in result.stdout
