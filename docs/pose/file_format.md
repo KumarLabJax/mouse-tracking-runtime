@@ -45,7 +45,7 @@ Each video has a corresponding HDF5 file with the same name as the corresponding
   - Type: 8-bit unsigned integer
   - Padding: None
   - Notes:
-    - This field provides a simplified view of when an instance only contains 0 confidence keypoints.
+    - This field provides a simplified count of instances in a frame that contain at least 1 non-zero keypoint confidence.
 
 - `poseest/instance_embedding`
   - Description: Associative embedding value for keypoints.
@@ -66,7 +66,7 @@ Each video has a corresponding HDF5 file with the same name as the corresponding
   - Type: 32-bit unsigned integer
   - Padding: 0
   - Notes:
-    - Tracklets are continuous blocks of frames (no breaks/gaps).
+    - Tracklets are continuous intervals of frames (no breaks/gaps).
     - Tracklets can start at index 0, meaning padded values must be masked with `poseest/instance_count` field.
 
 ### Identity Embedding Datasets
@@ -271,14 +271,10 @@ MID_TAIL_INDEX = 10
 TIP_TAIL_INDEX = 11
 ```
 
-## Dynamic Object Keypoint Sorting
-
-- `fecal_boli`: Sorting is `y, x`, since this network was created using HRNet.
-
 ## Important Notes
 
 1. Applications should not assume all files contain all datasets from all versions. The absence of fields does not imply the absence of objects in the arena.
 
 2. Dynamic object predictions are not made every single frame. While the objects may be dynamic, they aren't as active as mice.
 
-3. The way tracklets are generated ensures they are continuous blocks (no breaks/gaps). Some software depends on this (e.g., JABS as of v0.16.3).
+3. The way tracklets are generated ensures they are continuous intervals (no breaks/gaps). Some software depends on this (e.g., JABS as of v0.16.3).
