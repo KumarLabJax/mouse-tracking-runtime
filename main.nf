@@ -107,8 +107,8 @@ workflow{
         paired_video_and_pose = ADD_DUMMY_VIDEO.out[0]
         SINGLE_MOUSE_V6_FEATURES(paired_video_and_pose)
     }
-    // if (params.workflow == "multi-mouse"){
-    //     MULTI_MOUSE_TRACKING(PREPARE_DATA.out.video_file, params.num_mice)
-    // }
+    if (params.workflow == "multi-mouse"){
+        MULTI_MOUSE_TRACKING(PREPARE_DATA.out.video_file, params.num_mice)
+    }
 }
 
