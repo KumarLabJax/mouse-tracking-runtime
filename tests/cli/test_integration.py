@@ -4,7 +4,7 @@ import pytest
 from typer.testing import CliRunner
 from unittest.mock import patch
 
-from mouse_tracking_runtime.cli.main import app
+from mouse_tracking.cli.main import app
 
 
 def test_full_cli_help_hierarchy():
@@ -83,7 +83,7 @@ def test_main_app_version_option_integration():
     runner = CliRunner()
 
     # Act
-    with patch("mouse_tracking_runtime.cli.utils.__version__", "2.1.0"):
+    with patch("mouse_tracking.cli.utils.__version__", "2.1.0"):
         result = runner.invoke(app, ["--version"])
 
     # Assert
@@ -327,7 +327,7 @@ def test_complete_workflow_examples():
     # Act & Assert
     for i, workflow_step in enumerate(workflows):
         if workflow_step == ["--version"]:
-            with patch("mouse_tracking_runtime.cli.utils.__version__", "1.0.0"):
+            with patch("mouse_tracking.cli.utils.__version__", "1.0.0"):
                 result = runner.invoke(app, workflow_step)
         else:
             result = runner.invoke(app, workflow_step)
@@ -338,7 +338,7 @@ def test_complete_workflow_examples():
 def test_subcommand_app_independence():
     """Test that each subcommand app can function independently."""
     # Arrange
-    from mouse_tracking_runtime.cli import infer, qa, utils
+    from mouse_tracking.cli import infer, qa, utils
 
     runner = CliRunner()
 
@@ -379,7 +379,7 @@ def test_main_app_callback_integration():
     assert result.exit_code == 0
 
     # Test that version callback overrides subcommand execution
-    with patch("mouse_tracking_runtime.cli.utils.__version__", "1.0.0"):
+    with patch("mouse_tracking.cli.utils.__version__", "1.0.0"):
         result = runner.invoke(app, ["--version", "utils", "render-pose"])
     assert result.exit_code == 0
     assert "Mouse Tracking Runtime version" in result.stdout

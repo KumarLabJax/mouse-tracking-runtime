@@ -4,8 +4,8 @@ import pytest
 from typer.testing import CliRunner
 from unittest.mock import patch
 
-from mouse_tracking_runtime.cli.main import app
-from mouse_tracking_runtime.cli import infer, qa, utils
+from mouse_tracking.cli.main import app
+from mouse_tracking.cli import infer, qa, utils
 
 
 def test_main_app_is_typer_instance():
@@ -166,7 +166,7 @@ def test_main_app_version_option():
     runner = CliRunner()
 
     # Act
-    with patch("mouse_tracking_runtime.cli.utils.__version__", "1.0.0"):
+    with patch("mouse_tracking.cli.utils.__version__", "1.0.0"):
         result = runner.invoke(app, ["--version"])
 
     # Assert

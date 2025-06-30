@@ -4,7 +4,7 @@ import pytest
 from typer.testing import CliRunner
 from unittest.mock import patch
 
-from mouse_tracking_runtime.cli.qa import app
+from mouse_tracking.cli.qa import app
 
 
 def test_qa_app_is_typer_instance():
@@ -130,7 +130,7 @@ def test_qa_app_without_arguments():
 def test_qa_command_functions_exist(command_function_name):
     """Test that all QA command functions exist in the module."""
     # Arrange & Act
-    from mouse_tracking_runtime.cli import qa
+    from mouse_tracking.cli import qa
 
     # Assert
     assert hasattr(qa, command_function_name)
@@ -153,7 +153,7 @@ def test_qa_command_function_docstrings(
 ):
     """Test that QA command functions have appropriate docstrings."""
     # Arrange
-    from mouse_tracking_runtime.cli import qa
+    from mouse_tracking.cli import qa
 
     # Act
     command_function = getattr(qa, command_function_name)
@@ -167,7 +167,7 @@ def test_qa_command_function_docstrings(
 def test_qa_commands_have_no_parameters():
     """Test that all current QA commands have no parameters (empty implementations)."""
     # Arrange
-    from mouse_tracking_runtime.cli import qa
+    from mouse_tracking.cli import qa
     import inspect
 
     command_functions = ["single_pose", "multi_pose"]
@@ -184,7 +184,7 @@ def test_qa_commands_have_no_parameters():
 def test_qa_commands_return_none():
     """Test that all QA commands return None (current implementations)."""
     # Arrange
-    from mouse_tracking_runtime.cli import qa
+    from mouse_tracking.cli import qa
 
     command_functions = [qa.single_pose, qa.multi_pose]
 
@@ -219,7 +219,7 @@ def test_qa_command_help_format(command_name):
 def test_qa_app_module_docstring():
     """Test that the qa module has appropriate docstring."""
     # Arrange & Act
-    from mouse_tracking_runtime.cli import qa
+    from mouse_tracking.cli import qa
 
     # Assert
     assert qa.__doc__ is not None
@@ -246,7 +246,7 @@ def test_qa_command_name_conventions():
 def test_qa_commands_are_properly_decorated():
     """Test that QA commands are properly decorated as typer commands."""
     # Arrange
-    from mouse_tracking_runtime.cli import qa
+    from mouse_tracking.cli import qa
 
     # Act
     single_pose_func = qa.single_pose
@@ -301,7 +301,7 @@ def test_qa_function_names_match_command_names():
     # Assert
     for func_name, command_name in function_to_command_mapping.items():
         # Check that the function exists in the qa module
-        from mouse_tracking_runtime.cli import qa
+        from mouse_tracking.cli import qa
 
         assert hasattr(qa, func_name)
 

@@ -6,7 +6,7 @@ from unittest.mock import patch
 import pytest
 from typer.testing import CliRunner
 
-from mouse_tracking_runtime.cli.infer import app
+from mouse_tracking.cli.infer import app
 
 
 def test_infer_app_is_typer_instance():
@@ -167,7 +167,7 @@ def test_infer_app_without_arguments():
 def test_infer_command_functions_exist(command_function_name):
     """Test that all inference command functions exist in the module."""
     # Arrange & Act
-    from mouse_tracking_runtime.cli import infer
+    from mouse_tracking.cli import infer
 
     # Assert
     assert hasattr(infer, command_function_name)
@@ -202,7 +202,7 @@ def test_infer_command_function_docstrings(
 ):
     """Test that inference command functions have appropriate docstrings."""
     # Arrange
-    from mouse_tracking_runtime.cli import infer
+    from mouse_tracking.cli import infer
 
     # Act
     command_function = getattr(infer, command_function_name)

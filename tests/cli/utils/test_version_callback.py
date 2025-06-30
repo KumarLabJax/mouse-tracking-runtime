@@ -4,7 +4,7 @@ import pytest
 from unittest.mock import patch
 import typer
 
-from mouse_tracking_runtime.cli.utils import version_callback
+from mouse_tracking.cli.utils import version_callback
 
 
 @pytest.mark.parametrize(
@@ -26,8 +26,8 @@ def test_version_callback_behavior(value, should_print, should_exit):
     """
     # Arrange
     with (
-        patch("mouse_tracking_runtime.cli.utils.print") as mock_print,
-        patch("mouse_tracking_runtime.cli.utils.__version__", "1.2.3"),
+        patch("mouse_tracking.cli.utils.print") as mock_print,
+        patch("mouse_tracking.cli.utils.__version__", "1.2.3"),
     ):
         # Act & Assert
         if should_exit:
@@ -52,8 +52,8 @@ def test_version_callback_with_true_prints_correct_format():
     expected_message = f"Mouse Tracking Runtime version: [green]{test_version}[/green]"
 
     with (
-        patch("mouse_tracking_runtime.cli.utils.print") as mock_print,
-        patch("mouse_tracking_runtime.cli.utils.__version__", test_version),
+        patch("mouse_tracking.cli.utils.print") as mock_print,
+        patch("mouse_tracking.cli.utils.__version__", test_version),
     ):
         # Act & Assert
         with pytest.raises(typer.Exit):
@@ -66,7 +66,7 @@ def test_version_callback_with_true_prints_correct_format():
 def test_version_callback_with_false_no_side_effects():
     """Test that version_callback has no side effects when value is False."""
     # Arrange
-    with patch("mouse_tracking_runtime.cli.utils.print") as mock_print:
+    with patch("mouse_tracking.cli.utils.print") as mock_print:
         # Act
         result = version_callback(False)
 
@@ -79,8 +79,8 @@ def test_version_callback_exit_exception_type():
     """Test that version_callback raises specifically typer.Exit when value is True."""
     # Arrange
     with (
-        patch("mouse_tracking_runtime.cli.utils.print"),
-        patch("mouse_tracking_runtime.cli.utils.__version__", "1.0.0"),
+        patch("mouse_tracking.cli.utils.print"),
+        patch("mouse_tracking.cli.utils.__version__", "1.0.0"),
     ):
         # Act & Assert
         with pytest.raises(typer.Exit) as exc_info:
@@ -115,8 +115,8 @@ def test_version_callback_with_various_version_formats(version_string):
     )
 
     with (
-        patch("mouse_tracking_runtime.cli.utils.print") as mock_print,
-        patch("mouse_tracking_runtime.cli.utils.__version__", version_string),
+        patch("mouse_tracking.cli.utils.print") as mock_print,
+        patch("mouse_tracking.cli.utils.__version__", version_string),
     ):
         # Act & Assert
         with pytest.raises(typer.Exit):
@@ -130,8 +130,8 @@ def test_version_callback_print_called_when_true():
     """Test that print is called when value is True."""
     # Arrange
     with (
-        patch("mouse_tracking_runtime.cli.utils.print") as mock_print,
-        patch("mouse_tracking_runtime.cli.utils.__version__", "1.0.0"),
+        patch("mouse_tracking.cli.utils.print") as mock_print,
+        patch("mouse_tracking.cli.utils.__version__", "1.0.0"),
     ):
         # Act & Assert
         with pytest.raises(typer.Exit):
@@ -169,8 +169,8 @@ def test_version_callback_with_edge_case_versions(edge_case_version, description
     )
 
     with (
-        patch("mouse_tracking_runtime.cli.utils.print") as mock_print,
-        patch("mouse_tracking_runtime.cli.utils.__version__", edge_case_version),
+        patch("mouse_tracking.cli.utils.print") as mock_print,
+        patch("mouse_tracking.cli.utils.__version__", edge_case_version),
     ):
         # Act & Assert
         with pytest.raises(typer.Exit):
@@ -183,7 +183,7 @@ def test_version_callback_with_edge_case_versions(edge_case_version, description
 def test_version_callback_return_value_when_false():
     """Test that version_callback returns None when value is False."""
     # Arrange
-    with patch("mouse_tracking_runtime.cli.utils.print"):
+    with patch("mouse_tracking.cli.utils.print"):
         # Act
         result = version_callback(False)
 
@@ -194,7 +194,7 @@ def test_version_callback_return_value_when_false():
 def test_version_callback_no_exception_when_false():
     """Test that version_callback does not raise any exception when value is False."""
     # Arrange
-    with patch("mouse_tracking_runtime.cli.utils.print"):
+    with patch("mouse_tracking.cli.utils.print"):
         # Act & Assert - should not raise any exception
         try:
             version_callback(False)
@@ -217,8 +217,8 @@ def test_version_callback_with_truthy_values(boolean_equivalent):
     """Test version_callback with various truthy values."""
     # Arrange
     with (
-        patch("mouse_tracking_runtime.cli.utils.print") as mock_print,
-        patch("mouse_tracking_runtime.cli.utils.__version__", "1.0.0"),
+        patch("mouse_tracking.cli.utils.print") as mock_print,
+        patch("mouse_tracking.cli.utils.__version__", "1.0.0"),
     ):
         # Act & Assert
         with pytest.raises(typer.Exit):
@@ -250,7 +250,7 @@ def test_version_callback_with_truthy_values(boolean_equivalent):
 def test_version_callback_with_falsy_values(boolean_equivalent):
     """Test version_callback with various falsy values."""
     # Arrange
-    with patch("mouse_tracking_runtime.cli.utils.print") as mock_print:
+    with patch("mouse_tracking.cli.utils.print") as mock_print:
         # Act
         version_callback(boolean_equivalent)
 

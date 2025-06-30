@@ -6,7 +6,7 @@ from unittest.mock import patch
 import pytest
 from typer.testing import CliRunner
 
-from mouse_tracking_runtime.cli.infer import app
+from mouse_tracking.cli.infer import app
 
 
 class TestFecalBoliImplementation:

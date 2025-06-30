@@ -4,7 +4,7 @@ import pytest
 from unittest.mock import patch
 from typing import get_type_hints
 
-from mouse_tracking_runtime.cli.main import callback
+from mouse_tracking.cli.main import callback
 
 
 def test_callback_function_signature():
@@ -308,7 +308,7 @@ def test_callback_function_module():
     module_name = callback.__module__
 
     # Assert
-    assert module_name == "mouse_tracking_runtime.cli.main"
+    assert module_name == "mouse_tracking.cli.main"
 
 
 def test_callback_with_all_none_parameters():
