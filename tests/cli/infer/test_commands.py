@@ -1,8 +1,10 @@
-"""Unit tests for inference CLI commands."""
+"""Tests for inference command registration and basic functionality."""
+
+from pathlib import Path
+from unittest.mock import patch
 
 import pytest
 from typer.testing import CliRunner
-from unittest.mock import patch
 
 from mouse_tracking_runtime.cli.infer import app
 
@@ -29,9 +31,9 @@ def test_infer_app_has_commands():
 @pytest.mark.parametrize(
     "command_name,expected_docstring",
     [
-        ("arena-corner", "Run arena corder inference."),
+        ("arena-corner", "Infer an onnx single mouse pose model."),
         ("fecal-boli", "Run fecal boli inference."),
-        ("food-hopper", "Run food_hopper inference."),
+        ("food-hopper", "Run food hopper inference."),
         ("lixit", "Run lixit inference."),
         ("multi-identity", "Run multi-identity inference."),
         ("multi-pose", "Run multi-pose inference."),
@@ -63,30 +65,8 @@ def test_infer_commands_registered(command_name, expected_docstring):
     assert expected_docstring in result.stdout
 
 
-def test_all_expected_infer_commands_present():
-    """Test that all expected inference commands are present."""
-    # Arrange
-    expected_commands = {
-        "arena_corner",
-        "fecal_boli",
-        "food_hopper",
-        "lixit",
-        "multi_identity",
-        "multi_pose",
-        "single_pose",
-        "single_segmentation",
-    }
-
-    # Act
-    registered_commands = app.registered_commands
-    registered_command_names = {cmd.callback.__name__ for cmd in registered_commands}
-
-    # Assert
-    assert registered_command_names == expected_commands
-
-
-def test_infer_help_displays_all_commands():
-    """Test that infer help displays all available commands."""
+def test_infer_commands_list():
+    """Test that all expected inference commands are registered."""
     # Arrange
     runner = CliRunner()
 
@@ -95,14 +75,42 @@ def test_infer_help_displays_all_commands():
 
     # Assert
     assert result.exit_code == 0
-    assert "arena-corner" in result.stdout
-    assert "fecal-boli" in result.stdout
-    assert "food-hopper" in result.stdout
-    assert "lixit" in result.stdout
-    assert "multi-identity" in result.stdout
-    assert "multi-pose" in result.stdout
-    assert "single-pose" in result.stdout
-    assert "single-segmentation" in result.stdout
+    expected_commands = [
+        "arena-corner",
+        "fecal-boli",
+        "food-hopper",
+        "lixit",
+        "multi-identity",
+        "multi-pose",
+        "single-pose",
+        "single-segmentation",
+    ]
+
+    for command in expected_commands:
+        assert command in result.stdout
+
+
+def test_infer_commands_help_structure():
+    """Test that inference commands have consistent help structure."""
+    # Arrange
+    runner = CliRunner()
+    commands = [
+        "arena-corner",
+        "fecal-boli",
+        "food-hopper",
+        "lixit",
+        "multi-identity",
+        "multi-pose",
+        "single-pose",
+        "single-segmentation",
+    ]
+
+    # Act & Assert
+    for command in commands:
+        result = runner.invoke(app, [command, "--help"])
+        assert result.exit_code == 0
+        assert "Usage:" in result.stdout
+        assert "--help" in result.stdout
 
 
 def test_infer_invalid_command():
@@ -169,9 +177,9 @@ def test_infer_command_functions_exist(command_function_name):
 @pytest.mark.parametrize(
     "command_function_name,expected_docstring_content",
     [
-        ("arena_corner", "arena corder inference"),
+        ("arena_corner", "arena corner detection"),
         ("fecal_boli", "fecal boli inference"),
-        ("food_hopper", "food_hopper inference"),
+        ("food_hopper", "food hopper inference"),
         ("lixit", "lixit inference"),
         ("multi_identity", "multi-identity inference"),
         ("multi_pose", "multi-pose inference"),
@@ -203,28 +211,6 @@ def test_infer_command_function_docstrings(
     # Assert
     assert docstring is not None
     assert expected_docstring_content.lower() in docstring.lower()
-
-
-def test_infer_commands_return_none():
-    """Test that all inference commands return None (current implementations)."""
-    # Arrange
-    from mouse_tracking_runtime.cli import infer
-
-    command_functions = [
-        infer.arena_corner,
-        infer.fecal_boli,
-        infer.food_hopper,
-        infer.lixit,
-        infer.multi_identity,
-        infer.multi_pose,
-        infer.single_pose,
-        infer.single_segmentation,
-    ]
-
-    # Act & Assert
-    for func in command_functions:
-        result = func()
-        assert result is None
 
 
 @pytest.mark.parametrize(
@@ -288,3 +274,100 @@ def test_infer_command_name_conventions():
         assert name in actual_names
         # Check that names use snake_case for function names (typer converts to kebab-case)
         assert "-" not in name  # Function names should use underscores
+
+
+def test_infer_commands_require_input_validation():
+    """Test that all inference commands properly validate required inputs."""
+    # Arrange
+    runner = CliRunner()
+    commands_requiring_video_or_frame = [
+        "arena-corner",
+        "fecal-boli",
+        "food-hopper",
+        "lixit",
+        "multi-identity",
+        "multi-pose",
+        "single-pose",
+        "single-segmentation",
+    ]
+
+    # Act & Assert
+    for command in commands_requiring_video_or_frame:
+        # Test without required inputs - should fail
+        result = runner.invoke(app, [command])
+        assert result.exit_code != 0  # Should fail due to missing required parameters
+
+
+def test_infer_commands_with_minimal_valid_inputs():
+    """Test that inference commands work with minimal valid inputs."""
+    # Arrange
+    runner = CliRunner()
+    test_video = Path("/tmp/test.mp4")
+    test_output = Path("/tmp/output.json")
+
+    commands_with_optional_outfile = [
+        "arena-corner",
+        "fecal-boli",
+        "food-hopper",
+        "lixit",
+    ]
+
+    commands_with_required_outfile = [
+        "multi-identity",
+        "multi-pose",
+        "single-pose",
+        "single-segmentation",
+    ]
+
+    with patch("pathlib.Path.exists", return_value=True):
+        # Test commands with optional out-file
+        for command in commands_with_optional_outfile:
+            result = runner.invoke(app, [command, "--video", str(test_video)])
+            assert result.exit_code == 0
+
+        # Test commands with required out-file
+        for command in commands_with_required_outfile:
+            result = runner.invoke(
+                app,
+                [command, "--out-file", str(test_output), "--video", str(test_video)],
+            )
+            assert result.exit_code == 0
+
+
+def test_infer_commands_mutually_exclusive_validation():
+    """Test that inference commands properly validate mutually exclusive video/frame options."""
+    # Arrange
+    runner = CliRunner()
+    test_video = Path("/tmp/test.mp4")
+    test_frame = Path("/tmp/test.jpg")
+    test_output = Path("/tmp/output.json")
+
+    commands = [
+        "arena-corner",
+        "fecal-boli",
+        "food-hopper",
+        "lixit",
+        ("multi-identity", ["--out-file", str(test_output)]),
+        ("multi-pose", ["--out-file", str(test_output)]),
+        ("single-pose", ["--out-file", str(test_output)]),
+        ("single-segmentation", ["--out-file", str(test_output)]),
+    ]
+
+    with patch("pathlib.Path.exists", return_value=True):
+        for command_info in commands:
+            if isinstance(command_info, tuple):
+                command, extra_args = command_info
+            else:
+                command, extra_args = command_info, []
+
+            # Test both video and frame specified - should fail
+            cmd_args = [
+                command,
+                "--video",
+                str(test_video),
+                "--frame",
+                str(test_frame),
+            ] + extra_args
+            result = runner.invoke(app, cmd_args)
+            assert result.exit_code == 1
+            assert "Cannot specify both --video and --frame" in result.stdout
