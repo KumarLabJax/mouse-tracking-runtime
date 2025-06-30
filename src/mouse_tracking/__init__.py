@@ -2,4 +2,4 @@
 
 from importlib import metadata
 
-__version__ = metadata.version("mouse-tracking-runtime")
+__version__ = metadata.version("mouse-tracking")
