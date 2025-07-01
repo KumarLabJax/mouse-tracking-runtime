@@ -66,7 +66,7 @@ def find_first_nonzero_index(array: np.ndarray) -> int:
     return int(nonzero_indices[0])
 
 
-def safe_find_first(arr):
+def safe_find_first(arr: np.ndarray):
     """Finds the first non-zero index in an array.
 
     Args:
@@ -89,7 +89,7 @@ def safe_find_first(arr):
     return sorted(nonzero)[0]
 
 
-def argmax_2d(arr):
+def argmax_2d(arr: np.ndarray):
     """Obtains the peaks for all keypoints in a pose.
 
     Args:
@@ -114,7 +114,7 @@ def argmax_2d(arr):
     return max_vals, max_idxs
 
 
-def get_peak_coords(arr):
+def get_peak_coords(arr: np.ndarray):
     """Converts a boolean array of peaks into locations.
 
     Args:
@@ -134,7 +134,7 @@ def get_peak_coords(arr):
     return np.stack(max_vals), peak_locations
 
 
-def localmax_2d(arr, threshold, radius):
+def localmax_2d(arr: np.ndarray, threshold: int | float, radius: int | float):
     """Obtains the multiple peaks with non-max suppression.
 
     Args:
