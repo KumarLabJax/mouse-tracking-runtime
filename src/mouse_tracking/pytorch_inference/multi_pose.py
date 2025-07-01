@@ -5,15 +5,16 @@ import numpy as np
 import queue
 import time
 import sys
-from utils.pose import render_pose_overlay
-from utils.hrnet import argmax_2d_torch, preprocess_hrnet
-from utils.segmentation import get_frame_masks
-from utils.prediction_saver import prediction_saver
-from utils.writers import write_pose_v2_data, write_pose_v3_data, adjust_pose_version
-from utils.timers import time_accumulator
-from models.model_definitions import MULTI_MOUSE_POSE
+from mouse_tracking.utils.pose import render_pose_overlay
+from mouse_tracking.utils.hrnet import argmax_2d_torch, preprocess_hrnet
+from mouse_tracking.utils.segmentation import get_frame_masks
+from mouse_tracking.utils.prediction_saver import prediction_saver
+from mouse_tracking.utils.writers import write_pose_v2_data, write_pose_v3_data, adjust_pose_version
+from mouse_tracking.utils.timers import time_accumulator
+from mouse_tracking.models.model_definitions import MULTI_MOUSE_POSE
 import torch
 import torch.backends.cudnn as cudnn
+# TODO: Where is this import file?
 from .hrnet.models import pose_hrnet
 from .hrnet.config import cfg
 

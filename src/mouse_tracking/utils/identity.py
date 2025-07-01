@@ -1,13 +1,7 @@
 import numpy as np
 import cv2
 from typing import Tuple
-
-
-class InvalidIdentityException(Exception):
-	"""Exception if pose data doesn't make sense to align for the identity network."""
-	def __init__(self, message):   
-		"""Just a basic exception with a message."""         
-		super().__init__(message)
+from mouse_tracking.core.exceptions import InvalidIdentityException
 
 
 def get_rotation_mat(pose: np.ndarray, input_size: Tuple[int], output_size: Tuple[int]) -> np.ndarray:
@@ -57,7 +51,7 @@ def crop_and_rotate_frame(frame: np.ndarray, pose: np.ndarray, crop_size: Tuple[
 	Args:
 		frame: frame to crop and rotate
 		pose: pose to use in transformation (sorted [y, x])
-		crop_size: size of the resulting cropped frame
+alembic_version		crop_size: size of the resulting cropped frame
 
 	Returns:
 		cropped and rotated frame.

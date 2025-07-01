@@ -4,15 +4,9 @@ import h5py
 import numpy as np
 from pathlib import Path
 from typing import Union, List
-from .matching import hungarian_match_points_seg
-from .pose import convert_v2_to_v3
-
-
-class InvalidPoseFileException(Exception):
-	"""Exception if pose data doesn't make sense."""
-	def __init__(self, message):   
-		"""Just a basic exception with a message."""         
-		super().__init__(message)
+from mouse_tracking.core.exceptions import InvalidPoseFileException
+from mouse_tracking.utils.matching import hungarian_match_points_seg
+from mouse_tracking.utils.pose import convert_v2_to_v3
 
 
 def promote_pose_data(pose_file, current_version: int, new_version: int):

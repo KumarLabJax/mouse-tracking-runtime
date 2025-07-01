@@ -5,11 +5,11 @@ import numpy as np
 import queue
 import time
 import sys
-from utils.static_objects import plot_keypoints
-from utils.prediction_saver import prediction_saver
-from utils.writers import write_static_object_data
-from utils.timers import time_accumulator
-from models.model_definitions import STATIC_LIXIT
+from mouse_tracking.utils.static_objects import plot_keypoints
+from mouse_tracking.utils.prediction_saver import prediction_saver
+from mouse_tracking.utils.writers import write_static_object_data
+from mouse_tracking.utils.timers import time_accumulator
+from mouse_tracking.models.model_definitions import STATIC_LIXIT
 from absl import logging
 
 

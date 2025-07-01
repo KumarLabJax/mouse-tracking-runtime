@@ -6,11 +6,11 @@ import cv2
 import queue
 import time
 import sys
-from utils.segmentation import get_contours, pad_contours, render_segmentation_overlay
-from utils.prediction_saver import prediction_saver
-from utils.writers import write_seg_data
-from utils.timers import time_accumulator
-from models.model_definitions import SINGLE_MOUSE_SEGMENTATION
+from mouse_tracking.utils.segmentation import get_contours, pad_contours, render_segmentation_overlay
+from mouse_tracking.utils.prediction_saver import prediction_saver
+from mouse_tracking.utils.writers import write_seg_data
+from mouse_tracking.utils.timers import time_accumulator
+from mouse_tracking.models.model_definitions import SINGLE_MOUSE_SEGMENTATION
 
 
 def infer_single_segmentation_tfs(args):
