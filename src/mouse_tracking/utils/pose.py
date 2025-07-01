@@ -1,10 +1,14 @@
-import hashlib
 import re
 from pathlib import Path
 
 import cv2
 import h5py
 import numpy as np
+
+from mouse_tracking.utils.run_length_encode import rle
+from mouse_tracking.utils.arrays import safe_find_first
+from mouse_tracking.utils.hashing import hash_file
+
 
 NOSE_INDEX = 0
 LEFT_EAR_INDEX = 1
@@ -32,137 +36,6 @@ MIN_HIGH_CONFIDENCE = 0.75
 MIN_GAIT_CONFIDENCE = 0.3
 MIN_JABS_CONFIDENCE = 0.3
 MIN_JABS_KEYPOINTS = 3
-
-
-def rle(inarray: np.ndarray):
-	"""Run length encoding, implemented using numpy.
-
-	Args:
-		inarray: 1d vector
-
-	Returns:
-		tuple of (starts, durations, values)
-		starts: start index of run
-		durations: duration of run
-		values: value of run
-	"""
-	ia = np.asarray(inarray)
-	n = len(ia)
-	if n == 0:
-		return (None, None, None)
-	y = ia[1:] != ia[:-1]
-	i = np.append(np.where(y), n - 1)
-	z = np.diff(np.append(-1, i))
-	p = np.cumsum(np.append(0, z))[:-1]
-	return (p, z, ia[i])
-
-
-def safe_find_first(arr):
-	"""Finds the first non-zero index in an array.
-
-	Args:
-		arr: array to search
-
-	Returns:
-		integer index of the first non-zero element, -1 if no non-zero elements
-	"""
-	nonzero = np.where(arr)[0]
-	if len(nonzero) == 0:
-		return -1
-	return sorted(nonzero)[0]
-
-
-def hash_file(file: Path):
-	"""Return hash of file.
-
-	Args:
-		file: path to file to hash
-
-	Returns:
-		blake2b hash of file
-	"""
-	chunk_size = 8192
-	with file.open('rb') as f:
-		h = hashlib.blake2b(digest_size=20)
-		c = f.read(chunk_size)
-		while c:
-			h.update(c)
-			c = f.read(chunk_size)
-	return h.hexdigest()
-
-
-def argmax_2d(arr):
-	"""Obtains the peaks for all keypoints in a pose.
-
-	Args:
-		arr: np.ndarray of shape [batch, 12, img_width, img_height]
-
-	Returns:
-		tuple of (values, coordinates)
-		values: array of shape [batch, 12] containing the maximal values per-keypoint
-		coordinates: array of shape [batch, 12, 2] containing the coordinates
-	"""
-	full_max_cols = np.argmax(arr, axis=-1, keepdims=True)
-	max_col_vals = np.take_along_axis(arr, full_max_cols, axis=-1)
-	max_rows = np.argmax(max_col_vals, axis=-2, keepdims=True)
-	max_row_vals = np.take_along_axis(max_col_vals, max_rows, axis=-2)
-	max_cols = np.take_along_axis(full_max_cols, max_rows, axis=-2)
-
-	max_vals = max_row_vals.squeeze(-1).squeeze(-1)
-	max_idxs = np.stack([max_rows.squeeze(-1).squeeze(-1), max_cols.squeeze(-1).squeeze(-1)], axis=-1)
-
-	return max_vals, max_idxs
-
-
-def get_peak_coords(arr):
-	"""Converts a boolean array of peaks into locations.
-
-	Args:
-		arr: array of shape [w, h] to search for peaks
-
-	Returns:
-		tuple of (values, coordinates)
-		values: array of shape [n_peaks] containing the maximal values per-peak
-		coordinates: array of shape [n_peaks, 2] containing the coordinates
-	"""
-	peak_locations = np.argwhere(arr)
-	if len(peak_locations) == 0:
-		return np.zeros([0], dtype=np.float32), np.zeros([0, 2], dtype=np.int16)
-
-	max_vals = [arr[coord.tolist()] for coord in peak_locations]
-
-	return np.stack(max_vals), peak_locations
-
-
-def localmax_2d(arr, threshold, radius):
-	"""Obtains the multiple peaks with non-max suppression.
-
-	Args:
-		arr: np.ndarray of shape [img_width, img_height]
-		threshold: threshold required for a positive to be found
-		radius: square radius (rectangle, not circle) peaks must be apart to be considered a peak. Largest peaks will cause all other potential peaks in this radius to be omitted.
-
-	Returns:
-		tuple of (values, coordinates)
-		values: array of shape [n_peaks] containing the maximal values per-peak
-		coordinates: array of shape [n_peaks, 2] containing the coordinates
-	"""
-	assert radius >= 1
-	assert np.squeeze(arr).ndim == 2
-
-	point_heatmap = np.expand_dims(np.squeeze(arr), axis=-1)
-	kernel = cv2.getStructuringElement(cv2.MORPH_RECT, (radius * 2 + 1, radius * 2 + 1))
-	# Non-max suppression
-	dilated = cv2.dilate(point_heatmap, kernel)
-	mask = arr >= dilated
-	eroded = cv2.erode(point_heatmap, kernel)
-	mask_2 = arr > eroded
-	mask = np.logical_and(mask, mask_2)
-	# Peakfinding via Threshold
-	mask = np.logical_and(mask, arr > threshold)
-	bool_arr = np.full(dilated.shape, False, dtype=bool)
-	bool_arr[mask] = True
-	return get_peak_coords(bool_arr)
 
 
 def convert_v2_to_v3(pose_data, conf_data, threshold: float = 0.3):
