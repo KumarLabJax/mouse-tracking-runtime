@@ -6,11 +6,11 @@ import h5py
 import queue
 import time
 import sys
-from utils.identity import InvalidIdentityException, crop_and_rotate_frame
-from utils.prediction_saver import prediction_saver
-from utils.writers import write_identity_data
-from utils.timers import time_accumulator
-from models.model_definitions import MULTI_MOUSE_IDENTITY
+from mouse_tracking.utils.identity import InvalidIdentityException, crop_and_rotate_frame
+from mouse_tracking.utils.prediction_saver import prediction_saver
+from mouse_tracking.utils.writers import write_identity_data
+from mouse_tracking.utils.timers import time_accumulator
+from mouse_tracking.models.model_definitions import MULTI_MOUSE_IDENTITY
 from absl import logging
 
 

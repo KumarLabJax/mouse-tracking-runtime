@@ -4,15 +4,16 @@ import numpy as np
 import queue
 import time
 import sys
-from utils.hrnet import preprocess_hrnet, localmax_2d_torch
-from utils.pose import get_peak_coords
-from utils.static_objects import plot_keypoints
-from utils.prediction_saver import prediction_saver
-from utils.timers import time_accumulator
-from utils.writers import write_fecal_boli_data
-from models.model_definitions import FECAL_BOLI
+from mouse_tracking.utils.hrnet import preprocess_hrnet, localmax_2d_torch
+from mouse_tracking.utils.arrays import get_peak_coords
+from mouse_tracking.utils.static_objects import plot_keypoints
+from mouse_tracking.utils.prediction_saver import prediction_saver
+from mouse_tracking.utils.timers import time_accumulator
+from mouse_tracking.utils.writers import write_fecal_boli_data
+from mouse_tracking.models.model_definitions import FECAL_BOLI
 import torch
 import torch.backends.cudnn as cudnn
+# TODO: Where is this import file?
 from .hrnet.models import pose_hrnet
 from .hrnet.config import cfg
 

@@ -8,7 +8,7 @@ import cv2
 import scipy
 import multiprocessing
 from itertools import chain
-from .segmentation import get_contour_stack, render_blob
+from mouse_tracking.utils.segmentation import get_contour_stack, render_blob
 from typing import List, Union, Tuple
 import warnings
 

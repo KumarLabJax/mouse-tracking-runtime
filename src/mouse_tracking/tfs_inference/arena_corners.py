@@ -6,11 +6,11 @@ import cv2
 import queue
 import time
 import sys
-from utils.static_objects import filter_square_keypoints, plot_keypoints, get_px_per_cm, DEFAULT_CM_PER_PX, ARENA_IMAGING_RESOLUTION
-from utils.prediction_saver import prediction_saver
-from utils.writers import write_static_object_data, write_pixel_per_cm_attr
-from utils.timers import time_accumulator
-from models.model_definitions import STATIC_ARENA_CORNERS
+from mouse_tracking.utils.static_objects import filter_square_keypoints, plot_keypoints, get_px_per_cm, DEFAULT_CM_PER_PX, ARENA_IMAGING_RESOLUTION
+from mouse_tracking.utils.prediction_saver import prediction_saver
+from mouse_tracking.utils.writers import write_static_object_data, write_pixel_per_cm_attr
+from mouse_tracking.utils.timers import time_accumulator
+from mouse_tracking.models.model_definitions import STATIC_ARENA_CORNERS
 
 
 def infer_arena_corner_model(args):
