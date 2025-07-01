@@ -4,7 +4,7 @@ import pytest
 from typer.testing import CliRunner
 from unittest.mock import patch
 
-from mouse_tracking_runtime.cli.utils import app
+from mouse_tracking.cli.utils import app
 
 
 def test_utils_app_is_typer_instance():
@@ -186,7 +186,7 @@ def test_utils_app_without_arguments():
 def test_utils_command_functions_exist(command_function_name):
     """Test that all utils command functions exist in the module."""
     # Arrange & Act
-    from mouse_tracking_runtime.cli import utils
+    from mouse_tracking.cli import utils
 
     # Assert
     assert hasattr(utils, command_function_name)
@@ -220,7 +220,7 @@ def test_utils_command_function_docstrings(
 ):
     """Test that utils command functions have appropriate docstrings."""
     # Arrange
-    from mouse_tracking_runtime.cli import utils
+    from mouse_tracking.cli import utils
 
     # Act
     command_function = getattr(utils, command_function_name)
@@ -234,7 +234,7 @@ def test_utils_command_function_docstrings(
 def test_utils_commands_have_no_parameters():
     """Test that all current utils commands have no parameters (placeholder implementations)."""
     # Arrange
-    from mouse_tracking_runtime.cli import utils
+    from mouse_tracking.cli import utils
     import inspect
 
     command_functions = [
@@ -258,7 +258,7 @@ def test_utils_commands_have_no_parameters():
 def test_utils_commands_return_none():
     """Test that all utils commands return None (current implementations)."""
     # Arrange
-    from mouse_tracking_runtime.cli import utils
+    from mouse_tracking.cli import utils
 
     command_functions = [
         utils.aggregate_fecal_boli,
@@ -312,7 +312,7 @@ def test_utils_command_help_format(command_name):
 def test_utils_app_module_docstring():
     """Test that the utils module has appropriate docstring."""
     # Arrange & Act
-    from mouse_tracking_runtime.cli import utils
+    from mouse_tracking.cli import utils
 
     # Assert
     assert utils.__doc__ is not None
@@ -346,7 +346,7 @@ def test_utils_command_name_conventions():
 def test_utils_version_callback_function_exists():
     """Test that the version_callback function exists in utils module."""
     # Arrange & Act
-    from mouse_tracking_runtime.cli import utils
+    from mouse_tracking.cli import utils
 
     # Assert
     assert hasattr(utils, "version_callback")
@@ -408,7 +408,7 @@ def test_utils_function_names_match_command_names():
     # Assert
     for func_name, command_name in function_to_command_mapping.items():
         # Check that the function exists in the utils module
-        from mouse_tracking_runtime.cli import utils
+        from mouse_tracking.cli import utils
 
         assert hasattr(utils, func_name)
 
@@ -424,7 +424,7 @@ def test_utils_function_names_match_command_names():
 def test_utils_rich_print_import():
     """Test that utils module imports rich print correctly."""
     # Arrange & Act
-    from mouse_tracking_runtime.cli import utils
+    from mouse_tracking.cli import utils
     import inspect
 
     # Act
@@ -437,7 +437,7 @@ def test_utils_rich_print_import():
 def test_utils_commands_detailed_docstrings():
     """Test that utils commands have detailed docstrings with proper formatting."""
     # Arrange
-    from mouse_tracking_runtime.cli import utils
+    from mouse_tracking.cli import utils
 
     command_functions = [
         utils.aggregate_fecal_boli,
