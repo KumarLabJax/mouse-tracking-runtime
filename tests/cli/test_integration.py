@@ -3,6 +3,8 @@
 import pytest
 from typer.testing import CliRunner
 from unittest.mock import patch
+import tempfile
+from pathlib import Path
 
 from mouse_tracking.cli.main import app
 
@@ -41,16 +43,16 @@ def test_full_cli_help_hierarchy():
 
 
 @pytest.mark.parametrize(
-    "subcommand,command,expected_pattern",
+    "subcommand,command,expected_exit_code,expected_pattern",
     [
-        ("infer", "arena-corner", None),  # Empty implementation
-        ("infer", "single-pose", None),  # Empty implementation
-        ("infer", "multi-pose", None),  # Empty implementation
-        ("qa", "single-pose", None),  # Empty implementation
-        ("qa", "multi-pose", None),  # Empty implementation
-        ("utils", "aggregate-fecal-boli", "Aggregating fecal boli data"),
-        ("utils", "render-pose", "Rendering pose data"),
-        ("utils", "stitch-tracklets", "Stitching tracklets"),
+        ("infer", "arena-corner", 1, None),  # Missing required --video or --frame
+        ("infer", "single-pose", 2, None),  # Missing required --out-file
+        ("infer", "multi-pose", 2, None),   # Missing required --out-file
+        ("qa", "single-pose", 2, None),     # Missing required pose argument
+        ("qa", "multi-pose", 0, None),      # Empty implementation
+        ("utils", "aggregate-fecal-boli", 0, "Aggregating fecal boli data"),
+        ("utils", "render-pose", 0, "Rendering pose data"),
+        ("utils", "stitch-tracklets", 0, "Stitching tracklets"),
     ],
     ids=[
         "infer_arena_corner",
@@ -63,7 +65,7 @@ def test_full_cli_help_hierarchy():
         "utils_stitch_tracklets",
     ],
 )
-def test_subcommand_execution_through_main_app(subcommand, command, expected_pattern):
+def test_subcommand_execution_through_main_app(subcommand, command, expected_exit_code, expected_pattern):
     """Test executing subcommands through the main app."""
     # Arrange
     runner = CliRunner()
@@ -72,7 +74,7 @@ def test_subcommand_execution_through_main_app(subcommand, command, expected_pat
     result = runner.invoke(app, [subcommand, command])
 
     # Assert
-    assert result.exit_code == 0
+    assert result.exit_code == expected_exit_code
     if expected_pattern:
         assert expected_pattern in result.stdout
 
@@ -210,10 +212,11 @@ def test_subcommand_isolation():
     infer_single_pose = runner.invoke(app, ["infer", "single-pose"])
     qa_single_pose = runner.invoke(app, ["qa", "single-pose"])
 
-    assert infer_single_pose.exit_code == 0
-    assert qa_single_pose.exit_code == 0
+    # Both should fail with missing arguments, but with different error codes
+    assert infer_single_pose.exit_code == 2  # Missing --out-file
+    assert qa_single_pose.exit_code == 2     # Missing pose argument
 
-    # Both should succeed but be different commands
+    # Both should succeed with help
     infer_single_pose_help = runner.invoke(app, ["infer", "single-pose", "--help"])
     qa_single_pose_help = runner.invoke(app, ["qa", "single-pose", "--help"])
 
@@ -226,23 +229,25 @@ def test_subcommand_isolation():
 
 
 @pytest.mark.parametrize(
-    "command_sequence",
+    "command_sequence,expected_exit_code",
     [
-        ["infer", "arena-corner"],
-        ["infer", "single-pose"],
-        ["qa", "single-pose"],
-        ["utils", "aggregate-fecal-boli"],
-        ["utils", "render-pose"],
+        (["infer", "arena-corner"], 1),      # Missing required --video or --frame
+        (["infer", "single-pose"], 2),       # Missing required --out-file
+        (["qa", "single-pose"], 2),          # Missing required pose argument
+        (["qa", "multi-pose"], 0),           # Empty implementation
+        (["utils", "aggregate-fecal-boli"], 0),
+        (["utils", "render-pose"], 0),
     ],
     ids=[
         "infer_arena_corner_sequence",
         "infer_single_pose_sequence",
         "qa_single_pose_sequence",
+        "qa_multi_pose_sequence",
         "utils_aggregate_sequence",
         "utils_render_sequence",
     ],
 )
-def test_command_execution_sequences(command_sequence):
+def test_command_execution_sequences(command_sequence, expected_exit_code):
     """Test that command sequences execute properly through the main app."""
     # Arrange
     runner = CliRunner()
@@ -251,7 +256,7 @@ def test_command_execution_sequences(command_sequence):
     result = runner.invoke(app, command_sequence)
 
     # Assert
-    assert result.exit_code == 0
+    assert result.exit_code == expected_exit_code
 
 
 def test_option_flag_combinations():
@@ -260,23 +265,17 @@ def test_option_flag_combinations():
     runner = CliRunner()
 
     test_combinations = [
-        ["--verbose"],
-        ["--verbose", "infer"],
-        ["--verbose", "utils", "render-pose"],
-        ["infer", "--help"],
-        ["--verbose", "qa", "--help"],
+        (["--verbose"], 2),                   # Missing subcommand
+        (["--verbose", "infer"], 2),          # Missing command 
+        (["--verbose", "utils", "render-pose"], 0),  # Valid combination
+        (["infer", "--help"], 0),             # Help always succeeds
+        (["--verbose", "qa", "--help"], 0),   # Help with verbose
     ]
 
     # Act & Assert
-    for combo in test_combinations:
+    for combo, expected_exit in test_combinations:
         result = runner.invoke(app, combo)
-        # Some combinations may fail with exit code 2 (missing arguments)
-        # Only help combinations should succeed with exit code 0
-        if "--help" in combo:
-            assert result.exit_code == 0
-        else:
-            # Commands without proper arguments may return exit code 2
-            assert result.exit_code in [0, 2]
+        assert result.exit_code == expected_exit
 
 
 def test_cli_error_handling_consistency():
@@ -310,29 +309,30 @@ def test_complete_workflow_examples():
 
     workflows = [
         # Check version first
-        ["--version"],
+        (["--version"], 0),
         # Explore available commands
-        ["--help"],
-        ["infer", "--help"],
-        # Run specific inference commands
-        ["infer", "single-pose"],
-        ["infer", "arena-corner"],
-        # Run QA commands
-        ["qa", "single-pose"],
-        # Run utility commands
-        ["utils", "render-pose"],
-        ["utils", "aggregate-fecal-boli"],
+        (["--help"], 0),
+        (["infer", "--help"], 0),
+        # Try to run specific inference commands without args (should fail appropriately)
+        (["infer", "single-pose"], 2),      # Missing --out-file
+        (["infer", "arena-corner"], 1),     # Missing --video or --frame
+        # Try QA commands
+        (["qa", "single-pose"], 2),         # Missing pose argument
+        (["qa", "multi-pose"], 0),          # Empty implementation
+        # Run utility commands (these still work without args)
+        (["utils", "render-pose"], 0),
+        (["utils", "aggregate-fecal-boli"], 0),
     ]
 
     # Act & Assert
-    for i, workflow_step in enumerate(workflows):
+    for i, (workflow_step, expected_exit) in enumerate(workflows):
         if workflow_step == ["--version"]:
             with patch("mouse_tracking.cli.utils.__version__", "1.0.0"):
                 result = runner.invoke(app, workflow_step)
         else:
             result = runner.invoke(app, workflow_step)
 
-        assert result.exit_code == 0, f"Workflow step {i} failed: {workflow_step}"
+        assert result.exit_code == expected_exit, f"Workflow step {i} failed: {workflow_step}"
 
 
 def test_subcommand_app_independence():
@@ -343,23 +343,25 @@ def test_subcommand_app_independence():
     runner = CliRunner()
 
     # Act & Assert - Test each subcommand app independently
-    # Infer app
+    # Infer app help should work
     result = runner.invoke(infer.app, ["--help"])
     assert result.exit_code == 0
     assert "arena-corner" in result.stdout
 
+    # Infer app commands should fail without required arguments
     result = runner.invoke(infer.app, ["single-pose"])
-    assert result.exit_code == 0
+    assert result.exit_code == 2  # Missing --out-file
 
-    # QA app
+    # QA app help should work
     result = runner.invoke(qa.app, ["--help"])
     assert result.exit_code == 0
     assert "single-pose" in result.stdout
 
+    # QA multi-pose should work (empty implementation)
     result = runner.invoke(qa.app, ["multi-pose"])
     assert result.exit_code == 0
 
-    # Utils app
+    # Utils app should work
     result = runner.invoke(utils.app, ["--help"])
     assert result.exit_code == 0
     assert "render-pose" in result.stdout
@@ -408,3 +410,50 @@ def test_comprehensive_cli_structure():
     # Should show main options
     assert "--version" in main_help.stdout
     assert "--verbose" in main_help.stdout
+
+
+def test_commands_with_proper_arguments():
+    """Test that commands work when provided with proper arguments."""
+    # Arrange
+    runner = CliRunner()
+    
+    # Create temporary files for testing
+    with tempfile.NamedTemporaryFile(suffix='.mp4', delete=False) as tmp_video:
+        video_path = Path(tmp_video.name)
+    
+    with tempfile.NamedTemporaryFile(suffix='.h5', delete=False) as tmp_pose:
+        pose_path = Path(tmp_pose.name)
+        
+    with tempfile.NamedTemporaryFile(suffix='.h5', delete=False) as tmp_out:
+        out_path = Path(tmp_out.name)
+
+    try:
+        # Test infer arena-corner with video
+        result = runner.invoke(app, [
+            "infer", "arena-corner", 
+            "--video", str(video_path)
+        ])
+        assert result.exit_code == 0
+        
+        # Test infer single-pose with proper arguments
+        result = runner.invoke(app, [
+            "infer", "single-pose",
+            "--video", str(video_path),
+            "--out-file", str(out_path)
+        ])
+        assert result.exit_code == 0
+        
+        # Test qa single-pose with proper arguments (mock the inspect function)
+        with patch('mouse_tracking.cli.qa.inspect_pose_v6') as mock_inspect:
+            mock_inspect.return_value = {'metric1': 0.5}
+            result = runner.invoke(app, [
+                "qa", "single-pose", 
+                str(pose_path)
+            ])
+            assert result.exit_code == 0
+            
+    finally:
+        # Cleanup
+        for path in [video_path, pose_path, out_path]:
+            if path.exists():
+                path.unlink()

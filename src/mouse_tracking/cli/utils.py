@@ -3,7 +3,7 @@
 import typer
 from rich import print
 
-from mouse_tracking_runtime import __version__
+from mouse_tracking import __version__
 
 app = typer.Typer()
 
