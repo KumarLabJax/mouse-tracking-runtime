@@ -37,20 +37,21 @@ def inspect_pose_v2(pose_file, pad: int = 150, duration: int = 108000) -> dict:
         pose_quality = f["poseest/confidence"][:]
 
     num_keypoints = np.sum(pose_quality > CONFIG.MIN_JABS_CONFIDENCE, axis=1)
-    return_dict = {}
-    return_dict["first_frame_pose"] = safe_find_first(np.all(num_keypoints, axis=1))
     high_conf_keypoints = np.all(
         pose_quality > CONFIG.MIN_HIGH_CONFIDENCE, axis=2
     ).squeeze(1)
-    return_dict["first_frame_full_high_conf"] = safe_find_first(high_conf_keypoints)
-    return_dict["pose_counts"] = np.sum(num_keypoints > CONFIG.MIN_JABS_CONFIDENCE)
-    return_dict["missing_poses"] = duration - np.sum(
-        (num_keypoints > CONFIG.MIN_JABS_CONFIDENCE)[pad : pad + duration]
-    )
-    return_dict["missing_keypoint_frames"] = np.sum(
-        num_keypoints[pad : pad + duration] != 12
-    )
-    return return_dict
+
+    return {
+       "first_frame_pose": safe_find_first(high_conf_keypoints),
+       "first_frame_full_high_conf": safe_find_first(high_conf_keypoints),
+       "pose_counts": np.sum(num_keypoints > CONFIG.MIN_JABS_CONFIDENCE),
+       "missing_poses": duration - np.sum(
+            (num_keypoints > CONFIG.MIN_JABS_CONFIDENCE)[pad : pad + duration]
+        ),
+        "missing_keypoint_frames": np.sum(
+            num_keypoints[pad : pad + duration] != 12
+        ),
+    }
 
 
 def inspect_pose_v6(pose_file, pad: int = 150, duration: int = 108000) -> dict:
@@ -95,27 +96,18 @@ def inspect_pose_v6(pose_file, pad: int = 150, duration: int = 108000) -> dict:
         corners_present = "static_objects/corners" in f
 
     num_keypoints = 12 - np.sum(pose_quality.squeeze(1) == 0, axis=1)
-    return_dict = {}
-    return_dict["pose_file"] = Path(pose_file).name
-    return_dict["pose_hash"] = hash_file(Path(pose_file))
+
     # Keep 2 folders if present for video name
     folder_name = "/".join(Path(pose_file).parts[-3:-1]) + "/"
-    return_dict["video_name"] = folder_name + re.sub(
-        "_pose_est_v[0-9]+", "", Path(pose_file).stem
-    )
-    return_dict["video_duration"] = pose_counts.shape[0]
-    return_dict["corners_present"] = corners_present
-    return_dict["first_frame_pose"] = safe_find_first(pose_counts > 0)
+
     high_conf_keypoints = np.all(
         pose_quality > CONFIG.MIN_HIGH_CONFIDENCE, axis=2
     ).squeeze(1)
-    return_dict["first_frame_full_high_conf"] = safe_find_first(high_conf_keypoints)
+
     jabs_keypoints = np.sum(pose_quality > CONFIG.MIN_JABS_CONFIDENCE, axis=2).squeeze(
         1
     )
-    return_dict["first_frame_jabs"] = safe_find_first(
-        jabs_keypoints >= CONFIG.MIN_JABS_KEYPOINTS
-    )
+
     gait_keypoints = np.all(
         pose_quality[
             :,
@@ -129,18 +121,30 @@ def inspect_pose_v6(pose_file, pad: int = 150, duration: int = 108000) -> dict:
         > CONFIG.MIN_GAIT_CONFIDENCE,
         axis=2,
     ).squeeze(1)
-    return_dict["first_frame_gait"] = safe_find_first(gait_keypoints)
-    return_dict["first_frame_seg"] = safe_find_first(seg_ids > 0)
-    return_dict["pose_counts"] = np.sum(pose_counts)
-    return_dict["seg_counts"] = np.sum(seg_ids > 0)
-    return_dict["missing_poses"] = duration - np.sum(pose_counts[pad : pad + duration])
-    return_dict["missing_segs"] = duration - np.sum(seg_ids[pad : pad + duration] > 0)
-    return_dict["pose_tracklets"] = len(
-        np.unique(
-            pose_tracks[pad : pad + duration][pose_counts[pad : pad + duration] == 1]
-        )
-    )
-    return_dict["missing_keypoint_frames"] = np.sum(
-        num_keypoints[pad : pad + duration] != 12
-    )
-    return return_dict
+
+    return {
+        "pose_file": Path(pose_file).name,
+        "pose_hash": hash_file(Path(pose_file)),
+        "video_name": folder_name + re.sub(
+            "_pose_est_v[0-9]+", "", Path(pose_file).stem
+        ),
+        "video_duration": pose_counts.shape[0],
+        "corners_present": corners_present,
+        "first_frame_pose": safe_find_first(pose_counts > 0),
+        "first_frame_full_high_conf": safe_find_first(high_conf_keypoints),
+        "first_frame_jabs": safe_find_first(jabs_keypoints >= CONFIG.MIN_JABS_KEYPOINTS),
+        "first_frame_gait": safe_find_first(gait_keypoints),
+        "first_frame_seg": safe_find_first(seg_ids > 0),
+        "pose_counts": np.sum(pose_counts),
+        "seg_counts": np.sum(seg_ids > 0),
+        "missing_poses": duration - np.sum(pose_counts[pad : pad + duration]),
+        "missing_segs": duration - np.sum(seg_ids[pad : pad + duration] > 0),
+        "pose_tracklets": len(
+            np.unique(
+                pose_tracks[pad : pad + duration][pose_counts[pad : pad + duration] == 1]
+            )
+        ),
+        "missing_keypoint_frames": np.sum(
+            num_keypoints[pad : pad + duration] != 12
+        ),
+    }
