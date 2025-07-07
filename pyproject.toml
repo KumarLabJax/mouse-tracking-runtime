@@ -12,7 +12,6 @@ dependencies = [
     "fonttools==4.57.0",
     "h5py==3.13.0",
     "imageio>=2.37.0",
-    "jax>=0.4.34",
     "kiwisolver==1.4.8",
     "matplotlib==3.10.1",
     "mypy-extensions==1.0.0",
