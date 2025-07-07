@@ -6,6 +6,8 @@ from typing import Annotated
 import click
 import typer
 
+# from mouse_tracking.tfs_inference import infer_arena_corner_model as infer_tfs
+
 app = typer.Typer()
 
 
