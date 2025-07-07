@@ -1,5 +1,6 @@
 import numpy as np
 import cv2
+import h5py
 from typing import Tuple
 from scipy.spatial.distance import cdist
 
@@ -245,3 +246,31 @@ def get_px_per_cm(corners: np.ndarray, arena_size_cm: float = ARENA_SIZE_CM) -> 
 	cm_per_pixel = np.float32(arena_size_cm / np.mean(edges))
 
 	return cm_per_pixel
+
+
+def swap_static_obj_xy(pose_file, object_key):
+	"""Swaps the [y, x] data to [x, y] for a given static object key.
+
+	Args:
+		pose_file: pose file to modify in-place
+		object_key: dataset key to swap x and y data
+	"""
+	with h5py.File(pose_file, 'a') as f:
+		if object_key not in f:
+			print(f'{object_key} not in {pose_file}.')
+			return
+		object_data = np.flip(f[object_key][:], axis=-1)
+		if len(f[object_key].attrs.keys()) > 0:
+			object_attrs = dict(f[object_key].attrs.items())
+		else:
+			object_attrs = {}
+		compression_opt = f[object_key].compression_opts
+
+		del f[object_key]
+
+		if compression_opt is None:
+			f.create_dataset(object_key, data=object_data)
+		else:
+			f.create_dataset(object_key, data=object_data, compression='gzip', compression_opts=compression_opt)
+		for cur_attr, data in object_attrs.items():
+			f[object_key].attrs.create(cur_attr, data)
