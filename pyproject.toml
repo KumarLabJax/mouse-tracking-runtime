@@ -2,7 +2,7 @@
 name = "mouse-tracking"
 version = "0.1.0"
 description = "Runtime environment for mouse tracking experiments"
-requires-python = ">=3.10"
+requires-python = ">=3.10,<3.11"
 packages = ["src/mouse_tracking"]
 dependencies = [
     "absl-py>=2.3.0",
@@ -16,7 +16,7 @@ dependencies = [
     "matplotlib==3.10.1",
     "mypy-extensions==1.0.0",
     "networkx==3.4.2",
-    "numpy==2.2.4",
+    "numpy>=1.26.0,<2.0.0",
     "opencv-python==4.11.0.86",
     "packaging==24.2",
     "pandas==2.2.3",
@@ -30,8 +30,8 @@ dependencies = [
     "pytz==2025.1",
     "scipy==1.15.2",
     "six==1.17.0",
-    "tensorflow==2.14",
-    "torch>=2.7.1",
+    "tensorflow>=2.15",
+    "torch>=2.0.1",
     "typer>=0.16.0",
     "tzdata==2025.1",
     "yacs>=0.1.8",
