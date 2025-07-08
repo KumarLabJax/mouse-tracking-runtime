@@ -2,11 +2,12 @@
 
 import typer
 from rich import print
+from pathlib import Path
 
 from mouse_tracking import __version__
 
 app = typer.Typer()
-
+from mouse_tracking.utils import fecal_boli
 
 def version_callback(value: bool) -> None:
     """
@@ -22,13 +23,19 @@ def version_callback(value: bool) -> None:
 
 
 @app.command()
-def aggregate_fecal_boli():
+def aggregate_fecal_boli(
+        folder: Path = typer.Argument(..., help="Path to the folder containing fecal boli data"),
+        folder_depth: int = typer.Option(2, help="Expected subfolder depth in the project folder"),
+        num_bins: int = typer.Option(-1, help="Number of bins to read in (value < 0 reads all)"),
+        output: Path = typer.Option("output.csv", help="Output file path for aggregated data")
+):
     """
     Aggregate fecal boli data.
 
     This command processes and aggregates fecal boli data from the specified source.
     """
-    print("Aggregating fecal boli data... (not implemented yet)")
+    result = fecal_boli.aggregate_folder_data(str(folder), depth=folder_depth, num_bins=num_bins)
+    result.to_csv(output, index=False)
 
 
 @app.command()
