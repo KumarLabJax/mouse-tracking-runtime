@@ -1,12 +1,11 @@
-"""Script to stitch tracklets within a pose file."""
+"""Stitch tracklets within a pose file."""
 
 import h5py
 import numpy as np
-import argparse
-from utils.matching import VideoObservations
-from utils.writers import write_pose_v3_data, write_pose_v4_data, write_v6_tracklets
+from mouse_tracking.utils.matching import VideoObservations
+from mouse_tracking.utils.writers import write_pose_v3_data, write_pose_v4_data, write_v6_tracklets
 import time
-from utils.timers import time_accumulator
+from mouse_tracking.utils.timers import time_accumulator
 
 
 def match_predictions(pose_file):
@@ -47,15 +46,3 @@ def match_predictions(pose_file):
 	# Finally, overwrite segmentation data
 	write_v6_tracklets(pose_file, new_seg_ids, stitched_seg)
 	performance_accumulator.print_performance()
-
-
-def main():
-	"""Command line interaction."""
-	parser = argparse.ArgumentParser()
-	parser.add_argument('--in-pose', help='input HDF5 pose file', required=True)
-	args = parser.parse_args()
-	match_predictions(args.in_pose)
-
-
-if __name__ == '__main__':
-	main()
