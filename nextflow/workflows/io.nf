@@ -17,13 +17,13 @@ workflow PREPARE_DATA {
             video_file = CHECK_FILE(in_video_file).file
         // TODO: Change remote retrieval to be serialized to not DDOS the network
         else if (location == "dropbox")
-            CHECK_GLOBUS_AUTH()
             in_video_list = FILTER_UNPROCESSED_DROPBOX(in_video_file).unprocessed_files
             video_file = GET_DATA_FROM_DROPBOX(in_video_file).out.video_file
-        else if (location == "t2")
-            in_video_list = FILTER_UNPROCESSED_GLOBUS(in_video_file).unprocessed_files
-            video_file = TRANSFER_GLOBUS(params.globus_t2_endpoint, params.globus_t1_endpoint, in_video_file).out.video_file
-        else error "${location} is invalid, specify either local or dropbox"
+        else if (location == "globus")
+            CHECK_GLOBUS_AUTH()
+            in_video_list = FILTER_UNPROCESSED_GLOBUS(params.globus_remote_endpoint, in_video_file).unprocessed_files
+            video_file = TRANSFER_GLOBUS(params.globus_remote_endpoint, params.globus_compute_endpoint, in_video_file).out.video_file
+        else error "${location} is invalid, specify either local, dropbox, or globus"
         out_file = URLIFY_FILE(video_file, params.path_depth).file
     }
 
