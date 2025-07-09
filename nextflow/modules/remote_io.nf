@@ -1,30 +1,42 @@
-process GET_DATA_FROM_T2 {
+process CHECK_GLOBUS_AUTH {
     label "globus"
     
     input:
+    val globus_endpoint
+
+    script:
+    // TODO:
+    // If the command fails, globus will print a message to re-authenticate
+    // This message should be sent to the user via email.
+    """
+    globus ls ${globus_endpoint}:/
+    if [[ \$? != 0 ]]; then
+        echo "Globus authentication failed. Please re-authenticate."
+        exit 1
+    fi
+    """
+
+    // TODO: This check could be improved.
+    // "globus session show -F json" can return a json containing auth_time
+    // But this needs to be parsed and compared with the endpoint expiration
+}
+
+process TRANSFER_GLOBUS {
+    label "globus"
+    
+    input:
+    val globus_src_endpoint
+    val globus_dst_endpoint
     val video_filename
 
     output:
     path video_file
 
     script:
+    // Globus is asynchronous, so we need to capture the task and wait.
     """
-    echo "Not implemented yet!"
-    exit 1
-    """
-}
-
-process PUT_DATA_TO_T2 {
-    label "globus"
-    
-    input:
-    path file_to_upload
-    val folder_name
-
-    script:
-    """
-    echo "Not implemented yet!"
-    exit 1
+    id=$(globus transfer --jq "task_id" --format=UNIX ${globus_src_endpoint}:/${video_filename} ${globus_dst_endpoint}:/${video_filename})
+    globus task wait --polling-interval=10 \$id
     """
 }
 
