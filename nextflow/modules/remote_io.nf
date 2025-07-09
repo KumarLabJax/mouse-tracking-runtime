@@ -21,6 +21,52 @@ process CHECK_GLOBUS_AUTH {
     // But this needs to be parsed and compared with the endpoint expiration
 }
 
+process FILTER_UNPROCESSED_GLOBUS {
+    label "globus"
+
+    input:
+    val globus_endpoint
+    path test_files
+
+    output:
+    path "unprocessed_files.txt", emit unprocessed_files
+
+    script:
+    """
+    touch unprocessed_files.txt
+    while read test_file; do
+        test_pose=\${test_file/.*}_pose_est_v6.h5
+        globus ls ${globus_endpoint}:/\${test_pose} > /dev/null 2>&1
+        if [[ \$? != 0 ]]; then
+            echo \$test_file >> unprocessed_files.txt
+        fi
+    done < ${test_files}
+    """
+}
+
+process FILTER_UNPROCESSED_DROPBOX {
+    label "rclone"
+    label "dropbox"
+
+    input:
+    path test_files
+
+    output:
+    path "unprocessed_files.txt", emit unprocessed_files
+
+    script:
+    """
+    touch unprocessed_files.txt
+    while read test_file; do
+        test_pose=\${test_file/.*}_pose_est_v6.h5
+        rclone ls ${DROPBOX_PREFIX}/\${test_pose} > /dev/null 2>&1
+        if [[ \$? != 0 ]]; then
+            echo \$test_file >> unprocessed_files.txt
+        fi
+    done < ${test_files}
+    """
+}
+
 process TRANSFER_GLOBUS {
     label "globus"
     
@@ -48,26 +94,11 @@ process GET_DATA_FROM_DROPBOX {
     val video_filename
 
     output:
-    path ${video_file.baseName}, emit: video_file
+    path "${video_filename}", emit: video_file
 
     script:
     """
-    #!/bin/bash
-
-    rclone ls ${DROPBOX_PREFIX}/\$video_filename > ./video_file_remote_stats.txt"
-    h5_filename=${video_file.baseName}_pose_est_v6.h5
-    rclone ls "${DROPBOX_PREFIX}/\${h5_filename}"
-    if [[ \$? == 0 ]]; then
-        echo "File already processed. Skipping."
-        return 1
-    fi
-    required_space=\$(awk '{print \$1}' ./video_file_remote_stats.txt)
-    available_space=\$(df . | awk '{ print \$4 }' | tail -n 1)
-    if [[ $required_space -gt $available_space ]]; then
-        echo "Not enough space to download file. Exiting."
-        return 1
-    fi
-    rclone copy ${DROPBOX_PREFIX}/$video_filename .
+    rclone copy ${DROPBOX_PREFIX}/${video_filename} ./${video_filename}
     """
 }
 
@@ -77,10 +108,10 @@ process PUT_DATA_TO_DROPBOX {
     
     input:
     path file_to_upload
-    val folder_name
+    tuple path(result_file), val(publish_filename)
 
     script:
     """
-    rclone copy $file_to_upload ${DROPBOX_PREFIX}/$folder_name/.
+    rclone copy ${result_file} ${DROPBOX_PREFIX}/${publish_filename}
     """
 }
