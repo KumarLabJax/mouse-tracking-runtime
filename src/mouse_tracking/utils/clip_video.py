@@ -79,7 +79,7 @@ def clip_video_auto(
     in_pose: str,
     out_video: str,
     out_pose: str,
-    frame_offset: int = 150,  # Default 5 minutes in frames
+    frame_offset: int = 150,  # Default 5 seconds in frames
     observation_duration: int = 30 * 60 * 60,  # Default 1 hour in frames
     confidence_threshold: float = 0.5,  # Default confidence threshold
     num_keypoints: int = 12,  # Default number of keypoints

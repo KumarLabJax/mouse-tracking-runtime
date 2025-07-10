@@ -777,6 +777,9 @@ class TestV2ToV3SpecialValues:
         # Frame 0: has valid keypoints (including NaN), should be valid
         # Frame 1: all valid keypoints, should be valid
         # Frame 2: all NaN (which are not < threshold), should be valid
+        #
+        # TODO: (From Brian) - "Not sure I agree with this behavior, but I don't think
+        #   it affects any data. NAN confidence should probably be filtered out."
         expected_instance_count = np.array([1, 1, 1], dtype=np.uint8)
         np.testing.assert_array_equal(instance_count, expected_instance_count)
 
@@ -810,6 +813,155 @@ class TestV2ToV3SpecialValues:
         # Check specific filtering
         assert conf_data_v3[1, 0, 0] == 0  # -inf should be filtered to 0
         assert conf_data_v3[0, 0, 1] == np.inf  # +inf should be preserved
+
+    def test_confidence_values_greater_than_one(self):
+        """Test handling of confidence values greater than 1.0 (realistic HRNet output)."""
+        # Arrange
+        pose_data = np.ones((4, 12, 2)) * 50
+        conf_data = np.array(
+            [
+                [1.1] * 12,  # Slightly above 1.0
+                [1.5] * 12,  # Moderately above 1.0
+                [2.3] * 12,  # Well above 1.0
+                [0.5, 1.2, 0.8, 2.1, 0.3, 1.0, 0.9, 1.8, 0.2, 1.5, 0.7, 2.0],  # Mixed
+            ]
+        )
+        threshold = 0.6
+
+        # Act
+        (
+            pose_data_v3,
+            conf_data_v3,
+            instance_count,
+            instance_embedding,
+            instance_track_id,
+        ) = v2_to_v3(pose_data, conf_data, threshold)
+
+        # Assert
+        # All frames should be valid since values > 1.0 are > threshold
+        expected_instance_count = np.array([1, 1, 1, 1], dtype=np.uint8)
+        np.testing.assert_array_equal(instance_count, expected_instance_count)
+
+        # Check that values > 1.0 are preserved as-is
+        np.testing.assert_array_equal(conf_data_v3[0, 0, :], [1.1] * 12)
+        np.testing.assert_array_equal(conf_data_v3[1, 0, :], [1.5] * 12)
+        np.testing.assert_array_equal(conf_data_v3[2, 0, :], [2.3] * 12)
+
+        # Check mixed frame filtering (only values < threshold should be zeroed)
+        expected_mixed_frame = np.array(
+            [0.0, 1.2, 0.8, 2.1, 0.0, 1.0, 0.9, 1.8, 0.0, 1.5, 0.7, 2.0]
+        )
+        np.testing.assert_array_equal(conf_data_v3[3, 0, :], expected_mixed_frame)
+
+    def test_negative_confidence_values(self):
+        """Test handling of negative confidence values (possible HRNet output)."""
+        # Arrange
+        pose_data = np.ones((4, 12, 2)) * 25
+        conf_data = np.array(
+            [
+                [-0.1] * 12,  # Slightly negative
+                [-0.5] * 12,  # Moderately negative
+                [-2.0] * 12,  # Very negative
+                [
+                    0.8,
+                    -0.2,
+                    0.9,
+                    -0.1,
+                    0.7,
+                    -0.3,
+                    0.6,
+                    -0.4,
+                    0.5,
+                    -0.5,
+                    0.4,
+                    -0.6,
+                ],  # Mixed
+            ]
+        )
+        threshold = 0.3
+
+        # Act
+        (
+            pose_data_v3,
+            conf_data_v3,
+            instance_count,
+            instance_embedding,
+            instance_track_id,
+        ) = v2_to_v3(pose_data, conf_data, threshold)
+
+        # Assert
+        # First three frames should be invalid (all negative < threshold)
+        # Fourth frame should be valid (has some values >= threshold)
+        expected_instance_count = np.array([0, 0, 0, 1], dtype=np.uint8)
+        np.testing.assert_array_equal(instance_count, expected_instance_count)
+
+        # Check that negative values are filtered to 0
+        np.testing.assert_array_equal(conf_data_v3[0, 0, :], np.zeros(12))
+        np.testing.assert_array_equal(conf_data_v3[1, 0, :], np.zeros(12))
+        np.testing.assert_array_equal(conf_data_v3[2, 0, :], np.zeros(12))
+
+        # Check mixed frame filtering
+        expected_mixed_frame = np.array(
+            [0.8, 0.0, 0.9, 0.0, 0.7, 0.0, 0.6, 0.0, 0.5, 0.0, 0.4, 0.0]
+        )
+        np.testing.assert_array_equal(conf_data_v3[3, 0, :], expected_mixed_frame)
+
+        # Corresponding pose data should also be zeroed for filtered keypoints
+        for frame_idx in range(3):
+            np.testing.assert_array_equal(
+                pose_data_v3[frame_idx, 0, :, :], np.zeros((12, 2))
+            )
+
+    def test_extreme_out_of_bounds_confidence_values(self):
+        """Test handling of extremely out-of-bounds confidence values."""
+        # Arrange
+        pose_data = np.ones((3, 12, 2)) * 100
+        conf_data = np.array(
+            [
+                [
+                    10.0,
+                    -5.0,
+                    0.5,
+                    100.0,
+                    -10.0,
+                    0.8,
+                    50.0,
+                    -1.0,
+                    0.3,
+                    200.0,
+                    -20.0,
+                    0.1,
+                ],
+                [1000.0] * 12,  # Very large positive values
+                [-1000.0] * 12,  # Very large negative values
+            ]
+        )
+        threshold = 0.4
+
+        # Act
+        (
+            pose_data_v3,
+            conf_data_v3,
+            instance_count,
+            instance_embedding,
+            instance_track_id,
+        ) = v2_to_v3(pose_data, conf_data, threshold)
+
+        # Assert
+        expected_instance_count = np.array([1, 1, 0], dtype=np.uint8)
+        np.testing.assert_array_equal(instance_count, expected_instance_count)
+
+        # Check extreme positive values are preserved
+        np.testing.assert_array_equal(conf_data_v3[1, 0, :], [1000.0] * 12)
+
+        # Check extreme negative values are filtered
+        np.testing.assert_array_equal(conf_data_v3[2, 0, :], np.zeros(12))
+
+        # Check mixed extreme values
+        expected_mixed = np.array(
+            [10.0, 0.0, 0.5, 100.0, 0.0, 0.8, 50.0, 0.0, 0.0, 200.0, 0.0, 0.0]
+        )
+        np.testing.assert_array_equal(conf_data_v3[0, 0, :], expected_mixed)
 
 
 class TestV2ToV3ComprehensiveScenarios:
