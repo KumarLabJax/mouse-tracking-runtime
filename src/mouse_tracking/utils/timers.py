@@ -5,6 +5,28 @@ import sys
 from typing import List
 from resource import getrusage, RUSAGE_SELF
 
+SECONDS_PER_MINUTE = 60
+MINUTES_PER_HOUR = 60
+
+def print_time(frames: int, fps: int = 30.0):
+	"""Prints human-readable frame times.
+
+	Args:
+		frames: number of frames to be translated
+		fps: number of frames per second
+
+	Returns:
+		string representation of frames in H:M:S.s
+	"""
+	seconds = frames / fps
+	if seconds < SECONDS_PER_MINUTE:
+		return f'{np.round(seconds, 4)}s'
+	minutes, seconds = divmod(seconds, SECONDS_PER_MINUTE)
+	if minutes < MINUTES_PER_HOUR:
+		return f'{minutes}m{np.round(seconds, 4)}s'
+	hours, minutes = divmod(minutes, MINUTES_PER_HOUR)
+	return f'{hours}h{minutes}m{np.round(seconds, 4)}s'
+
 
 class time_accumulator:
 	"""An accumulator object that collects performance timings."""
