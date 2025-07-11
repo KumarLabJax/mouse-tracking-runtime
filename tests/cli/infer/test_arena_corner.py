@@ -34,13 +34,15 @@ class TestArenaCornerImplementation:
             "neither_specified_error",
         ],
     )
+    @patch("mouse_tracking.cli.infer.infer_arena_corner_model")
     def test_arena_corner_input_validation(
-        self, video_arg, frame_arg, expected_success
+        self, mock_infer, video_arg, frame_arg, expected_success
     ):
         """
         Test input validation for arena corner implementation.
 
         Args:
+            mock_infer: Mock for the inference function
             video_arg: Video argument flag or None
             frame_arg: Frame argument flag or None
             expected_success: Whether the command should succeed
@@ -61,27 +63,30 @@ class TestArenaCornerImplementation:
             # Assert
             if expected_success:
                 assert result.exit_code == 0
-                assert "Running TFS inference" in result.stdout
+                mock_infer.assert_called_once()
             else:
                 assert result.exit_code == 1
                 assert "Error:" in result.stdout
+                mock_infer.assert_not_called()
 
     @pytest.mark.parametrize(
         "model_choice,runtime_choice,expected_success",
         [
-            ("gait-paper", "tfs", True),
+            ("social-2022-pipeline", "tfs", True),
             ("invalid-model", "tfs", False),
-            ("gait-paper", "invalid-runtime", False),
+            ("social-2022-pipeline", "invalid-runtime", False),
         ],
         ids=["valid_choices", "invalid_model", "invalid_runtime"],
     )
+    @patch("mouse_tracking.cli.infer.infer_arena_corner_model")
     def test_arena_corner_choice_validation(
-        self, model_choice, runtime_choice, expected_success
+        self, mock_infer, model_choice, runtime_choice, expected_success
     ):
         """
         Test model and runtime choice validation.
 
         Args:
+            mock_infer: Mock for the inference function
             model_choice: Model choice to test
             runtime_choice: Runtime choice to test
             expected_success: Whether the command should succeed
@@ -104,9 +109,14 @@ class TestArenaCornerImplementation:
             # Assert
             if expected_success:
                 assert result.exit_code == 0
-                assert f"Model: {model_choice}" in result.stdout
+                mock_infer.assert_called_once()
+                # Verify the args object passed to the inference function
+                args = mock_infer.call_args[0][0]
+                assert args.model == model_choice
+                assert args.runtime == runtime_choice
             else:
                 assert result.exit_code != 0
+                mock_infer.assert_not_called()
 
     @pytest.mark.parametrize(
         "file_exists,expected_success",
@@ -116,13 +126,15 @@ class TestArenaCornerImplementation:
         ],
         ids=["file_exists", "file_not_exists"],
     )
+    @patch("mouse_tracking.cli.infer.infer_arena_corner_model")
     def test_arena_corner_file_existence_validation(
-        self, file_exists, expected_success
+        self, mock_infer, file_exists, expected_success
     ):
         """
         Test file existence validation.
 
         Args:
+            mock_infer: Mock for the inference function
             file_exists: Whether the input file should exist
             expected_success: Whether the command should succeed
         """
@@ -136,28 +148,20 @@ class TestArenaCornerImplementation:
             # Assert
             if expected_success:
                 assert result.exit_code == 0
-                assert "Running TFS inference" in result.stdout
+                mock_infer.assert_called_once()
             else:
                 assert result.exit_code == 1
                 assert "does not exist" in result.stdout
+                mock_infer.assert_not_called()
 
     @pytest.mark.parametrize(
-        "out_file,out_image,out_video,expected_outputs",
+        "out_file,out_image,out_video",
         [
-            (None, None, None, []),
-            ("output.json", None, None, ["Output file: output.json"]),
-            (None, "output.png", None, ["Output image: output.png"]),
-            (None, None, "output.mp4", ["Output video: output.mp4"]),
-            (
-                "output.json",
-                "output.png",
-                "output.mp4",
-                [
-                    "Output file: output.json",
-                    "Output image: output.png",
-                    "Output video: output.mp4",
-                ],
-            ),
+            (None, None, None),
+            ("output.json", None, None),
+            (None, "output.png", None),
+            (None, None, "output.mp4"),
+            ("output.json", "output.png", "output.mp4"),
         ],
         ids=[
             "no_outputs",
@@ -167,17 +171,18 @@ class TestArenaCornerImplementation:
             "all_outputs",
         ],
     )
+    @patch("mouse_tracking.cli.infer.infer_arena_corner_model")
     def test_arena_corner_output_options(
-        self, out_file, out_image, out_video, expected_outputs
+        self, mock_infer, out_file, out_image, out_video
     ):
         """
         Test output options functionality.
 
         Args:
+            mock_infer: Mock for the inference function
             out_file: Output file path or None
             out_image: Output image path or None
             out_video: Output video path or None
-            expected_outputs: Expected output messages
         """
         # Arrange
         cmd_args = ["arena-corner", "--video", str(self.test_video_path)]
@@ -195,29 +200,33 @@ class TestArenaCornerImplementation:
 
             # Assert
             assert result.exit_code == 0
-            for expected_output in expected_outputs:
-                assert expected_output in result.stdout
+            mock_infer.assert_called_once()
+
+            # Verify the args object contains the correct output paths
+            args = mock_infer.call_args[0][0]
+            assert args.out_file == out_file
+            assert args.out_image == out_image
+            assert args.out_video == out_video
 
     @pytest.mark.parametrize(
-        "num_frames,frame_interval,expected_in_output",
+        "num_frames,frame_interval",
         [
-            (100, 100, "Frames: 100, Interval: 100"),
-            (50, 10, "Frames: 50, Interval: 10"),
-            (1, 1, "Frames: 1, Interval: 1"),
-            (1000, 500, "Frames: 1000, Interval: 500"),
+            (100, 100),  # defaults
+            (50, 10),  # custom values
+            (1, 1),  # minimal values
+            (1000, 500),  # large values
         ],
         ids=["default_values", "custom_values", "minimal_values", "large_values"],
     )
-    def test_arena_corner_frame_options(
-        self, num_frames, frame_interval, expected_in_output
-    ):
+    @patch("mouse_tracking.cli.infer.infer_arena_corner_model")
+    def test_arena_corner_frame_options(self, mock_infer, num_frames, frame_interval):
         """
         Test frame number and interval options.
 
         Args:
+            mock_infer: Mock for the inference function
             num_frames: Number of frames to process
             frame_interval: Frame interval
-            expected_in_output: Expected output message containing frame info
         """
         # Arrange
         cmd_args = [
@@ -236,7 +245,12 @@ class TestArenaCornerImplementation:
 
             # Assert
             assert result.exit_code == 0
-            assert expected_in_output in result.stdout
+            mock_infer.assert_called_once()
+
+            # Verify the args object contains the correct frame options
+            args = mock_infer.call_args[0][0]
+            assert args.num_frames == num_frames
+            assert args.frame_interval == frame_interval
 
     def test_arena_corner_help_text(self):
         """Test that the command has proper help text."""
@@ -245,7 +259,7 @@ class TestArenaCornerImplementation:
 
         # Assert
         assert result.exit_code == 0
-        assert "Infer an onnx single mouse pose model" in result.stdout
+        assert "Infer arena corner detection model" in result.stdout
         assert "Exactly one of --video or --frame must be specified" in result.stdout
 
     def test_arena_corner_error_handling_comprehensive(self):
@@ -277,7 +291,8 @@ class TestArenaCornerImplementation:
             assert result.exit_code == 1
             assert "does not exist" in result.stdout
 
-    def test_arena_corner_integration_flow(self):
+    @patch("mouse_tracking.cli.infer.infer_arena_corner_model")
+    def test_arena_corner_integration_flow(self, mock_infer):
         """Test the complete integration flow of arena corner inference."""
         # Arrange
         cmd_args = [
@@ -285,7 +300,7 @@ class TestArenaCornerImplementation:
             "--video",
             str(self.test_video_path),
             "--model",
-            "gait-paper",
+            "social-2022-pipeline",
             "--runtime",
             "tfs",
             "--out-file",
@@ -306,34 +321,55 @@ class TestArenaCornerImplementation:
 
             # Assert
             assert result.exit_code == 0
+            mock_infer.assert_called_once()
 
-            # Verify all expected outputs are in the result
-            expected_messages = [
-                "Running TFS inference on video",
-                "Model: gait-paper",
-                "Frames: 25, Interval: 5",
-                "Output file: output.json",
-                "Output image: output.png",
-                "Output video: output.mp4",
-            ]
+            # Verify the args object has all the expected values
+            args = mock_infer.call_args[0][0]
+            assert args.model == "social-2022-pipeline"
+            assert args.runtime == "tfs"
+            assert args.video == str(self.test_video_path)
+            assert args.frame is None
+            assert args.out_file == "output.json"
+            assert args.out_image == "output.png"
+            assert args.out_video == "output.mp4"
+            assert args.num_frames == 25
+            assert args.frame_interval == 5
 
-            for message in expected_messages:
-                assert message in result.stdout
-
-    def test_arena_corner_path_handling(self):
-        """Test proper Path object handling in the implementation."""
+    @patch("mouse_tracking.cli.infer.infer_arena_corner_model")
+    def test_arena_corner_video_input_processing(self, mock_infer):
+        """Test arena corner specifically with video input."""
         # Arrange
-        video_path = Path("/some/path/to/video.mp4")
+        cmd_args = ["arena-corner", "--video", str(self.test_video_path)]
 
         with patch("pathlib.Path.exists", return_value=True):
             # Act
-            result = self.runner.invoke(
-                app, ["arena-corner", "--video", str(video_path)]
-            )
+            result = self.runner.invoke(app, cmd_args)
 
             # Assert
             assert result.exit_code == 0
-            assert str(video_path) in result.stdout
+            mock_infer.assert_called_once()
+
+            args = mock_infer.call_args[0][0]
+            assert args.video == str(self.test_video_path)
+            assert args.frame is None
+
+    @patch("mouse_tracking.cli.infer.infer_arena_corner_model")
+    def test_arena_corner_frame_input_processing(self, mock_infer):
+        """Test arena corner specifically with frame input."""
+        # Arrange
+        cmd_args = ["arena-corner", "--frame", str(self.test_frame_path)]
+
+        with patch("pathlib.Path.exists", return_value=True):
+            # Act
+            result = self.runner.invoke(app, cmd_args)
+
+            # Assert
+            assert result.exit_code == 0
+            mock_infer.assert_called_once()
+
+            args = mock_infer.call_args[0][0]
+            assert args.video is None
+            assert args.frame == str(self.test_frame_path)
 
     @pytest.mark.parametrize(
         "edge_case_path",
@@ -352,11 +388,13 @@ class TestArenaCornerImplementation:
             "relative_path",
         ],
     )
-    def test_arena_corner_edge_case_paths(self, edge_case_path):
+    @patch("mouse_tracking.cli.infer.infer_arena_corner_model")
+    def test_arena_corner_edge_case_paths(self, mock_infer, edge_case_path):
         """
         Test arena corner with edge case file paths.
 
         Args:
+            mock_infer: Mock for the inference function
             edge_case_path: Path with special characters to test
         """
         # Arrange
@@ -368,39 +406,14 @@ class TestArenaCornerImplementation:
 
             # Assert
             assert result.exit_code == 0
-            assert "Running TFS inference" in result.stdout
+            mock_infer.assert_called_once()
 
-    def test_arena_corner_video_input_processing(self):
-        """Test arena corner specifically with video input."""
-        # Arrange
-        cmd_args = ["arena-corner", "--video", str(self.test_video_path)]
+            args = mock_infer.call_args[0][0]
+            assert args.video == edge_case_path
 
-        with patch("pathlib.Path.exists", return_value=True):
-            # Act
-            result = self.runner.invoke(app, cmd_args)
-
-            # Assert
-            assert result.exit_code == 0
-            assert "Running TFS inference on video" in result.stdout
-            assert str(self.test_video_path) in result.stdout
-
-    def test_arena_corner_frame_input_processing(self):
-        """Test arena corner specifically with frame input."""
-        # Arrange
-        cmd_args = ["arena-corner", "--frame", str(self.test_frame_path)]
-
-        with patch("pathlib.Path.exists", return_value=True):
-            # Act
-            result = self.runner.invoke(app, cmd_args)
-
-            # Assert
-            assert result.exit_code == 0
-            assert "Running TFS inference on frame" in result.stdout
-            assert str(self.test_frame_path) in result.stdout
-
-    def test_arena_corner_args_compatibility_object(self):
+    @patch("mouse_tracking.cli.infer.infer_arena_corner_model")
+    def test_arena_corner_args_compatibility_object(self, mock_infer):
         """Test that the InferenceArgs compatibility object is properly structured."""
-        # This test indirectly verifies the args object structure by checking outputs
         # Arrange
         cmd_args = [
             "arena-corner",
@@ -416,6 +429,39 @@ class TestArenaCornerImplementation:
 
             # Assert
             assert result.exit_code == 0
-            # Verify that the output indicates proper args object creation
-            assert "Running TFS inference on video" in result.stdout
-            assert "Output file: test.json" in result.stdout
+            mock_infer.assert_called_once()
+
+            # Verify that the args object has all expected attributes
+            args = mock_infer.call_args[0][0]
+            assert hasattr(args, "model")
+            assert hasattr(args, "runtime")
+            assert hasattr(args, "video")
+            assert hasattr(args, "frame")
+            assert hasattr(args, "out_file")
+            assert hasattr(args, "out_image")
+            assert hasattr(args, "out_video")
+            assert hasattr(args, "num_frames")
+            assert hasattr(args, "frame_interval")
+
+    @patch("mouse_tracking.cli.infer.infer_arena_corner_model")
+    def test_arena_corner_default_values(self, mock_infer):
+        """Test that arena corner uses the correct default values."""
+        # Arrange
+        cmd_args = ["arena-corner", "--video", str(self.test_video_path)]
+
+        with patch("pathlib.Path.exists", return_value=True):
+            # Act
+            result = self.runner.invoke(app, cmd_args)
+
+            # Assert
+            assert result.exit_code == 0
+            mock_infer.assert_called_once()
+
+            args = mock_infer.call_args[0][0]
+            assert args.model == "social-2022-pipeline"
+            assert args.runtime == "tfs"
+            assert args.num_frames == 100
+            assert args.frame_interval == 100
+            assert args.out_file is None
+            assert args.out_image is None
+            assert args.out_video is None

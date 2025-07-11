@@ -12,9 +12,8 @@ from mouse_tracking.utils.timers import time_accumulator
 from mouse_tracking.models.model_definitions import SINGLE_MOUSE_POSE
 import torch
 import torch.backends.cudnn as cudnn
-# TODO: Where is this import file?
-from .hrnet.models import pose_hrnet
-from .hrnet.config import cfg
+from mouse_tracking.pytorch_inference.hrnet.models import pose_hrnet
+from mouse_tracking.pytorch_inference.hrnet.config import cfg
 
 
 def predict_pose(input_iter, model, render: str = None, batch_size: int = 1):

@@ -1,4 +1,4 @@
-"""Mouse Tracking Runtime inference CLI"""
+"""Mouse Tracking Runtime inference CLI."""
 
 from pathlib import Path
 from typing import Annotated
@@ -6,7 +6,21 @@ from typing import Annotated
 import click
 import typer
 
-# from mouse_tracking.tfs_inference import infer_arena_corner_model as infer_tfs
+from mouse_tracking.pytorch_inference import (
+    infer_fecal_boli_pytorch,
+    infer_multi_pose_pytorch,
+    infer_single_pose_pytorch,
+)
+
+# Import inference functions
+from mouse_tracking.tfs_inference import (
+    infer_arena_corner_model,
+    infer_food_hopper_model,
+    infer_lixit_model,
+    infer_multi_identity_tfs,
+    infer_multi_segmentation_tfs,
+    infer_single_segmentation_tfs,
+)
 
 app = typer.Typer()
 
@@ -26,9 +40,9 @@ def arena_corner(
         typer.Option(
             "--model",
             help="Trained model to infer",
-            click_type=click.Choice(["gait-paper"]),
+            click_type=click.Choice(["social-2022-pipeline"]),
         ),
-    ] = "gait-paper",
+    ] = "social-2022-pipeline",
     runtime: Annotated[
         str,
         typer.Option(
@@ -57,7 +71,7 @@ def arena_corner(
     ] = 100,
 ) -> None:
     """
-    Infer an onnx single mouse pose model.
+    Infer arena corner detection model.
 
     Processes either a video file or a single frame image for arena corner detection.
     Exactly one of --video or --frame must be specified.
@@ -91,7 +105,7 @@ def arena_corner(
         typer.echo(f"Error: Input file '{input_source}' does not exist.", err=True)
         raise typer.Exit(1)
 
-    # Create args object (temporary) compatible with existing inference function
+    # Create args object compatible with existing inference function
     class InferenceArgs:
         """Arguments container for compatibility with existing inference code."""
 
@@ -110,20 +124,7 @@ def arena_corner(
 
     # Execute inference based on runtime
     if runtime == "tfs":
-        # TODO: Import and call the actual inference function
-        # from tfs_inference import infer_arena_corner_model as infer_tfs
-        # infer_tfs(args)
-
-        input_type = "video" if video else "frame"
-        typer.echo(f"Running TFS inference on {input_type}: {input_source}")
-        typer.echo(f"Model: {model}")
-        typer.echo(f"Frames: {num_frames}, Interval: {frame_interval}")
-        if out_file:
-            typer.echo(f"Output file: {out_file}")
-        if out_image:
-            typer.echo(f"Output image: {out_image}")
-        if out_video:
-            typer.echo(f"Output video: {out_video}")
+        infer_arena_corner_model(args)
 
 
 @app.command()
@@ -207,7 +208,7 @@ def fecal_boli(
         typer.echo(f"Error: Input file '{input_source}' does not exist.", err=True)
         raise typer.Exit(1)
 
-    # Create args object (temporary) compatible with existing inference function
+    # Create args object compatible with existing inference function
     class InferenceArgs:
         """Arguments container for compatibility with existing inference code."""
 
@@ -226,20 +227,7 @@ def fecal_boli(
 
     # Execute inference based on runtime
     if runtime == "pytorch":
-        # TODO: Import and call the actual inference function
-        # from pytorch_inference import infer_fecal_boli_model as infer_pytorch
-        # infer_pytorch(args)
-
-        input_type = "video" if video else "frame"
-        typer.echo(f"Running PyTorch inference on {input_type}: {input_source}")
-        typer.echo(f"Model: {model}")
-        typer.echo(f"Frame interval: {frame_interval}, Batch size: {batch_size}")
-        if out_file:
-            typer.echo(f"Output file: {out_file}")
-        if out_image:
-            typer.echo(f"Output image: {out_image}")
-        if out_video:
-            typer.echo(f"Output video: {out_video}")
+        infer_fecal_boli_pytorch(args)
 
 
 @app.command()
@@ -322,7 +310,7 @@ def food_hopper(
         typer.echo(f"Error: Input file '{input_source}' does not exist.", err=True)
         raise typer.Exit(1)
 
-    # Create args object (temporary) compatible with existing inference function
+    # Create args object compatible with existing inference function
     class InferenceArgs:
         """Arguments container for compatibility with existing inference code."""
 
@@ -341,20 +329,7 @@ def food_hopper(
 
     # Execute inference based on runtime
     if runtime == "tfs":
-        # TODO: Import and call the actual inference function
-        # from tfs_inference import infer_food_hopper_model as infer_tfs
-        # infer_tfs(args)
-
-        input_type = "video" if video else "frame"
-        typer.echo(f"Running TFS inference on {input_type}: {input_source}")
-        typer.echo(f"Model: {model}")
-        typer.echo(f"Frames: {num_frames}, Interval: {frame_interval}")
-        if out_file:
-            typer.echo(f"Output file: {out_file}")
-        if out_image:
-            typer.echo(f"Output image: {out_image}")
-        if out_video:
-            typer.echo(f"Output video: {out_video}")
+        infer_food_hopper_model(args)
 
 
 @app.command()
@@ -437,7 +412,7 @@ def lixit(
         typer.echo(f"Error: Input file '{input_source}' does not exist.", err=True)
         raise typer.Exit(1)
 
-    # Create args object (temporary) compatible with existing inference function
+    # Create args object compatible with existing inference function
     class InferenceArgs:
         """Arguments container for compatibility with existing inference code."""
 
@@ -456,20 +431,7 @@ def lixit(
 
     # Execute inference based on runtime
     if runtime == "tfs":
-        # TODO: Import and call the actual inference function
-        # from tfs_inference import infer_lixit_model as infer_tfs
-        # infer_tfs(args)
-
-        input_type = "video" if video else "frame"
-        typer.echo(f"Running TFS inference on {input_type}: {input_source}")
-        typer.echo(f"Model: {model}")
-        typer.echo(f"Frames: {num_frames}, Interval: {frame_interval}")
-        if out_file:
-            typer.echo(f"Output file: {out_file}")
-        if out_image:
-            typer.echo(f"Output image: {out_image}")
-        if out_video:
-            typer.echo(f"Output video: {out_video}")
+        infer_lixit_model(args)
 
 
 @app.command()
@@ -534,7 +496,7 @@ def multi_identity(
         typer.echo(f"Error: Input file '{input_source}' does not exist.", err=True)
         raise typer.Exit(1)
 
-    # Create args object (temporary) compatible with existing inference function
+    # Create args object compatible with existing inference function
     class InferenceArgs:
         """Arguments container for compatibility with existing inference code."""
 
@@ -549,15 +511,7 @@ def multi_identity(
 
     # Execute inference based on runtime
     if runtime == "tfs":
-        # TODO: Import and call the actual inference function
-        # from tfs_inference import infer_multi_identity_model as infer_tfs
-        # infer_tfs(args)
-
-        input_type = "video" if video else "frame"
-        typer.echo(f"Running TFS inference on {input_type}: {input_source}")
-        typer.echo(f"Model: {model}")
-        typer.echo(f"Output file: {out_file}")
-        typer.echo("Multi-identity inference completed.")
+        infer_multi_identity_tfs(args)
 
 
 @app.command()
@@ -632,7 +586,15 @@ def multi_pose(
         typer.echo(f"Error: Input file '{input_source}' does not exist.", err=True)
         raise typer.Exit(1)
 
-    # Create args object (temporary) compatible with existing inference function
+    # Validate that out_file exists (required for multi_pose)
+    if not out_file.exists():
+        typer.echo(
+            f"Error: Pose file containing segmentation data is required. Pose file '{out_file}' does not exist.",
+            err=True,
+        )
+        raise typer.Exit(1)
+
+    # Create args object compatible with existing inference function
     class InferenceArgs:
         """Arguments container for compatibility with existing inference code."""
 
@@ -649,18 +611,7 @@ def multi_pose(
 
     # Execute inference based on runtime
     if runtime == "pytorch":
-        # TODO: Import and call the actual inference function
-        # from pytorch_inference import infer_multi_pose_model as infer_pytorch
-        # infer_pytorch(args)
-
-        input_type = "video" if video else "frame"
-        typer.echo(f"Running PyTorch inference on {input_type}: {input_source}")
-        typer.echo(f"Model: {model}")
-        typer.echo(f"Batch size: {batch_size}")
-        typer.echo(f"Output file: {out_file}")
-        if out_video:
-            typer.echo(f"Output video: {out_video}")
-        typer.echo("Multi-pose inference completed.")
+        infer_multi_pose_pytorch(args)
 
 
 @app.command()
@@ -735,7 +686,7 @@ def single_pose(
         typer.echo(f"Error: Input file '{input_source}' does not exist.", err=True)
         raise typer.Exit(1)
 
-    # Create args object (temporary) compatible with existing inference function
+    # Create args object compatible with existing inference function
     class InferenceArgs:
         """Arguments container for compatibility with existing inference code."""
 
@@ -752,18 +703,7 @@ def single_pose(
 
     # Execute inference based on runtime
     if runtime == "pytorch":
-        # TODO: Import and call the actual inference function
-        # from pytorch_inference import infer_single_pose_model as infer_pytorch
-        # infer_pytorch(args)
-
-        input_type = "video" if video else "frame"
-        typer.echo(f"Running PyTorch inference on {input_type}: {input_source}")
-        typer.echo(f"Model: {model}")
-        typer.echo(f"Batch size: {batch_size}")
-        typer.echo(f"Output file: {out_file}")
-        if out_video:
-            typer.echo(f"Output video: {out_video}")
-        typer.echo("Single-pose inference completed.")
+        infer_single_pose_pytorch(args)
 
 
 @app.command()
@@ -833,7 +773,7 @@ def single_segmentation(
         typer.echo(f"Error: Input file '{input_source}' does not exist.", err=True)
         raise typer.Exit(1)
 
-    # Create args object (temporary) compatible with existing inference function
+    # Create args object compatible with existing inference function
     class InferenceArgs:
         """Arguments container for compatibility with existing inference code."""
 
@@ -849,14 +789,91 @@ def single_segmentation(
 
     # Execute inference based on runtime
     if runtime == "tfs":
-        # TODO: Import and call the actual inference function
-        # from tfs_inference import infer_single_segmentation_model as infer_tfs
-        # infer_tfs(args)
+        infer_single_segmentation_tfs(args)
 
-        input_type = "video" if video else "frame"
-        typer.echo(f"Running TFS inference on {input_type}: {input_source}")
-        typer.echo(f"Model: {model}")
-        typer.echo(f"Output file: {out_file}")
-        if out_video:
-            typer.echo(f"Output video: {out_video}")
-        typer.echo("Single-segmentation inference completed.")
+
+# Add multi_segmentation command that was missing
+@app.command()
+def multi_segmentation(
+    out_file: Annotated[
+        Path,
+        typer.Option("--out-file", help="Pose file to write out"),
+    ],
+    video: Annotated[
+        Path | None,
+        typer.Option("--video", help="Video file for processing"),
+    ] = None,
+    frame: Annotated[
+        Path | None,
+        typer.Option("--frame", help="Image file for processing"),
+    ] = None,
+    model: Annotated[
+        str,
+        typer.Option(
+            "--model",
+            help="Trained model to infer",
+            click_type=click.Choice(["social-paper"]),
+        ),
+    ] = "social-paper",
+    runtime: Annotated[
+        str,
+        typer.Option(
+            "--runtime",
+            help="Runtime to execute the model",
+            click_type=click.Choice(["tfs"]),
+        ),
+    ] = "tfs",
+    out_video: Annotated[
+        Path | None,
+        typer.Option("--out-video", help="Render the results to a video"),
+    ] = None,
+) -> None:
+    """
+    Run multi-segmentation inference.
+
+    Processes either a video file or a single frame image for multi-mouse segmentation.
+    Exactly one of --video or --frame must be specified.
+
+    Args:
+        out_file: Path to output pose file (required)
+        video: Path to video file for processing
+        frame: Path to image file for processing
+        model: Trained model to use for inference
+        runtime: Runtime environment to execute the model
+        out_video: Path to render results as video
+
+    Raises:
+        typer.Exit: If validation fails or file doesn't exist
+    """
+    # Validate mutually exclusive group
+    if video and frame:
+        typer.echo("Error: Cannot specify both --video and --frame options.", err=True)
+        raise typer.Exit(1)
+
+    if not video and not frame:
+        typer.echo("Error: Must specify either --video or --frame option.", err=True)
+        raise typer.Exit(1)
+
+    # Determine input source and validate it exists
+    input_source = video if video else frame
+    if not input_source.exists():
+        typer.echo(f"Error: Input file '{input_source}' does not exist.", err=True)
+        raise typer.Exit(1)
+
+    # Create args object compatible with existing inference function
+    class InferenceArgs:
+        """Arguments container for compatibility with existing inference code."""
+
+        def __init__(self):
+            self.model = model
+            self.runtime = runtime
+            self.video = str(video) if video else None
+            self.frame = str(frame) if frame else None
+            self.out_file = str(out_file)
+            self.out_video = str(out_video) if out_video else None
+
+    args = InferenceArgs()
+
+    # Execute inference based on runtime
+    if runtime == "tfs":
+        infer_multi_segmentation_tfs(args)

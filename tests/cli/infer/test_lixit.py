@@ -34,11 +34,15 @@ class TestLixitImplementation:
             "neither_specified_error",
         ],
     )
-    def test_lixit_input_validation(self, video_arg, frame_arg, expected_success):
+    @patch("mouse_tracking.cli.infer.infer_lixit_model")
+    def test_lixit_input_validation(
+        self, mock_infer, video_arg, frame_arg, expected_success
+    ):
         """
         Test input validation for lixit implementation.
 
         Args:
+            mock_infer: Mock for the inference function
             video_arg: Video argument flag or None
             frame_arg: Frame argument flag or None
             expected_success: Whether the command should succeed
@@ -59,10 +63,11 @@ class TestLixitImplementation:
             # Assert
             if expected_success:
                 assert result.exit_code == 0
-                assert "Running TFS inference" in result.stdout
+                mock_infer.assert_called_once()
             else:
                 assert result.exit_code == 1
                 assert "Error:" in result.stdout
+                mock_infer.assert_not_called()
 
     @pytest.mark.parametrize(
         "model_choice,runtime_choice,expected_success",
@@ -73,13 +78,15 @@ class TestLixitImplementation:
         ],
         ids=["valid_choices", "invalid_model", "invalid_runtime"],
     )
+    @patch("mouse_tracking.cli.infer.infer_lixit_model")
     def test_lixit_choice_validation(
-        self, model_choice, runtime_choice, expected_success
+        self, mock_infer, model_choice, runtime_choice, expected_success
     ):
         """
         Test model and runtime choice validation.
 
         Args:
+            mock_infer: Mock for the inference function
             model_choice: Model choice to test
             runtime_choice: Runtime choice to test
             expected_success: Whether the command should succeed
@@ -102,9 +109,14 @@ class TestLixitImplementation:
             # Assert
             if expected_success:
                 assert result.exit_code == 0
-                assert f"Model: {model_choice}" in result.stdout
+                mock_infer.assert_called_once()
+                # Verify the args object passed to the inference function
+                args = mock_infer.call_args[0][0]
+                assert args.model == model_choice
+                assert args.runtime == runtime_choice
             else:
                 assert result.exit_code != 0
+                mock_infer.assert_not_called()
 
     @pytest.mark.parametrize(
         "file_exists,expected_success",
@@ -114,11 +126,15 @@ class TestLixitImplementation:
         ],
         ids=["file_exists", "file_not_exists"],
     )
-    def test_lixit_file_existence_validation(self, file_exists, expected_success):
+    @patch("mouse_tracking.cli.infer.infer_lixit_model")
+    def test_lixit_file_existence_validation(
+        self, mock_infer, file_exists, expected_success
+    ):
         """
         Test file existence validation.
 
         Args:
+            mock_infer: Mock for the inference function
             file_exists: Whether the input file should exist
             expected_success: Whether the command should succeed
         """
@@ -132,28 +148,20 @@ class TestLixitImplementation:
             # Assert
             if expected_success:
                 assert result.exit_code == 0
-                assert "Running TFS inference" in result.stdout
+                mock_infer.assert_called_once()
             else:
                 assert result.exit_code == 1
                 assert "does not exist" in result.stdout
+                mock_infer.assert_not_called()
 
     @pytest.mark.parametrize(
-        "out_file,out_image,out_video,expected_outputs",
+        "out_file,out_image,out_video",
         [
-            (None, None, None, []),
-            ("output.json", None, None, ["Output file: output.json"]),
-            (None, "output.png", None, ["Output image: output.png"]),
-            (None, None, "output.mp4", ["Output video: output.mp4"]),
-            (
-                "output.json",
-                "output.png",
-                "output.mp4",
-                [
-                    "Output file: output.json",
-                    "Output image: output.png",
-                    "Output video: output.mp4",
-                ],
-            ),
+            (None, None, None),
+            ("output.json", None, None),
+            (None, "output.png", None),
+            (None, None, "output.mp4"),
+            ("output.json", "output.png", "output.mp4"),
         ],
         ids=[
             "no_outputs",
@@ -163,17 +171,16 @@ class TestLixitImplementation:
             "all_outputs",
         ],
     )
-    def test_lixit_output_options(
-        self, out_file, out_image, out_video, expected_outputs
-    ):
+    @patch("mouse_tracking.cli.infer.infer_lixit_model")
+    def test_lixit_output_options(self, mock_infer, out_file, out_image, out_video):
         """
         Test output options functionality.
 
         Args:
+            mock_infer: Mock for the inference function
             out_file: Output file path or None
             out_image: Output image path or None
             out_video: Output video path or None
-            expected_outputs: Expected output messages
         """
         # Arrange
         cmd_args = ["lixit", "--video", str(self.test_video_path)]
@@ -191,27 +198,33 @@ class TestLixitImplementation:
 
             # Assert
             assert result.exit_code == 0
-            for expected_output in expected_outputs:
-                assert expected_output in result.stdout
+            mock_infer.assert_called_once()
+
+            # Verify the args object contains the correct output paths
+            args = mock_infer.call_args[0][0]
+            assert args.out_file == out_file
+            assert args.out_image == out_image
+            assert args.out_video == out_video
 
     @pytest.mark.parametrize(
-        "num_frames,frame_interval,expected_in_output",
+        "num_frames,frame_interval",
         [
-            (100, 100, "Frames: 100, Interval: 100"),  # defaults
-            (50, 10, "Frames: 50, Interval: 10"),  # custom values
-            (1, 1, "Frames: 1, Interval: 1"),  # minimal values
-            (1000, 500, "Frames: 1000, Interval: 500"),  # large values
+            (100, 100),  # defaults
+            (50, 10),  # custom values
+            (1, 1),  # minimal values
+            (1000, 500),  # large values
         ],
         ids=["default_values", "custom_values", "minimal_values", "large_values"],
     )
-    def test_lixit_frame_options(self, num_frames, frame_interval, expected_in_output):
+    @patch("mouse_tracking.cli.infer.infer_lixit_model")
+    def test_lixit_frame_options(self, mock_infer, num_frames, frame_interval):
         """
         Test frame number and interval options.
 
         Args:
+            mock_infer: Mock for the inference function
             num_frames: Number of frames to process
             frame_interval: Frame interval
-            expected_in_output: Expected output message containing frame info
         """
         # Arrange
         cmd_args = [
@@ -230,9 +243,15 @@ class TestLixitImplementation:
 
             # Assert
             assert result.exit_code == 0
-            assert expected_in_output in result.stdout
+            mock_infer.assert_called_once()
 
-    def test_lixit_default_values(self):
+            # Verify the args object contains the correct frame options
+            args = mock_infer.call_args[0][0]
+            assert args.num_frames == num_frames
+            assert args.frame_interval == frame_interval
+
+    @patch("mouse_tracking.cli.infer.infer_lixit_model")
+    def test_lixit_default_values(self, mock_infer):
         """Test that lixit uses the correct default values."""
         # Arrange
         cmd_args = ["lixit", "--video", str(self.test_video_path)]
@@ -243,9 +262,16 @@ class TestLixitImplementation:
 
             # Assert
             assert result.exit_code == 0
-            assert "Model: social-2022-pipeline" in result.stdout
-            assert "Frames: 100, Interval: 100" in result.stdout
-            assert "Running TFS inference" in result.stdout
+            mock_infer.assert_called_once()
+
+            args = mock_infer.call_args[0][0]
+            assert args.model == "social-2022-pipeline"
+            assert args.runtime == "tfs"
+            assert args.num_frames == 100
+            assert args.frame_interval == 100
+            assert args.out_file is None
+            assert args.out_image is None
+            assert args.out_video is None
 
     def test_lixit_help_text(self):
         """Test that the lixit command has proper help text."""
@@ -286,7 +312,8 @@ class TestLixitImplementation:
             assert result.exit_code == 1
             assert "does not exist" in result.stdout
 
-    def test_lixit_integration_flow(self):
+    @patch("mouse_tracking.cli.infer.infer_lixit_model")
+    def test_lixit_integration_flow(self, mock_infer):
         """Test the complete integration flow of lixit inference."""
         # Arrange
         cmd_args = [
@@ -315,21 +342,22 @@ class TestLixitImplementation:
 
             # Assert
             assert result.exit_code == 0
+            mock_infer.assert_called_once()
 
-            # Verify all expected outputs are in the result
-            expected_messages = [
-                "Running TFS inference on video",
-                "Model: social-2022-pipeline",
-                "Frames: 25, Interval: 5",
-                "Output file: output.json",
-                "Output image: output.png",
-                "Output video: output.mp4",
-            ]
+            # Verify the args object has all the expected values
+            args = mock_infer.call_args[0][0]
+            assert args.model == "social-2022-pipeline"
+            assert args.runtime == "tfs"
+            assert args.video == str(self.test_video_path)
+            assert args.frame is None
+            assert args.out_file == "output.json"
+            assert args.out_image == "output.png"
+            assert args.out_video == "output.mp4"
+            assert args.num_frames == 25
+            assert args.frame_interval == 5
 
-            for message in expected_messages:
-                assert message in result.stdout
-
-    def test_lixit_video_input_processing(self):
+    @patch("mouse_tracking.cli.infer.infer_lixit_model")
+    def test_lixit_video_input_processing(self, mock_infer):
         """Test lixit specifically with video input."""
         # Arrange
         cmd_args = ["lixit", "--video", str(self.test_video_path)]
@@ -340,10 +368,14 @@ class TestLixitImplementation:
 
             # Assert
             assert result.exit_code == 0
-            assert "Running TFS inference on video" in result.stdout
-            assert str(self.test_video_path) in result.stdout
+            mock_infer.assert_called_once()
 
-    def test_lixit_frame_input_processing(self):
+            args = mock_infer.call_args[0][0]
+            assert args.video == str(self.test_video_path)
+            assert args.frame is None
+
+    @patch("mouse_tracking.cli.infer.infer_lixit_model")
+    def test_lixit_frame_input_processing(self, mock_infer):
         """Test lixit specifically with frame input."""
         # Arrange
         cmd_args = ["lixit", "--frame", str(self.test_frame_path)]
@@ -354,8 +386,11 @@ class TestLixitImplementation:
 
             # Assert
             assert result.exit_code == 0
-            assert "Running TFS inference on frame" in result.stdout
-            assert str(self.test_frame_path) in result.stdout
+            mock_infer.assert_called_once()
+
+            args = mock_infer.call_args[0][0]
+            assert args.video is None
+            assert args.frame == str(self.test_frame_path)
 
     @pytest.mark.parametrize(
         "edge_case_path",
@@ -374,11 +409,13 @@ class TestLixitImplementation:
             "relative_path",
         ],
     )
-    def test_lixit_edge_case_paths(self, edge_case_path):
+    @patch("mouse_tracking.cli.infer.infer_lixit_model")
+    def test_lixit_edge_case_paths(self, mock_infer, edge_case_path):
         """
         Test lixit with edge case file paths.
 
         Args:
+            mock_infer: Mock for the inference function
             edge_case_path: Path with special characters to test
         """
         # Arrange
@@ -388,50 +425,32 @@ class TestLixitImplementation:
 
             # Assert
             assert result.exit_code == 0
-            assert "Running TFS inference" in result.stdout
+            mock_infer.assert_called_once()
 
-    def test_lixit_frame_count_edge_cases(self):
+            args = mock_infer.call_args[0][0]
+            assert args.video == edge_case_path
+
+    @pytest.mark.parametrize(
+        "num_frames",
+        [1, 10, 100, 1000, 10000],
+        ids=[
+            "minimal_frames",
+            "small_frames",
+            "default_frames",
+            "large_frames",
+            "huge_frames",
+        ],
+    )
+    @patch("mouse_tracking.cli.infer.infer_lixit_model")
+    def test_lixit_frame_count_edge_cases(self, mock_infer, num_frames):
         """Test lixit with edge case frame counts."""
-        # Arrange & Act - very small frame count
-        with patch("pathlib.Path.exists", return_value=True):
-            result = self.runner.invoke(
-                app,
-                ["lixit", "--video", str(self.test_video_path), "--num-frames", "1"],
-            )
-
-            # Assert
-            assert result.exit_code == 0
-            assert "Frames: 1, Interval: 100" in result.stdout
-
-        # Arrange & Act - large frame count
-        with patch("pathlib.Path.exists", return_value=True):
-            result = self.runner.invoke(
-                app,
-                [
-                    "lixit",
-                    "--video",
-                    str(self.test_video_path),
-                    "--num-frames",
-                    "10000",
-                ],
-            )
-
-            # Assert
-            assert result.exit_code == 0
-            assert "Frames: 10000, Interval: 100" in result.stdout
-
-    def test_lixit_comparison_with_food_hopper(self):
-        """Test that lixit has same parameter structure as food hopper."""
-        # This test ensures consistency between similar commands
         # Arrange
         cmd_args = [
             "lixit",
             "--video",
             str(self.test_video_path),
-            "--model",
-            "social-2022-pipeline",
-            "--runtime",
-            "tfs",
+            "--num-frames",
+            str(num_frames),
         ]
 
         with patch("pathlib.Path.exists", return_value=True):
@@ -440,41 +459,37 @@ class TestLixitImplementation:
 
             # Assert
             assert result.exit_code == 0
-            # Should use same model and runtime as food_hopper
-            assert "Model: social-2022-pipeline" in result.stdout
-            assert "Running TFS inference" in result.stdout
+            mock_infer.assert_called_once()
 
-    def test_lixit_parameter_independence(self):
+            args = mock_infer.call_args[0][0]
+            assert args.num_frames == num_frames
+
+    @patch("mouse_tracking.cli.infer.infer_lixit_model")
+    def test_lixit_parameter_independence(self, mock_infer):
         """Test that num_frames and frame_interval work independently."""
-        # Arrange & Act - only num_frames changed
+        # Arrange - only frame_interval changed
+        cmd_args = [
+            "lixit",
+            "--video",
+            str(self.test_video_path),
+            "--frame-interval",
+            "50",
+        ]
+
         with patch("pathlib.Path.exists", return_value=True):
-            result = self.runner.invoke(
-                app,
-                ["lixit", "--video", str(self.test_video_path), "--num-frames", "200"],
-            )
+            # Act
+            result = self.runner.invoke(app, cmd_args)
 
             # Assert
             assert result.exit_code == 0
-            assert "Frames: 200, Interval: 100" in result.stdout
+            mock_infer.assert_called_once()
 
-        # Arrange & Act - only frame_interval changed
-        with patch("pathlib.Path.exists", return_value=True):
-            result = self.runner.invoke(
-                app,
-                [
-                    "lixit",
-                    "--video",
-                    str(self.test_video_path),
-                    "--frame-interval",
-                    "50",
-                ],
-            )
+            args = mock_infer.call_args[0][0]
+            assert args.num_frames == 100  # should be default
+            assert args.frame_interval == 50
 
-            # Assert
-            assert result.exit_code == 0
-            assert "Frames: 100, Interval: 50" in result.stdout
-
-    def test_lixit_water_spout_specific_functionality(self):
+    @patch("mouse_tracking.cli.infer.infer_lixit_model")
+    def test_lixit_water_spout_specific_functionality(self, mock_infer):
         """Test lixit-specific functionality for water spout detection."""
         # Arrange
         cmd_args = [
@@ -495,11 +510,15 @@ class TestLixitImplementation:
 
             # Assert
             assert result.exit_code == 0
-            assert "Running TFS inference on video" in result.stdout
-            assert "Model: social-2022-pipeline" in result.stdout
-            assert "Output file: lixit_detection.json" in result.stdout
+            mock_infer.assert_called_once()
 
-    def test_lixit_minimal_configuration(self):
+            args = mock_infer.call_args[0][0]
+            assert args.model == "social-2022-pipeline"
+            assert args.runtime == "tfs"
+            assert args.out_file == "lixit_detection.json"
+
+    @patch("mouse_tracking.cli.infer.infer_lixit_model")
+    def test_lixit_minimal_configuration(self, mock_infer):
         """Test lixit with minimal required configuration."""
         # Arrange
         cmd_args = ["lixit", "--frame", str(self.test_frame_path)]
@@ -510,11 +529,16 @@ class TestLixitImplementation:
 
             # Assert
             assert result.exit_code == 0
-            assert "Running TFS inference on frame" in result.stdout
-            assert "Model: social-2022-pipeline" in result.stdout
-            assert "Frames: 100, Interval: 100" in result.stdout
+            mock_infer.assert_called_once()
 
-    def test_lixit_maximum_configuration(self):
+            args = mock_infer.call_args[0][0]
+            assert args.model == "social-2022-pipeline"
+            assert args.runtime == "tfs"
+            assert args.num_frames == 100
+            assert args.frame_interval == 100
+
+    @patch("mouse_tracking.cli.infer.infer_lixit_model")
+    def test_lixit_maximum_configuration(self, mock_infer):
         """Test lixit with all possible options specified."""
         # Arrange
         cmd_args = [
@@ -543,16 +567,46 @@ class TestLixitImplementation:
 
             # Assert
             assert result.exit_code == 0
+            mock_infer.assert_called_once()
 
             # Verify all options are processed correctly
-            expected_in_output = [
-                "Running TFS inference on video",
-                "Model: social-2022-pipeline",
-                "Frames: 500, Interval: 20",
-                "Output file: lixit_output.json",
-                "Output image: lixit_render.png",
-                "Output video: lixit_video.mp4",
-            ]
+            args = mock_infer.call_args[0][0]
+            assert args.model == "social-2022-pipeline"
+            assert args.runtime == "tfs"
+            assert args.num_frames == 500
+            assert args.frame_interval == 20
+            assert args.out_file == "lixit_output.json"
+            assert args.out_image == "lixit_render.png"
+            assert args.out_video == "lixit_video.mp4"
 
-            for expected in expected_in_output:
-                assert expected in result.stdout
+    @patch("mouse_tracking.cli.infer.infer_lixit_model")
+    def test_lixit_args_compatibility_object(self, mock_infer):
+        """Test that the InferenceArgs compatibility object is properly structured."""
+        # Arrange
+        cmd_args = [
+            "lixit",
+            "--video",
+            str(self.test_video_path),
+            "--out-file",
+            "test.json",
+        ]
+
+        with patch("pathlib.Path.exists", return_value=True):
+            # Act
+            result = self.runner.invoke(app, cmd_args)
+
+            # Assert
+            assert result.exit_code == 0
+            mock_infer.assert_called_once()
+
+            # Verify that the args object has all expected attributes
+            args = mock_infer.call_args[0][0]
+            assert hasattr(args, "model")
+            assert hasattr(args, "runtime")
+            assert hasattr(args, "video")
+            assert hasattr(args, "frame")
+            assert hasattr(args, "out_file")
+            assert hasattr(args, "out_image")
+            assert hasattr(args, "out_video")
+            assert hasattr(args, "num_frames")
+            assert hasattr(args, "frame_interval")

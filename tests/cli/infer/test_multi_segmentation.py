@@ -1,4 +1,4 @@
-"""Unit tests for single-segmentation Typer implementation."""
+"""Unit tests for multi-segmentation Typer implementation."""
 
 from pathlib import Path
 from unittest.mock import patch
@@ -9,8 +9,8 @@ from typer.testing import CliRunner
 from mouse_tracking.cli.infer import app
 
 
-class TestSingleSegmentationImplementation:
-    """Test suite for single-segmentation Typer implementation."""
+class TestMultiSegmentationImplementation:
+    """Test suite for multi-segmentation Typer implementation."""
 
     def setup_method(self):
         """Set up test fixtures before each test method."""
@@ -35,12 +35,12 @@ class TestSingleSegmentationImplementation:
             "neither_specified_error",
         ],
     )
-    @patch("mouse_tracking.cli.infer.infer_single_segmentation_tfs")
-    def test_single_segmentation_input_validation(
+    @patch("mouse_tracking.cli.infer.infer_multi_segmentation_tfs")
+    def test_multi_segmentation_input_validation(
         self, mock_infer, video_arg, frame_arg, expected_success
     ):
         """
-        Test input validation for single-segmentation implementation.
+        Test input validation for multi-segmentation implementation.
 
         Args:
             mock_infer: Mock for the inference function
@@ -49,7 +49,7 @@ class TestSingleSegmentationImplementation:
             expected_success: Whether the command should succeed
         """
         # Arrange
-        cmd_args = ["single-segmentation", "--out-file", str(self.test_output_path)]
+        cmd_args = ["multi-segmentation", "--out-file", str(self.test_output_path)]
 
         # Mock file existence for successful cases
         with patch("pathlib.Path.exists", return_value=True):
@@ -73,14 +73,14 @@ class TestSingleSegmentationImplementation:
     @pytest.mark.parametrize(
         "model_choice,runtime_choice,expected_success",
         [
-            ("tracking-paper", "tfs", True),
+            ("social-paper", "tfs", True),
             ("invalid-model", "tfs", False),
-            ("tracking-paper", "invalid-runtime", False),
+            ("social-paper", "invalid-runtime", False),
         ],
         ids=["valid_choices", "invalid_model", "invalid_runtime"],
     )
-    @patch("mouse_tracking.cli.infer.infer_single_segmentation_tfs")
-    def test_single_segmentation_choice_validation(
+    @patch("mouse_tracking.cli.infer.infer_multi_segmentation_tfs")
+    def test_multi_segmentation_choice_validation(
         self, mock_infer, model_choice, runtime_choice, expected_success
     ):
         """
@@ -94,7 +94,7 @@ class TestSingleSegmentationImplementation:
         """
         # Arrange
         cmd_args = [
-            "single-segmentation",
+            "multi-segmentation",
             "--out-file",
             str(self.test_output_path),
             "--video",
@@ -129,8 +129,8 @@ class TestSingleSegmentationImplementation:
         ],
         ids=["file_exists", "file_not_exists"],
     )
-    @patch("mouse_tracking.cli.infer.infer_single_segmentation_tfs")
-    def test_single_segmentation_file_existence_validation(
+    @patch("mouse_tracking.cli.infer.infer_multi_segmentation_tfs")
+    def test_multi_segmentation_file_existence_validation(
         self, mock_infer, file_exists, expected_success
     ):
         """
@@ -143,7 +143,7 @@ class TestSingleSegmentationImplementation:
         """
         # Arrange
         cmd_args = [
-            "single-segmentation",
+            "multi-segmentation",
             "--out-file",
             str(self.test_output_path),
             "--video",
@@ -163,10 +163,10 @@ class TestSingleSegmentationImplementation:
                 assert "does not exist" in result.stdout
                 mock_infer.assert_not_called()
 
-    def test_single_segmentation_required_out_file(self):
+    def test_multi_segmentation_required_out_file(self):
         """Test that out-file parameter is required."""
         # Arrange
-        cmd_args = ["single-segmentation", "--video", str(self.test_video_path)]
+        cmd_args = ["multi-segmentation", "--video", str(self.test_video_path)]
 
         with patch("pathlib.Path.exists", return_value=True):
             # Act
@@ -181,8 +181,8 @@ class TestSingleSegmentationImplementation:
         [None, "output_render.mp4"],
         ids=["no_video_output", "with_video_output"],
     )
-    @patch("mouse_tracking.cli.infer.infer_single_segmentation_tfs")
-    def test_single_segmentation_video_output_option(self, mock_infer, out_video):
+    @patch("mouse_tracking.cli.infer.infer_multi_segmentation_tfs")
+    def test_multi_segmentation_video_output_option(self, mock_infer, out_video):
         """
         Test video output option functionality.
 
@@ -192,7 +192,7 @@ class TestSingleSegmentationImplementation:
         """
         # Arrange
         cmd_args = [
-            "single-segmentation",
+            "multi-segmentation",
             "--out-file",
             str(self.test_output_path),
             "--video",
@@ -216,12 +216,12 @@ class TestSingleSegmentationImplementation:
             else:
                 assert args.out_video is None
 
-    @patch("mouse_tracking.cli.infer.infer_single_segmentation_tfs")
-    def test_single_segmentation_default_values(self, mock_infer):
-        """Test that single-segmentation uses the correct default values."""
+    @patch("mouse_tracking.cli.infer.infer_multi_segmentation_tfs")
+    def test_multi_segmentation_default_values(self, mock_infer):
+        """Test that multi-segmentation uses the correct default values."""
         # Arrange
         cmd_args = [
-            "single-segmentation",
+            "multi-segmentation",
             "--out-file",
             str(self.test_output_path),
             "--video",
@@ -237,27 +237,27 @@ class TestSingleSegmentationImplementation:
             mock_infer.assert_called_once()
 
             args = mock_infer.call_args[0][0]
-            assert args.model == "tracking-paper"
+            assert args.model == "social-paper"
             assert args.runtime == "tfs"
             assert args.out_video is None
 
-    def test_single_segmentation_help_text(self):
-        """Test that the single-segmentation command has proper help text."""
+    def test_multi_segmentation_help_text(self):
+        """Test that the multi-segmentation command has proper help text."""
         # Arrange & Act
-        result = self.runner.invoke(app, ["single-segmentation", "--help"])
+        result = self.runner.invoke(app, ["multi-segmentation", "--help"])
 
         # Assert
         assert result.exit_code == 0
-        assert "Run single-segmentation inference" in result.stdout
+        assert "Run multi-segmentation inference" in result.stdout
         assert "Exactly one of --video or --frame must be specified" in result.stdout
 
-    def test_single_segmentation_error_handling_comprehensive(self):
+    def test_multi_segmentation_error_handling_comprehensive(self):
         """Test comprehensive error handling scenarios."""
         # Test case 1: Both video and frame specified
         result = self.runner.invoke(
             app,
             [
-                "single-segmentation",
+                "multi-segmentation",
                 "--out-file",
                 str(self.test_output_path),
                 "--video",
@@ -271,7 +271,7 @@ class TestSingleSegmentationImplementation:
 
         # Test case 2: Neither video nor frame specified
         result = self.runner.invoke(
-            app, ["single-segmentation", "--out-file", str(self.test_output_path)]
+            app, ["multi-segmentation", "--out-file", str(self.test_output_path)]
         )
         assert result.exit_code == 1
         assert "Must specify either --video or --frame" in result.stdout
@@ -284,7 +284,7 @@ class TestSingleSegmentationImplementation:
             result = self.runner.invoke(
                 app,
                 [
-                    "single-segmentation",
+                    "multi-segmentation",
                     "--out-file",
                     str(self.test_output_path),
                     "--video",
@@ -294,18 +294,18 @@ class TestSingleSegmentationImplementation:
             assert result.exit_code == 1
             assert "does not exist" in result.stdout
 
-    @patch("mouse_tracking.cli.infer.infer_single_segmentation_tfs")
-    def test_single_segmentation_integration_flow(self, mock_infer):
+    @patch("mouse_tracking.cli.infer.infer_multi_segmentation_tfs")
+    def test_multi_segmentation_integration_flow(self, mock_infer):
         """Test complete integration flow with typical parameters."""
         # Arrange
         cmd_args = [
-            "single-segmentation",
+            "multi-segmentation",
             "--out-file",
             str(self.test_output_path),
             "--video",
             str(self.test_video_path),
             "--model",
-            "tracking-paper",
+            "social-paper",
             "--runtime",
             "tfs",
             "--out-video",
@@ -321,19 +321,19 @@ class TestSingleSegmentationImplementation:
             mock_infer.assert_called_once()
 
             args = mock_infer.call_args[0][0]
-            assert args.model == "tracking-paper"
+            assert args.model == "social-paper"
             assert args.runtime == "tfs"
             assert args.video == str(self.test_video_path)
             assert args.frame is None
             assert args.out_file == str(self.test_output_path)
             assert args.out_video == str(self.test_video_output_path)
 
-    @patch("mouse_tracking.cli.infer.infer_single_segmentation_tfs")
-    def test_single_segmentation_video_input_processing(self, mock_infer):
+    @patch("mouse_tracking.cli.infer.infer_multi_segmentation_tfs")
+    def test_multi_segmentation_video_input_processing(self, mock_infer):
         """Test video input processing."""
         # Arrange
         cmd_args = [
-            "single-segmentation",
+            "multi-segmentation",
             "--out-file",
             str(self.test_output_path),
             "--video",
@@ -352,12 +352,12 @@ class TestSingleSegmentationImplementation:
             assert args.video == str(self.test_video_path)
             assert args.frame is None
 
-    @patch("mouse_tracking.cli.infer.infer_single_segmentation_tfs")
-    def test_single_segmentation_frame_input_processing(self, mock_infer):
+    @patch("mouse_tracking.cli.infer.infer_multi_segmentation_tfs")
+    def test_multi_segmentation_frame_input_processing(self, mock_infer):
         """Test frame input processing."""
         # Arrange
         cmd_args = [
-            "single-segmentation",
+            "multi-segmentation",
             "--out-file",
             str(self.test_output_path),
             "--frame",
@@ -393,8 +393,8 @@ class TestSingleSegmentationImplementation:
             "relative_path",
         ],
     )
-    @patch("mouse_tracking.cli.infer.infer_single_segmentation_tfs")
-    def test_single_segmentation_edge_case_paths(self, mock_infer, edge_case_path):
+    @patch("mouse_tracking.cli.infer.infer_multi_segmentation_tfs")
+    def test_multi_segmentation_edge_case_paths(self, mock_infer, edge_case_path):
         """
         Test handling of edge case file paths.
 
@@ -404,7 +404,7 @@ class TestSingleSegmentationImplementation:
         """
         # Arrange
         cmd_args = [
-            "single-segmentation",
+            "multi-segmentation",
             "--out-file",
             str(self.test_output_path),
             "--video",
@@ -422,18 +422,18 @@ class TestSingleSegmentationImplementation:
             args = mock_infer.call_args[0][0]
             assert args.video == edge_case_path
 
-    @patch("mouse_tracking.cli.infer.infer_single_segmentation_tfs")
-    def test_single_segmentation_tracking_paper_model_specific(self, mock_infer):
-        """Test tracking-paper model specific functionality."""
+    @patch("mouse_tracking.cli.infer.infer_multi_segmentation_tfs")
+    def test_multi_segmentation_social_paper_model_specific(self, mock_infer):
+        """Test social-paper model specific functionality."""
         # Arrange
         cmd_args = [
-            "single-segmentation",
+            "multi-segmentation",
             "--out-file",
             str(self.test_output_path),
             "--video",
             str(self.test_video_path),
             "--model",
-            "tracking-paper",
+            "social-paper",
         ]
 
         with patch("pathlib.Path.exists", return_value=True):
@@ -445,14 +445,14 @@ class TestSingleSegmentationImplementation:
             mock_infer.assert_called_once()
 
             args = mock_infer.call_args[0][0]
-            assert args.model == "tracking-paper"
+            assert args.model == "social-paper"
 
-    @patch("mouse_tracking.cli.infer.infer_single_segmentation_tfs")
-    def test_single_segmentation_minimal_configuration(self, mock_infer):
+    @patch("mouse_tracking.cli.infer.infer_multi_segmentation_tfs")
+    def test_multi_segmentation_minimal_configuration(self, mock_infer):
         """Test minimal valid configuration."""
         # Arrange
         cmd_args = [
-            "single-segmentation",
+            "multi-segmentation",
             "--out-file",
             str(self.test_output_path),
             "--video",
@@ -468,22 +468,22 @@ class TestSingleSegmentationImplementation:
             mock_infer.assert_called_once()
 
             args = mock_infer.call_args[0][0]
-            assert args.model == "tracking-paper"
+            assert args.model == "social-paper"
             assert args.runtime == "tfs"
             assert args.out_video is None
 
-    @patch("mouse_tracking.cli.infer.infer_single_segmentation_tfs")
-    def test_single_segmentation_maximum_configuration(self, mock_infer):
+    @patch("mouse_tracking.cli.infer.infer_multi_segmentation_tfs")
+    def test_multi_segmentation_maximum_configuration(self, mock_infer):
         """Test maximum configuration with all parameters."""
         # Arrange
         cmd_args = [
-            "single-segmentation",
+            "multi-segmentation",
             "--out-file",
             str(self.test_output_path),
             "--video",
             str(self.test_video_path),
             "--model",
-            "tracking-paper",
+            "social-paper",
             "--runtime",
             "tfs",
             "--out-video",
@@ -499,18 +499,18 @@ class TestSingleSegmentationImplementation:
             mock_infer.assert_called_once()
 
             args = mock_infer.call_args[0][0]
-            assert args.model == "tracking-paper"
+            assert args.model == "social-paper"
             assert args.runtime == "tfs"
             assert args.video == str(self.test_video_path)
             assert args.out_file == str(self.test_output_path)
             assert args.out_video == str(self.test_video_output_path)
 
-    @patch("mouse_tracking.cli.infer.infer_single_segmentation_tfs")
-    def test_single_segmentation_tfs_runtime_specific(self, mock_infer):
+    @patch("mouse_tracking.cli.infer.infer_multi_segmentation_tfs")
+    def test_multi_segmentation_tfs_runtime_specific(self, mock_infer):
         """Test TFS runtime specific functionality."""
         # Arrange
         cmd_args = [
-            "single-segmentation",
+            "multi-segmentation",
             "--out-file",
             str(self.test_output_path),
             "--video",
@@ -530,12 +530,12 @@ class TestSingleSegmentationImplementation:
             args = mock_infer.call_args[0][0]
             assert args.runtime == "tfs"
 
-    @patch("mouse_tracking.cli.infer.infer_single_segmentation_tfs")
-    def test_single_segmentation_simplified_output_options(self, mock_infer):
+    @patch("mouse_tracking.cli.infer.infer_multi_segmentation_tfs")
+    def test_multi_segmentation_simplified_output_options(self, mock_infer):
         """Test simplified output options compared to other commands."""
-        # Arrange - single-segmentation only has out-video, no out-image, no batch-size
+        # Arrange - multi-segmentation only has out-video, no out-image, no batch-size
         cmd_args = [
-            "single-segmentation",
+            "multi-segmentation",
             "--out-file",
             str(self.test_output_path),
             "--video",
@@ -554,22 +554,22 @@ class TestSingleSegmentationImplementation:
 
             args = mock_infer.call_args[0][0]
             assert args.out_video == str(self.test_video_output_path)
-            # single-segmentation doesn't have out_image or batch_size parameters
+            # multi-segmentation doesn't have out_image or batch_size parameters
             assert not hasattr(args, "out_image")
             assert not hasattr(args, "batch_size")
 
-    @patch("mouse_tracking.cli.infer.infer_single_segmentation_tfs")
-    def test_single_segmentation_tracking_vs_gait_models(self, mock_infer):
-        """Test that single-segmentation uses tracking-paper vs single-pose gait-paper model."""
+    @patch("mouse_tracking.cli.infer.infer_multi_segmentation_tfs")
+    def test_multi_segmentation_social_vs_tracking_models(self, mock_infer):
+        """Test that multi-segmentation uses social-paper vs single-segmentation tracking-paper model."""
         # Arrange
         cmd_args = [
-            "single-segmentation",
+            "multi-segmentation",
             "--out-file",
             str(self.test_output_path),
             "--video",
             str(self.test_video_path),
             "--model",
-            "tracking-paper",
+            "social-paper",
         ]
 
         with patch("pathlib.Path.exists", return_value=True):
@@ -581,15 +581,15 @@ class TestSingleSegmentationImplementation:
             mock_infer.assert_called_once()
 
             args = mock_infer.call_args[0][0]
-            assert args.model == "tracking-paper"
-            # Different from single-pose which uses "gait-paper"
+            assert args.model == "social-paper"
+            # Different from single-segmentation which uses "tracking-paper"
 
-    @patch("mouse_tracking.cli.infer.infer_single_segmentation_tfs")
-    def test_single_segmentation_tfs_vs_pytorch_runtime(self, mock_infer):
-        """Test that single-segmentation uses TFS vs pose functions that use PyTorch."""
+    @patch("mouse_tracking.cli.infer.infer_multi_segmentation_tfs")
+    def test_multi_segmentation_tfs_vs_pytorch_runtime(self, mock_infer):
+        """Test that multi-segmentation uses TFS vs pose functions that use PyTorch."""
         # Arrange
         cmd_args = [
-            "single-segmentation",
+            "multi-segmentation",
             "--out-file",
             str(self.test_output_path),
             "--video",
@@ -610,12 +610,12 @@ class TestSingleSegmentationImplementation:
             assert args.runtime == "tfs"
             # Different from pose functions which use "pytorch"
 
-    @patch("mouse_tracking.cli.infer.infer_single_segmentation_tfs")
-    def test_single_segmentation_no_batch_size_parameter(self, mock_infer):
-        """Test that single-segmentation doesn't have batch-size parameter."""
+    @patch("mouse_tracking.cli.infer.infer_multi_segmentation_tfs")
+    def test_multi_segmentation_no_batch_size_parameter(self, mock_infer):
+        """Test that multi-segmentation doesn't have batch-size parameter."""
         # Arrange
         cmd_args = [
-            "single-segmentation",
+            "multi-segmentation",
             "--out-file",
             str(self.test_output_path),
             "--video",
@@ -634,12 +634,12 @@ class TestSingleSegmentationImplementation:
             # Verify batch_size parameter doesn't exist
             assert not hasattr(args, "batch_size")
 
-    @patch("mouse_tracking.cli.infer.infer_single_segmentation_tfs")
-    def test_single_segmentation_no_frame_parameters(self, mock_infer):
-        """Test that single-segmentation doesn't have frame-related parameters."""
+    @patch("mouse_tracking.cli.infer.infer_multi_segmentation_tfs")
+    def test_multi_segmentation_no_frame_parameters(self, mock_infer):
+        """Test that multi-segmentation doesn't have frame-related parameters."""
         # Arrange
         cmd_args = [
-            "single-segmentation",
+            "multi-segmentation",
             "--out-file",
             str(self.test_output_path),
             "--video",
@@ -659,12 +659,12 @@ class TestSingleSegmentationImplementation:
             assert not hasattr(args, "num_frames")
             assert not hasattr(args, "frame_interval")
 
-    @patch("mouse_tracking.cli.infer.infer_single_segmentation_tfs")
-    def test_single_segmentation_comparison_with_multi_identity(self, mock_infer):
-        """Test that single-segmentation has similar structure to multi_identity but different models."""
+    @patch("mouse_tracking.cli.infer.infer_multi_segmentation_tfs")
+    def test_multi_segmentation_comparison_with_multi_identity(self, mock_infer):
+        """Test that multi-segmentation has similar structure to multi_identity but different models."""
         # Arrange
         cmd_args = [
-            "single-segmentation",
+            "multi-segmentation",
             "--out-file",
             str(self.test_output_path),
             "--video",
@@ -680,16 +680,16 @@ class TestSingleSegmentationImplementation:
             mock_infer.assert_called_once()
 
             args = mock_infer.call_args[0][0]
-            assert args.model == "tracking-paper"
+            assert args.model == "social-paper"
             assert args.runtime == "tfs"
-            # Both use TFS runtime but different models
+            # Both use TFS runtime and social-paper model in this case
 
-    @patch("mouse_tracking.cli.infer.infer_single_segmentation_tfs")
-    def test_single_segmentation_segmentation_vs_pose_functionality(self, mock_infer):
-        """Test that single-segmentation is different from pose functionality."""
+    @patch("mouse_tracking.cli.infer.infer_multi_segmentation_tfs")
+    def test_multi_segmentation_segmentation_vs_pose_functionality(self, mock_infer):
+        """Test that multi-segmentation is different from pose functionality."""
         # Arrange
         cmd_args = [
-            "single-segmentation",
+            "multi-segmentation",
             "--out-file",
             str(self.test_output_path),
             "--video",
@@ -707,15 +707,15 @@ class TestSingleSegmentationImplementation:
             args = mock_infer.call_args[0][0]
             # Segmentation uses TFS, pose uses PyTorch
             assert args.runtime == "tfs"
-            # Segmentation uses tracking-paper, pose uses gait-paper or social-paper-topdown
-            assert args.model == "tracking-paper"
+            # Multi-segmentation uses social-paper
+            assert args.model == "social-paper"
 
-    @patch("mouse_tracking.cli.infer.infer_single_segmentation_tfs")
-    def test_single_segmentation_args_compatibility_object(self, mock_infer):
+    @patch("mouse_tracking.cli.infer.infer_multi_segmentation_tfs")
+    def test_multi_segmentation_args_compatibility_object(self, mock_infer):
         """Test that the args object has all required attributes for compatibility."""
         # Arrange
         cmd_args = [
-            "single-segmentation",
+            "multi-segmentation",
             "--out-file",
             str(self.test_output_path),
             "--video",
@@ -742,7 +742,7 @@ class TestSingleSegmentationImplementation:
             assert hasattr(args, "out_video")
 
             # Verify values are correct
-            assert args.model == "tracking-paper"
+            assert args.model == "social-paper"
             assert args.runtime == "tfs"
             assert args.video == str(self.test_video_path)
             assert args.frame is None
