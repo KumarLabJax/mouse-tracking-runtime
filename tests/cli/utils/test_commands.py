@@ -2,7 +2,6 @@
 
 import pytest
 from typer.testing import CliRunner
-from unittest.mock import patch
 
 from mouse_tracking.cli.utils import app
 
@@ -20,17 +19,18 @@ def test_utils_app_has_commands():
     """Test that the utils app has registered commands."""
     # Arrange & Act
     commands = app.registered_commands
+    typers = app.registered_groups
 
     # Assert
-    assert len(commands) > 0
-    assert isinstance(commands, list)
+    total_commands = len(commands) + len(typers)
+    assert total_commands > 0
 
 
 @pytest.mark.parametrize(
     "command_name,expected_docstring_content",
     [
         ("aggregate-fecal-boli", "Aggregate fecal boli data."),
-        ("clip-video-to-start", "Clip video to start."),
+        ("clip-video-to-start", "Clip video and pose data based on specified criteria"),
         (
             "downgrade-multi-to-single",
             "Downgrade multi-identity data to single-identity.",
@@ -67,12 +67,12 @@ def test_all_expected_utils_commands_present():
     # Arrange
     expected_commands = {
         "aggregate_fecal_boli",
-        "clip_video_to_start",
         "downgrade_multi_to_single",
         "flip_xy_field",
         "render_pose",
         "stitch_tracklets",
     }
+    # clip-video-to-start is a sub-app, not a direct command
 
     # Act
     registered_commands = app.registered_commands
@@ -100,44 +100,6 @@ def test_utils_help_displays_all_commands():
     assert "stitch-tracklets" in result.stdout
 
 
-@pytest.mark.parametrize(
-    "command_name,expected_output_content",
-    [
-        (
-            "aggregate-fecal-boli",
-            "Aggregating fecal boli data... (not implemented yet)",
-        ),
-        ("clip-video-to-start", "Clipping video to start... (not implemented yet)"),
-        (
-            "downgrade-multi-to-single",
-            "Downgrading multi-identity data to single-identity... (not implemented yet)",
-        ),
-        ("flip-xy-field", "Flipping XY field... (not implemented yet)"),
-        ("render-pose", "Rendering pose data... (not implemented yet)"),
-        ("stitch-tracklets", "Stitching tracklets... (not implemented yet)"),
-    ],
-    ids=[
-        "aggregate_fecal_boli_execution",
-        "clip_video_to_start_execution",
-        "downgrade_multi_to_single_execution",
-        "flip_xy_field_execution",
-        "render_pose_execution",
-        "stitch_tracklets_execution",
-    ],
-)
-def test_utils_command_execution_with_output(command_name, expected_output_content):
-    """Test that each utils command executes and prints expected placeholder message."""
-    # Arrange
-    runner = CliRunner()
-
-    # Act
-    result = runner.invoke(app, [command_name])
-
-    # Assert
-    assert result.exit_code == 0
-    assert expected_output_content in result.stdout
-
-
 def test_utils_invalid_command():
     """Test that invalid utils commands show appropriate error."""
     # Arrange
@@ -160,7 +122,9 @@ def test_utils_app_without_arguments():
     result = runner.invoke(app, [])
 
     # Assert
-    assert result.exit_code == 2  # Typer returns 2 for missing required arguments
+    assert (
+        result.exit_code == 2
+    )  # Typer returns 2 for missing required arguments/no command specified
     assert "Usage:" in result.stdout
 
 
@@ -168,7 +132,6 @@ def test_utils_app_without_arguments():
     "command_function_name",
     [
         "aggregate_fecal_boli",
-        "clip_video_to_start",
         "downgrade_multi_to_single",
         "flip_xy_field",
         "render_pose",
@@ -176,7 +139,6 @@ def test_utils_app_without_arguments():
     ],
     ids=[
         "aggregate_fecal_boli_function",
-        "clip_video_to_start_function",
         "downgrade_multi_to_single_function",
         "flip_xy_field_function",
         "render_pose_function",
@@ -197,7 +159,6 @@ def test_utils_command_functions_exist(command_function_name):
     "command_function_name,expected_docstring_content",
     [
         ("aggregate_fecal_boli", "Aggregate fecal boli data"),
-        ("clip_video_to_start", "Clip video to start"),
         (
             "downgrade_multi_to_single",
             "Downgrade multi-identity data to single-identity",
@@ -208,7 +169,6 @@ def test_utils_command_functions_exist(command_function_name):
     ],
     ids=[
         "aggregate_fecal_boli_docstring",
-        "clip_video_to_start_docstring",
         "downgrade_multi_to_single_docstring",
         "flip_xy_field_docstring",
         "render_pose_docstring",
@@ -229,50 +189,6 @@ def test_utils_command_function_docstrings(
     # Assert
     assert docstring is not None
     assert expected_docstring_content.lower() in docstring.lower()
-
-
-def test_utils_commands_have_no_parameters():
-    """Test that all current utils commands have no parameters (placeholder implementations)."""
-    # Arrange
-    from mouse_tracking.cli import utils
-    import inspect
-
-    command_functions = [
-        "aggregate_fecal_boli",
-        "clip_video_to_start",
-        "downgrade_multi_to_single",
-        "flip_xy_field",
-        "render_pose",
-        "stitch_tracklets",
-    ]
-
-    # Act & Assert
-    for func_name in command_functions:
-        func = getattr(utils, func_name)
-        signature = inspect.signature(func)
-
-        # All current implementations should have no parameters
-        assert len(signature.parameters) == 0
-
-
-def test_utils_commands_return_none():
-    """Test that all utils commands return None (current implementations)."""
-    # Arrange
-    from mouse_tracking.cli import utils
-
-    command_functions = [
-        utils.aggregate_fecal_boli,
-        utils.clip_video_to_start,
-        utils.downgrade_multi_to_single,
-        utils.flip_xy_field,
-        utils.render_pose,
-        utils.stitch_tracklets,
-    ]
-
-    # Act & Assert
-    for func in command_functions:
-        result = func()
-        assert result is None
 
 
 @pytest.mark.parametrize(
@@ -304,8 +220,7 @@ def test_utils_command_help_format(command_name):
 
     # Assert
     assert result.exit_code == 0
-    assert f"Usage: app {command_name}" in result.stdout or "Usage:" in result.stdout
-    assert "Options" in result.stdout
+    assert "Usage:" in result.stdout
     assert "--help" in result.stdout
 
 
@@ -325,7 +240,6 @@ def test_utils_command_name_conventions():
     # Arrange
     expected_names = [
         "aggregate_fecal_boli",
-        "clip_video_to_start",
         "downgrade_multi_to_single",
         "flip_xy_field",
         "render_pose",
@@ -363,8 +277,6 @@ def test_utils_version_callback_function_exists():
         ["flip-xy-field", "--help"],
         ["render-pose", "--help"],
         ["stitch-tracklets", "--help"],
-        ["aggregate-fecal-boli"],
-        ["render-pose"],
     ],
     ids=[
         "utils_help",
@@ -374,8 +286,6 @@ def test_utils_version_callback_function_exists():
         "flip_xy_field_help",
         "render_pose_help",
         "stitch_tracklets_help",
-        "aggregate_fecal_boli_run",
-        "render_pose_run",
     ],
 )
 def test_utils_command_combinations(command_combo):
@@ -395,7 +305,6 @@ def test_utils_function_names_match_command_names():
     # Arrange
     function_to_command_mapping = {
         "aggregate_fecal_boli": "aggregate-fecal-boli",
-        "clip_video_to_start": "clip-video-to-start",
         "downgrade_multi_to_single": "downgrade-multi-to-single",
         "flip_xy_field": "flip-xy-field",
         "render_pose": "render-pose",
@@ -406,7 +315,7 @@ def test_utils_function_names_match_command_names():
     registered_commands = app.registered_commands
 
     # Assert
-    for func_name, command_name in function_to_command_mapping.items():
+    for func_name, _command_name in function_to_command_mapping.items():
         # Check that the function exists in the utils module
         from mouse_tracking.cli import utils
 
@@ -424,8 +333,9 @@ def test_utils_function_names_match_command_names():
 def test_utils_rich_print_import():
     """Test that utils module imports rich print correctly."""
     # Arrange & Act
-    from mouse_tracking.cli import utils
     import inspect
+
+    from mouse_tracking.cli import utils
 
     # Act
     source = inspect.getsource(utils)
@@ -441,7 +351,6 @@ def test_utils_commands_detailed_docstrings():
 
     command_functions = [
         utils.aggregate_fecal_boli,
-        utils.clip_video_to_start,
         utils.downgrade_multi_to_single,
         utils.flip_xy_field,
         utils.render_pose,
@@ -457,7 +366,7 @@ def test_utils_commands_detailed_docstrings():
 
         # Should have at least a description paragraph
         lines = [line.strip() for line in docstring.strip().split("\n") if line.strip()]
-        assert len(lines) >= 2  # Title and description (reduced from 3 to 2)
+        assert len(lines) >= 2  # Title and description
 
         # First line should be a brief description
         assert len(lines[0]) > 0
@@ -465,3 +374,47 @@ def test_utils_commands_detailed_docstrings():
 
         # Should contain the word "command" in the description
         assert "command" in docstring.lower()
+
+
+def test_clip_video_sub_app_exists():
+    """Test that clip_video_app exists and is properly configured."""
+    # Arrange & Act
+    from mouse_tracking.cli import utils
+
+    # Assert
+    assert hasattr(utils, "clip_video_app")
+    assert hasattr(utils, "auto")
+    assert hasattr(utils, "manual")
+
+
+def test_clip_video_sub_commands():
+    """Test that clip-video-to-start sub-commands work correctly."""
+    # Arrange
+    runner = CliRunner()
+
+    # Act
+    result = runner.invoke(app, ["clip-video-to-start", "--help"])
+
+    # Assert
+    assert result.exit_code == 0
+    assert "auto" in result.stdout
+    assert "manual" in result.stdout
+
+
+def test_utils_commands_require_arguments():
+    """Test that commands requiring arguments fail appropriately when called without them."""
+    # Arrange
+    runner = CliRunner()
+
+    commands_requiring_args = [
+        "aggregate-fecal-boli",
+        "downgrade-multi-to-single",
+        "flip-xy-field",
+        "render-pose",
+        "stitch-tracklets",
+    ]
+
+    # Act & Assert
+    for command in commands_requiring_args:
+        result = runner.invoke(app, [command])
+        assert result.exit_code != 0  # Should fail due to missing required arguments
