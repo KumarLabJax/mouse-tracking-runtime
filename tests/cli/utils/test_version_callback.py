@@ -1,7 +1,8 @@
 """Unit tests for version_callback helper function."""
 
-import pytest
 from unittest.mock import patch
+
+import pytest
 import typer
 
 from mouse_tracking.cli.utils import version_callback

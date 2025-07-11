@@ -1,10 +1,11 @@
 """Integration tests for the complete CLI application."""
 
-import pytest
-from typer.testing import CliRunner
-from unittest.mock import patch
 import tempfile
 from pathlib import Path
+from unittest.mock import MagicMock, patch
+
+import pytest
+from typer.testing import CliRunner
 
 from mouse_tracking.cli.main import app
 
@@ -47,12 +48,12 @@ def test_full_cli_help_hierarchy():
     [
         ("infer", "arena-corner", 1, None),  # Missing required --video or --frame
         ("infer", "single-pose", 2, None),  # Missing required --out-file
-        ("infer", "multi-pose", 2, None),   # Missing required --out-file
-        ("qa", "single-pose", 2, None),     # Missing required pose argument
-        ("qa", "multi-pose", 0, None),      # Empty implementation
-        ("utils", "aggregate-fecal-boli", 0, "Aggregating fecal boli data"),
-        ("utils", "render-pose", 0, "Rendering pose data"),
-        ("utils", "stitch-tracklets", 0, "Stitching tracklets"),
+        ("infer", "multi-pose", 2, None),  # Missing required --out-file
+        ("qa", "single-pose", 2, None),  # Missing required pose argument
+        ("qa", "multi-pose", 0, None),  # Empty implementation
+        ("utils", "aggregate-fecal-boli", 2, None),  # Missing required folder argument
+        ("utils", "render-pose", 2, None),  # Missing required arguments
+        ("utils", "stitch-tracklets", 2, None),  # Missing required pose file argument
     ],
     ids=[
         "infer_arena_corner",
@@ -65,7 +66,9 @@ def test_full_cli_help_hierarchy():
         "utils_stitch_tracklets",
     ],
 )
-def test_subcommand_execution_through_main_app(subcommand, command, expected_exit_code, expected_pattern):
+def test_subcommand_execution_through_main_app(
+    subcommand, command, expected_exit_code, expected_pattern
+):
     """Test executing subcommands through the main app."""
     # Arrange
     runner = CliRunner()
@@ -107,10 +110,9 @@ def test_main_app_verbose_option_integration():
     result = runner.invoke(app, ["--verbose", "infer", "--help"])
     assert result.exit_code == 0
 
-    # Act & Assert - Verbose with command execution
+    # Act & Assert - Verbose with command execution (should fail due to missing args)
     result = runner.invoke(app, ["--verbose", "utils", "render-pose"])
-    assert result.exit_code == 0
-    assert "Rendering pose data" in result.stdout
+    assert result.exit_code == 2  # Missing required arguments
 
 
 @pytest.mark.parametrize(
@@ -214,7 +216,7 @@ def test_subcommand_isolation():
 
     # Both should fail with missing arguments, but with different error codes
     assert infer_single_pose.exit_code == 2  # Missing --out-file
-    assert qa_single_pose.exit_code == 2     # Missing pose argument
+    assert qa_single_pose.exit_code == 2  # Missing pose argument
 
     # Both should succeed with help
     infer_single_pose_help = runner.invoke(app, ["infer", "single-pose", "--help"])
@@ -231,12 +233,12 @@ def test_subcommand_isolation():
 @pytest.mark.parametrize(
     "command_sequence,expected_exit_code",
     [
-        (["infer", "arena-corner"], 1),      # Missing required --video or --frame
-        (["infer", "single-pose"], 2),       # Missing required --out-file
-        (["qa", "single-pose"], 2),          # Missing required pose argument
-        (["qa", "multi-pose"], 0),           # Empty implementation
-        (["utils", "aggregate-fecal-boli"], 0),
-        (["utils", "render-pose"], 0),
+        (["infer", "arena-corner"], 1),  # Missing required --video or --frame
+        (["infer", "single-pose"], 2),  # Missing required --out-file
+        (["qa", "single-pose"], 2),  # Missing required pose argument
+        (["qa", "multi-pose"], 0),  # Empty implementation
+        (["utils", "aggregate-fecal-boli"], 2),  # Missing required folder argument
+        (["utils", "render-pose"], 2),  # Missing required arguments
     ],
     ids=[
         "infer_arena_corner_sequence",
@@ -265,11 +267,11 @@ def test_option_flag_combinations():
     runner = CliRunner()
 
     test_combinations = [
-        (["--verbose"], 2),                   # Missing subcommand
-        (["--verbose", "infer"], 2),          # Missing command 
-        (["--verbose", "utils", "render-pose"], 0),  # Valid combination
-        (["infer", "--help"], 0),             # Help always succeeds
-        (["--verbose", "qa", "--help"], 0),   # Help with verbose
+        (["--verbose"], 2),  # Missing subcommand
+        (["--verbose", "infer"], 2),  # Missing command
+        (["--verbose", "utils", "render-pose"], 2),  # Missing required arguments
+        (["infer", "--help"], 0),  # Help always succeeds
+        (["--verbose", "qa", "--help"], 0),  # Help with verbose
     ]
 
     # Act & Assert
@@ -314,14 +316,14 @@ def test_complete_workflow_examples():
         (["--help"], 0),
         (["infer", "--help"], 0),
         # Try to run specific inference commands without args (should fail appropriately)
-        (["infer", "single-pose"], 2),      # Missing --out-file
-        (["infer", "arena-corner"], 1),     # Missing --video or --frame
+        (["infer", "single-pose"], 2),  # Missing --out-file
+        (["infer", "arena-corner"], 1),  # Missing --video or --frame
         # Try QA commands
-        (["qa", "single-pose"], 2),         # Missing pose argument
-        (["qa", "multi-pose"], 0),          # Empty implementation
-        # Run utility commands (these still work without args)
-        (["utils", "render-pose"], 0),
-        (["utils", "aggregate-fecal-boli"], 0),
+        (["qa", "single-pose"], 2),  # Missing pose argument
+        (["qa", "multi-pose"], 0),  # Empty implementation
+        # Run utility commands (these now require arguments)
+        (["utils", "render-pose"], 2),  # Missing required arguments
+        (["utils", "aggregate-fecal-boli"], 2),  # Missing required folder argument
     ]
 
     # Act & Assert
@@ -332,7 +334,9 @@ def test_complete_workflow_examples():
         else:
             result = runner.invoke(app, workflow_step)
 
-        assert result.exit_code == expected_exit, f"Workflow step {i} failed: {workflow_step}"
+        assert result.exit_code == expected_exit, (
+            f"Workflow step {i} failed: {workflow_step}"
+        )
 
 
 def test_subcommand_app_independence():
@@ -366,9 +370,9 @@ def test_subcommand_app_independence():
     assert result.exit_code == 0
     assert "render-pose" in result.stdout
 
+    # Utils commands now require arguments
     result = runner.invoke(utils.app, ["render-pose"])
-    assert result.exit_code == 0
-    assert "Rendering pose data" in result.stdout
+    assert result.exit_code == 2  # Missing required arguments
 
 
 def test_main_app_callback_integration():
@@ -376,9 +380,9 @@ def test_main_app_callback_integration():
     # Arrange
     runner = CliRunner()
 
-    # Act & Assert - Test callback options work with subcommands
+    # Act & Assert - Test callback options work with subcommands (will fail due to missing args)
     result = runner.invoke(app, ["--verbose", "utils", "render-pose"])
-    assert result.exit_code == 0
+    assert result.exit_code == 2  # Missing required arguments
 
     # Test that version callback overrides subcommand execution
     with patch("mouse_tracking.cli.utils.__version__", "1.0.0"):
@@ -416,44 +420,93 @@ def test_commands_with_proper_arguments():
     """Test that commands work when provided with proper arguments."""
     # Arrange
     runner = CliRunner()
-    
+
     # Create temporary files for testing
-    with tempfile.NamedTemporaryFile(suffix='.mp4', delete=False) as tmp_video:
+    with tempfile.NamedTemporaryFile(suffix=".mp4", delete=False) as tmp_video:
         video_path = Path(tmp_video.name)
-    
-    with tempfile.NamedTemporaryFile(suffix='.h5', delete=False) as tmp_pose:
+
+    with tempfile.NamedTemporaryFile(suffix=".h5", delete=False) as tmp_pose:
         pose_path = Path(tmp_pose.name)
-        
-    with tempfile.NamedTemporaryFile(suffix='.h5', delete=False) as tmp_out:
+
+    with tempfile.NamedTemporaryFile(suffix=".h5", delete=False) as tmp_out:
         out_path = Path(tmp_out.name)
 
-    try:
-        # Test infer arena-corner with video
-        result = runner.invoke(app, [
-            "infer", "arena-corner", 
-            "--video", str(video_path)
-        ])
-        assert result.exit_code == 0
-        
-        # Test infer single-pose with proper arguments
-        result = runner.invoke(app, [
-            "infer", "single-pose",
-            "--video", str(video_path),
-            "--out-file", str(out_path)
-        ])
-        assert result.exit_code == 0
-        
-        # Test qa single-pose with proper arguments (mock the inspect function)
-        with patch('mouse_tracking.cli.qa.inspect_pose_v6') as mock_inspect:
-            mock_inspect.return_value = {'metric1': 0.5}
-            result = runner.invoke(app, [
-                "qa", "single-pose", 
-                str(pose_path)
-            ])
+    with tempfile.TemporaryDirectory() as tmp_dir:
+        tmp_folder = Path(tmp_dir)
+
+        try:
+            # Test infer arena-corner with video
+            result = runner.invoke(
+                app, ["infer", "arena-corner", "--video", str(video_path)]
+            )
             assert result.exit_code == 0
-            
-    finally:
-        # Cleanup
-        for path in [video_path, pose_path, out_path]:
-            if path.exists():
-                path.unlink()
+
+            # Test infer single-pose with proper arguments
+            result = runner.invoke(
+                app,
+                [
+                    "infer",
+                    "single-pose",
+                    "--video",
+                    str(video_path),
+                    "--out-file",
+                    str(out_path),
+                ],
+            )
+            assert result.exit_code == 0
+
+            # Test qa single-pose with proper arguments (mock the inspect function)
+            with (
+                patch("mouse_tracking.cli.qa.inspect_pose_v6") as mock_inspect,
+                patch("pandas.DataFrame.to_csv") as mock_to_csv,
+                patch("pandas.Timestamp.now") as mock_timestamp,
+            ):
+                mock_inspect.return_value = {"metric1": 0.5}
+                mock_timestamp.return_value.strftime.return_value = "20231201_120000"
+
+                result = runner.invoke(app, ["qa", "single-pose", str(pose_path)])
+                assert result.exit_code == 0
+                mock_to_csv.assert_called_once()
+
+            # Test utils commands with proper arguments
+            with patch(
+                "mouse_tracking.cli.utils.fecal_boli.aggregate_folder_data"
+            ) as mock_aggregate:
+                # Mock the DataFrame with a to_csv method
+                mock_df = MagicMock()
+                mock_aggregate.return_value = mock_df
+
+                result = runner.invoke(
+                    app, ["utils", "aggregate-fecal-boli", str(tmp_folder)]
+                )
+                assert result.exit_code == 0
+                mock_aggregate.assert_called_once()
+
+            # Test utils render-pose with mocked function
+            with patch("mouse_tracking.cli.utils.render.process_video") as mock_render:
+                result = runner.invoke(
+                    app,
+                    [
+                        "utils",
+                        "render-pose",
+                        str(video_path),
+                        str(pose_path),
+                        str(out_path),
+                    ],
+                )
+                assert result.exit_code == 0
+                mock_render.assert_called_once()
+
+            # Test utils stitch-tracklets with mocked function
+            with patch("mouse_tracking.cli.utils.match_predictions") as mock_stitch:
+                result = runner.invoke(
+                    app, ["utils", "stitch-tracklets", str(pose_path)]
+                )
+                assert result.exit_code == 0
+                mock_stitch.assert_called_once()
+
+        finally:
+            # Cleanup
+            for path in [video_path, pose_path, out_path]:
+                if path.exists():
+                    path.unlink()
