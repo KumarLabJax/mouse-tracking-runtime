@@ -176,6 +176,55 @@ class TestMergeMultipleSegInstances:
         ):
             merge_multiple_seg_instances(matrix_list, flag_list)
 
+    def test_no_detections_scenario_real_world_crash(self):
+        """Test real-world scenario: videos without mice causing merge function crash.
+
+        The error occurs at line:
+        padded_matrix = np.full([n_predictions] + np.max(matrix_shapes, axis=0).tolist(), default_val, dtype=np.int32)
+
+        When matrix_list is empty, matrix_shapes becomes an empty array, and np.max
+        on an empty array raises "zero-size array to reduction operation maximum which has no identity".
+        """
+        # Arrange - Simulate the exact scenario from multi-segmentation pipeline
+        # when no mice are detected in any frame
+        frame_contours = []  # No contours detected in any frame
+        frame_flags = []  # No flags for any frame
+
+        # Act & Assert - Should raise the exact error from the traceback
+        with pytest.raises(
+            ValueError,
+            match="zero-size array to reduction operation maximum which has no identity",
+        ):
+            merge_multiple_seg_instances(frame_contours, frame_flags)
+
+    def test_no_detections_with_custom_default_value(self):
+        """Test that empty lists scenario fails regardless of default_val parameter."""
+        # Arrange
+        matrix_list = []
+        flag_list = []
+        custom_default = -999
+
+        # Act & Assert - Should fail even with custom default value
+        with pytest.raises(
+            ValueError,
+            match="zero-size array to reduction operation maximum which has no identity",
+        ):
+            merge_multiple_seg_instances(matrix_list, flag_list, custom_default)
+
+    def test_edge_case_zero_predictions_various_defaults(self):
+        """Test zero predictions scenario with various default values to ensure consistency."""
+        # Arrange
+        matrix_list = []
+        flag_list = []
+
+        # Test with different default values - all should fail the same way
+        for default_val in [-1, 0, 1, -100, 100, -999]:
+            with pytest.raises(
+                ValueError,
+                match="zero-size array to reduction operation maximum which has no identity",
+            ):
+                merge_multiple_seg_instances(matrix_list, flag_list, default_val)
+
     def test_single_empty_matrix(self):
         """Test with single empty matrix (zero segmentation data)."""
         # Arrange
