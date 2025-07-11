@@ -1,3 +1,20 @@
+"""
+Unit tests for the get_contour_stack function from mouse_tracking.utils.segmentation.
+
+This module tests the get_contour_stack function which converts padded contour matrices
+into lists of OpenCV-compatible contour arrays by removing padding and extracting
+valid contour data. The function handles both 2D and 3D contour matrices and ensures
+proper formatting for subsequent OpenCV operations.
+
+The tests cover:
+- 2D contour matrix processing (single contour)
+- 3D contour matrix processing (multiple contours)
+- Padding removal with default and custom padding values
+- Edge cases like empty arrays and all-padding matrices
+- Error handling for invalid input shapes
+- Integration with get_trimmed_contour function
+"""
+
 from unittest.mock import patch
 
 import numpy as np

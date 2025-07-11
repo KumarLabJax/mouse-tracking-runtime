@@ -354,9 +354,7 @@ class TestRenderOutline:
             patch(
                 "mouse_tracking.utils.segmentation.get_contour_stack"
             ) as mock_get_contour_stack,
-            patch(
-                "mouse_tracking.utils.segmentation.cv2.drawContours"
-            ),
+            patch("mouse_tracking.utils.segmentation.cv2.drawContours"),
         ):
             mock_get_contour_stack.side_effect = ValueError("Invalid contour matrix")
 

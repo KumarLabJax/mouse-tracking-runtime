@@ -5,7 +5,6 @@ This module tests the pad_contours function which converts OpenCV contour data
 into a padded matrix format suitable for batch processing and storage.
 """
 
-
 import numpy as np
 import pytest
 

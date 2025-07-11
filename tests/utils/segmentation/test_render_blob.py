@@ -1,3 +1,20 @@
+"""
+Unit tests for the render_blob function from mouse_tracking.utils.segmentation.
+
+This module tests the render_blob function which renders contour data as filled blobs
+on a boolean mask. The function uses OpenCV's drawContours with cv2.FILLED thickness
+to render solid regions and returns a boolean mask of the rendered blobs for
+segmentation visualization and processing.
+
+The tests cover:
+- 2D and 3D contour matrix rendering
+- Frame size customization and default values
+- Custom padding value handling
+- Boolean mask conversion and type safety
+- OpenCV integration and parameter validation
+- Exception handling and edge cases
+"""
+
 from unittest.mock import patch
 
 import numpy as np

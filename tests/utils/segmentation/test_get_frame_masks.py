@@ -1,3 +1,20 @@
+"""
+Unit tests for the get_frame_masks function from mouse_tracking.utils.segmentation.
+
+This module tests the get_frame_masks function which processes contour matrices
+to generate boolean masks for each animal in a frame. The function renders
+contours as filled regions using render_blob and returns a stack of masks
+for batch processing applications.
+
+The tests cover:
+- Single and multiple animal mask generation
+- Different frame sizes and custom configurations
+- Boolean conversion from various numeric types
+- Edge cases like empty contour matrices
+- Integration with render_blob function
+- Error handling and exception scenarios
+"""
+
 from unittest.mock import patch
 
 import numpy as np

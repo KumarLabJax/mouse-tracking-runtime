@@ -1,3 +1,19 @@
+"""
+Unit tests for the get_trimmed_contour function from mouse_tracking.utils.segmentation.
+
+This module tests the get_trimmed_contour function which removes padding values
+from contour arrays to extract valid coordinate data. The function filters out
+rows that match the specified default padding value and ensures proper data
+type conversion to int32 for OpenCV compatibility.
+
+The tests cover:
+- Padding removal from various positions (end, middle, mixed)
+- Custom padding values and edge cases
+- Empty contours and all-padding scenarios
+- Data type conversion and shape preservation
+- Integration with OpenCV contour processing workflows
+"""
+
 import numpy as np
 import pytest
 
