@@ -1,3 +1,43 @@
+process FILTER_LOCAL_BATCH {
+    label "r_util"
+
+    input:
+    path input_batch
+    val ignore_invalid_inputs
+    val filter_processed
+    val search_dir
+
+    output:
+    path "files_to_process.txt", emit: process_filelist
+
+    script:
+    """
+    touch files_to_process.txt
+    for file in ${input_batch}; do
+        if [[ ! -f "\${file}" && ${ignore_invalid_inputs} != "true" ]]; then
+            echo "File does not exist: \${file}"
+            exit 1
+        else
+            echo "\${file}" >> files_to_process.txt
+        fi
+    done
+    
+    if [[ ${filter_processed} == "true" ]]; then
+        mv files_to_process.txt all_files.txt
+        touch files_to_process.txt
+        echo "Filtering out already processed files..."
+        for file in \$(cat files_to_process.txt); do
+            pose_file="${search_dir}/\${file/.*}_pose_est_v6.h5"
+            if [[ -f "\${pose_file}" ]]; then
+                echo "File \${file} already processed, skipping."
+            else
+                echo "\${file}" >> files_to_process.txt
+            fi
+        done
+    fi
+    """
+}
+
 process VIDEO_TO_POSE {
     label "r_util"
 
@@ -11,30 +51,6 @@ process VIDEO_TO_POSE {
     script:
     """
     touch "${video_file.baseName}_pose_est_v0.h5"
-    sleep 10
-    """
-}
-
-process CHECK_FILE {
-    label "r_util"
-
-    input:
-    val file_to_check
-
-    output:
-    val file_to_check, emit: file
-    // path "file(${file_to_check})", emit: file
-    // val !file("${file_to_check}").exists(), emit: file_exists
-
-    script:
-    """
-    echo "Checking ${file_to_check}"
-    if [ -f "${file_to_check}" ]; then
-        echo "File exists"
-    else
-        echo "File does not exist"
-        exit 1
-    fi
     sleep 10
     """
 }

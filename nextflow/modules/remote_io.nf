@@ -73,16 +73,17 @@ process TRANSFER_GLOBUS {
     input:
     val globus_src_endpoint
     val globus_dst_endpoint
-    val video_filename
+    path files_to_transfer
 
     output:
-    path video_file
+    path "globus_cache_folder.txt", emit: globus_folder
 
     script:
     // Globus is asynchronous, so we need to capture the task and wait.
     """
     id=$(globus transfer --jq "task_id" --format=UNIX ${globus_src_endpoint}:/${video_filename} ${globus_dst_endpoint}:/${video_filename})
     globus task wait --polling-interval=10 \$id
+    echo \${pwd} > globus_cache_folder.txt
     """
 }
 
@@ -91,14 +92,14 @@ process GET_DATA_FROM_DROPBOX {
     label "dropbox"
     
     input:
-    val video_filename
+    path files_to_transfer
 
     output:
-    path "${video_filename}", emit: video_file
+    path "retrieved_files/*", emit: remote_files
 
     script:
     """
-    rclone copy ${DROPBOX_PREFIX}/${video_filename} ./${video_filename}
+    rclone copy --include-from ${files_to_transfer} ${DROPBOX_PREFIX}/ retrieved_files/.
     """
 }
 

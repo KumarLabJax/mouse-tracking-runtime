@@ -12,64 +12,13 @@ include { MULTI_MOUSE_TRACKING } from './nextflow/workflows/multi_mouse_pipeline
 include { MANUALLY_CORRECT_CORNERS; INTEGRATE_CORNER_ANNOTATIONS } from './nextflow/workflows/sleap_manual_correction'
 include { ADD_DUMMY_VIDEO; validateInputFile } from './nextflow/modules/utils'
 
-/*
- * Convert input_batch into a single list
- */
-all_files = []
-invalid_files = []
-valid_files = []
-
-if (params.input_batch != null) {
-    def batch_lines = file(params.input_batch).text.readLines()
-
-    // Validate each file in the batch
-    batch_lines.each { file_path ->
-        def (is_valid, error_message) = validateInputFile(file_path, params.pipeline)
-        
-        if (is_valid) {
-            valid_files.add(file_path)
-        } else {
-            invalid_files.add([file_path, error_message])
-        }
-    }
-    
-    // Report any invalid files
-    if (invalid_files.size() > 0) {
-        println "The following files failed validation:"
-        invalid_files.each { file_path, error_message ->
-            println "  - ${error_message}"
-        }
-        
-        if (!params.ignore_invalid_inputs) {
-            println "Please check the input files and try again."
-            println "If you want to ignore invalid inputs, please set the parameter ignore_invalid_inputs to true."
-            System.exit(1)
-        }
-
-        // If all files are invalid, exit
-        if (valid_files.size() == 0) {
-            println "No valid files to process. Exiting."
-            System.exit(1)
-        }
-        
-        // Otherwise, continue with valid files and warn the user
-        println "Continuing with ${valid_files.size()} valid files out of ${batch_lines.size()} total files."
-    }
-    
-    all_files.addAll(valid_files)
-}
-
-if (all_files.size() == 0){
-    println "Missing any data to process, please assign either input_data or input_batch"
-    System.exit(1)
-}
 
 /*
  * Run the selected workflow
  */
 workflow{
     // Download the data locally if necessary
-    PREPARE_DATA(Channel.fromList(all_files), params.location)
+    PREPARE_DATA(params.input_batch, params.location)
 
     // Generate pose files
     if (params.workflow == "single-mouse"){
