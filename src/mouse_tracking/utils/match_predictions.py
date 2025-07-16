@@ -21,7 +21,7 @@ def match_predictions(pose_file):
 	t1 = time.time()
 	video_observations = VideoObservations.from_pose_file(pose_file, 0.0)
 	t2 = time.time()
-	video_observations.generate_greedy_tracklets(rotate_pose=True, num_threads=2)
+	video_observations.generate_greedy_tracklets_vectorized(rotate_pose=True)
 	with h5py.File(pose_file, 'r') as f:
 		pose_shape = f['poseest/points'].shape[:2]
 		seg_shape = f['poseest/seg_data'].shape[:2]
@@ -29,7 +29,7 @@ def match_predictions(pose_file):
 
 	# Stitch the tracklets together
 	t3 = time.time()
-	video_observations.stitch_greedy_tracklets(num_tracks=None, prioritize_long=True)
+	video_observations.stitch_greedy_tracklets_optimized(num_tracks=None, prioritize_long=True)
 	translated_tracks = video_observations.stitch_translation
 	stitched_pose = np.vectorize(lambda x: translated_tracks.get(x, 0))(new_pose_ids)
 	stitched_seg = np.vectorize(lambda x: translated_tracks.get(x, 0))(new_seg_ids)

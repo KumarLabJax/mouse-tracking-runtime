@@ -13,6 +13,309 @@ from typing import List, Union, Tuple
 import warnings
 
 
+class VectorizedDetectionFeatures:
+	"""Precomputed vectorized features for batch detection processing."""
+	
+	def __init__(self, detections: List[Detection]):
+		"""Initialize vectorized features from a list of detections.
+		
+		Args:
+			detections: List of Detection objects to extract features from
+		"""
+		self.n_detections = len(detections)
+		self.detections = detections
+		
+		# Extract and organize features into arrays
+		self.poses = self._extract_poses(detections)           # Shape: (n, 12, 2)
+		self.embeddings = self._extract_embeddings(detections) # Shape: (n, embed_dim)
+		self.valid_pose_masks = self._compute_valid_pose_masks() # Shape: (n, 12)
+		self.valid_embed_masks = self._compute_valid_embed_masks() # Shape: (n,)
+		
+		# Cache rotated poses for efficiency
+		self._rotated_poses = None
+		self._seg_images = None
+	
+	def _extract_poses(self, detections: List[Detection]) -> np.ndarray:
+		"""Extract pose data into a vectorized array."""
+		poses = []
+		for det in detections:
+			if det.pose is not None:
+				poses.append(det.pose)
+			else:
+				# Default to zeros for missing poses
+				poses.append(np.zeros((12, 2), dtype=np.float64))
+		return np.array(poses, dtype=np.float64)
+	
+	def _extract_embeddings(self, detections: List[Detection]) -> np.ndarray:
+		"""Extract embedding data into a vectorized array."""
+		embeddings = []
+		embed_dim = None
+		
+		# First pass: determine embedding dimension from any non-None embedding
+		for det in detections:
+			if det.embed is not None:
+				embed_dim = len(det.embed)
+				break
+		
+		if embed_dim is None:
+			# No embeddings found at all, return empty array
+			return np.array([]).reshape(self.n_detections, 0)
+		
+		# Second pass: extract embeddings, preserving zeros as they are used for invalid detection
+		for det in detections:
+			if det.embed is not None and len(det.embed) == embed_dim:
+				embeddings.append(det.embed)
+			else:
+				# Default to zeros for missing embeddings
+				embeddings.append(np.zeros(embed_dim, dtype=np.float64))
+		
+		return np.array(embeddings, dtype=np.float64)
+	
+	def _compute_valid_pose_masks(self) -> np.ndarray:
+		"""Compute valid keypoint masks for all poses."""
+		# Valid keypoints are those that are not all zeros
+		return ~np.all(self.poses == 0, axis=-1)  # Shape: (n, 12)
+	
+	def _compute_valid_embed_masks(self) -> np.ndarray:
+		"""Compute valid embedding masks."""
+		if self.embeddings.size == 0:
+			return np.zeros(self.n_detections, dtype=bool)
+		return ~np.all(self.embeddings == 0, axis=-1)  # Shape: (n,)
+	
+	def get_rotated_poses(self) -> np.ndarray:
+		"""Get 180-degree rotated poses for all detections."""
+		if self._rotated_poses is not None:
+			return self._rotated_poses
+		
+		rotated_poses = np.zeros_like(self.poses)
+		
+		for i, det in enumerate(self.detections):
+			if det.pose is not None:
+				# Use the existing rotate_pose method but cache result
+				rotated_poses[i] = Detection.rotate_pose(det.pose, 180)
+			else:
+				rotated_poses[i] = self.poses[i]  # zeros
+		
+		self._rotated_poses = rotated_poses
+		return self._rotated_poses
+	
+	def get_seg_images(self) -> List[np.ndarray]:
+		"""Get segmentation images for all detections."""
+		if self._seg_images is not None:
+			return self._seg_images
+		
+		seg_images = []
+		for det in self.detections:
+			if det._seg_mat is not None:
+				seg_images.append(render_blob(det._seg_mat))
+			else:
+				seg_images.append(None)
+		
+		self._seg_images = seg_images
+		return self._seg_images
+
+
+def compute_vectorized_pose_distances(features1: VectorizedDetectionFeatures, 
+									  features2: VectorizedDetectionFeatures,
+									  use_rotation: bool = False) -> np.ndarray:
+	"""Compute pose distance matrix between two sets of detection features.
+	
+	Args:
+		features1: First set of detection features
+		features2: Second set of detection features  
+		use_rotation: Whether to consider 180-degree rotated poses
+		
+	Returns:
+		Distance matrix of shape (n1, n2) with mean pose distances
+	"""
+	poses1 = features1.poses  # Shape: (n1, 12, 2)
+	poses2 = features2.poses  # Shape: (n2, 12, 2)
+	valid1 = features1.valid_pose_masks  # Shape: (n1, 12)
+	valid2 = features2.valid_pose_masks  # Shape: (n2, 12)
+	
+	# Broadcasting: (n1, 1, 12, 2) - (1, n2, 12, 2) = (n1, n2, 12, 2)
+	diff = poses1[:, None, :, :] - poses2[None, :, :, :]
+	distances = np.sqrt(np.sum(diff**2, axis=-1))  # (n1, n2, 12)
+	
+	# Vectorized valid comparison mask: (n1, 1, 12) & (1, n2, 12) = (n1, n2, 12)
+	valid_comparisons = valid1[:, None, :] & valid2[None, :, :]
+	
+	# Compute mean distances where valid comparisons exist
+	result = np.full((features1.n_detections, features2.n_detections), np.nan)
+	
+	# For each pair, check if any valid comparisons exist
+	any_valid = np.any(valid_comparisons, axis=-1)  # (n1, n2)
+	
+	# Compute mean distances only where valid comparisons exist
+	with warnings.catch_warnings():
+		warnings.simplefilter("ignore", category=RuntimeWarning)
+		mean_distances = np.where(any_valid,
+								  np.mean(distances, axis=-1, where=valid_comparisons),
+								  np.nan)
+	
+	if use_rotation:
+		# Also compute distances with rotated poses
+		rotated_poses1 = features1.get_rotated_poses()
+		
+		# Recompute with rotated poses1
+		diff_rot = rotated_poses1[:, None, :, :] - poses2[None, :, :, :]
+		distances_rot = np.sqrt(np.sum(diff_rot**2, axis=-1))
+		
+		with warnings.catch_warnings():
+			warnings.simplefilter("ignore", category=RuntimeWarning)
+			mean_distances_rot = np.where(any_valid,
+										  np.mean(distances_rot, axis=-1, where=valid_comparisons),
+										  np.nan)
+		
+		# Take minimum of regular and rotated distances
+		result = np.where(np.isnan(mean_distances), mean_distances_rot,
+						  np.where(np.isnan(mean_distances_rot), mean_distances,
+								   np.minimum(mean_distances, mean_distances_rot)))
+	else:
+		result = mean_distances
+	
+	return result
+
+
+def compute_vectorized_embedding_distances(features1: VectorizedDetectionFeatures,
+										   features2: VectorizedDetectionFeatures) -> np.ndarray:
+	"""Compute embedding distance matrix between two sets of detection features.
+	
+	Args:
+		features1: First set of detection features
+		features2: Second set of detection features
+		
+	Returns:
+		Distance matrix of shape (n1, n2) with cosine distances
+	"""
+	if features1.embeddings.size == 0 or features2.embeddings.size == 0:
+		return np.full((features1.n_detections, features2.n_detections), np.nan)
+	
+	valid1 = features1.valid_embed_masks
+	valid2 = features2.valid_embed_masks
+	
+	# Extract valid embeddings only
+	valid_embeds1 = features1.embeddings[valid1]
+	valid_embeds2 = features2.embeddings[valid2]
+	
+	if len(valid_embeds1) == 0 or len(valid_embeds2) == 0:
+		return np.full((features1.n_detections, features2.n_detections), np.nan)
+	
+	# Compute cosine distances using scipy
+	valid_distances = scipy.spatial.distance.cdist(valid_embeds1, valid_embeds2, metric='cosine')
+	valid_distances = np.clip(valid_distances, 0, 1.0 - 1e-8)
+	
+	# Map back to full matrix
+	result = np.full((features1.n_detections, features2.n_detections), np.nan)
+	valid1_indices = np.where(valid1)[0]
+	valid2_indices = np.where(valid2)[0]
+	
+	for i, idx1 in enumerate(valid1_indices):
+		for j, idx2 in enumerate(valid2_indices):
+			result[idx1, idx2] = valid_distances[i, j]
+	
+	return result
+
+
+def compute_vectorized_segmentation_ious(features1: VectorizedDetectionFeatures,
+										 features2: VectorizedDetectionFeatures) -> np.ndarray:
+	"""Compute segmentation IoU matrix between two sets of detection features.
+	
+	Args:
+		features1: First set of detection features
+		features2: Second set of detection features
+		
+	Returns:
+		IoU matrix of shape (n1, n2) with intersection over union values
+	"""
+	seg_images1 = features1.get_seg_images()
+	seg_images2 = features2.get_seg_images()
+	
+	result = np.full((features1.n_detections, features2.n_detections), np.nan)
+	
+	for i, seg1 in enumerate(seg_images1):
+		for j, seg2 in enumerate(seg_images2):
+			# Handle cases where segmentations exist (even if rendered as all zeros)
+			# This matches the original Detection.seg_iou behavior
+			if seg1 is not None and seg2 is not None:
+				# Compute IoU using the same logic as Detection.seg_iou
+				intersection = np.sum(np.logical_and(seg1, seg2))
+				union = np.sum(np.logical_or(seg1, seg2))
+				if union == 0:
+					result[i, j] = 0.0
+				else:
+					result[i, j] = intersection / union
+			elif features1.detections[i]._seg_mat is not None or features2.detections[j]._seg_mat is not None:
+				# If at least one has segmentation data (even if rendered as zeros), return 0.0
+				# This matches the original behavior where render_blob creates an image
+				result[i, j] = 0.0
+			# else remains NaN for cases where both segmentations are truly missing
+	
+	return result
+
+
+def compute_vectorized_match_costs(features1: VectorizedDetectionFeatures,
+								   features2: VectorizedDetectionFeatures,
+								   max_dist: float = 40,
+								   default_cost: Union[float, Tuple[float]] = 0.0,
+								   beta: Tuple[float] = (1.0, 1.0, 1.0),
+								   pose_rotation: bool = False) -> np.ndarray:
+	"""Compute full match cost matrix between two sets of detection features.
+	
+	This vectorized version replicates the logic of Detection.calculate_match_cost
+	but computes all pairwise costs in batches for better performance.
+	
+	Args:
+		features1: First set of detection features
+		features2: Second set of detection features  
+		max_dist: Distance at which maximum penalty is applied for poses
+		default_cost: Default cost for missing data (pose, embed, seg)
+		beta: Scaling factors for (pose, embed, seg) costs
+		pose_rotation: Whether to consider 180-degree rotated poses
+		
+	Returns:
+		Cost matrix of shape (n1, n2) with match costs
+	"""
+	assert len(beta) == 3
+	assert isinstance(default_cost, (float, int)) or len(default_cost) == 3
+	
+	if isinstance(default_cost, (float, int)):
+		default_pose_cost = default_cost
+		default_embed_cost = default_cost
+		default_seg_cost = default_cost
+	else:
+		default_pose_cost, default_embed_cost, default_seg_cost = default_cost
+	
+	n1, n2 = features1.n_detections, features2.n_detections
+	
+	# Compute all distance matrices
+	pose_distances = compute_vectorized_pose_distances(features1, features2, use_rotation=pose_rotation)
+	embed_distances = compute_vectorized_embedding_distances(features1, features2)
+	seg_ious = compute_vectorized_segmentation_ious(features1, features2)
+	
+	# Convert distances to costs using the same logic as the original method
+	
+	# Pose costs
+	pose_costs = np.full((n1, n2), np.log(1e-8) * default_pose_cost)
+	valid_pose = ~np.isnan(pose_distances)
+	pose_costs[valid_pose] = np.log((1 - np.clip(pose_distances[valid_pose] / max_dist, 0, 1)) + 1e-8)
+	
+	# Embedding costs
+	embed_costs = np.full((n1, n2), np.log(1e-8) * default_embed_cost)
+	valid_embed = ~np.isnan(embed_distances)
+	embed_costs[valid_embed] = np.log((1 - embed_distances[valid_embed]) + 1e-8)
+	
+	# Segmentation costs
+	seg_costs = np.full((n1, n2), np.log(1e-8) * default_seg_cost)
+	valid_seg = ~np.isnan(seg_ious)
+	seg_costs[valid_seg] = np.log(seg_ious[valid_seg] + 1e-8)
+	
+	# Combine costs using beta weights
+	final_costs = -(pose_costs * beta[0] + embed_costs * beta[1] + seg_costs * beta[2]) / np.sum(beta)
+	
+	return final_costs
+
+
 def get_point_dist(contour: List[np.ndarray], point: np.ndarray):
 	"""Return the signed distance between a point and a contour.
 
@@ -1020,6 +1323,67 @@ class VideoObservations():
 				match_costs[i, j] = Detection.calculate_match_cost(cur_obs, next_obs, pose_rotation=rotate_pose)
 		return match_costs
 
+	def _calculate_costs_vectorized(self, frame_1: int, frame_2: int, rotate_pose: bool = False):
+		"""Vectorized version of cost calculation between observations in 2 frames.
+
+		Args:
+			frame_1: frame index 1 to compare
+			frame_2: frame index 2 to compare
+			rotate_pose: allow pose to be rotated 180 deg
+
+		Returns:
+			cost matrix computed using vectorized operations
+		"""
+		# Extract features for both frames
+		features1 = VectorizedDetectionFeatures(self._observations[frame_1])
+		features2 = VectorizedDetectionFeatures(self._observations[frame_2])
+		
+		# Compute vectorized match costs using the same parameters as original
+		return compute_vectorized_match_costs(
+			features1, features2,
+			max_dist=40,
+			default_cost=0.0,
+			beta=(1.0, 1.0, 1.0),
+			pose_rotation=rotate_pose
+		)
+
+	def generate_greedy_tracklets_vectorized(self, max_cost: float = -np.log(1e-3), rotate_pose: bool = False):
+		"""Vectorized version of greedy tracklet generation for improved performance.
+
+		Args:
+			max_cost: negative log probability associated with the maximum cost that will be greedily matched.
+			rotate_pose: allow pose to be rotated 180 deg when calculating distance cost
+		"""
+		# Seed first values
+		frame_dict = {0: {i: i for i in np.arange(len(self._observations[0]))}}
+		cur_tracklet_id = len(self._observations[0])
+		prev_matches = frame_dict[0]
+
+		# Main loop to cycle over greedy matching.
+		# Each match problem is posed as a bipartite graph between sequential frames
+		for frame in np.arange(len(self._observations) - 1) + 1:
+			# Calculate cost using vectorized method
+			match_costs = self._calculate_costs_vectorized(frame - 1, frame, rotate_pose)
+			match_costs = np.ma.array(match_costs, fill_value=max_cost, mask=False)
+			matches = {}
+			while np.any(~match_costs.mask) and np.any(match_costs.filled() < max_cost):
+				next_best = np.unravel_index(np.argmin(match_costs), match_costs.shape)
+				matches[next_best[1]] = prev_matches[next_best[0]]
+				match_costs.mask[next_best[0], :] = True
+				match_costs.mask[:, next_best[1]] = True
+			# Fill any unmatched observations
+			for j in range(len(self._observations[frame])):
+				if j not in matches.keys():
+					matches[j] = cur_tracklet_id
+					cur_tracklet_id += 1
+			frame_dict[frame] = matches
+			prev_matches = matches
+		
+		# Final modification of internal state
+		self._observation_id_dict = frame_dict
+		self._tracklet_gen_method = 'greedy_vectorized'
+		self._make_tracklets()
+
 	def generate_greedy_tracklets(self, max_cost: float = -np.log(1e-3), rotate_pose: bool = False, num_threads: int = 1):
 		"""Applies a greedy technique of identity matching to a list of frame observations.
 
@@ -1071,7 +1435,7 @@ class VideoObservations():
 		self._make_tracklets()
 
 
-	def stitch_greedy_tracklets(
+	def stitch_greedy_tracklets_optimized(
 			self,
 			num_tracks: int | None = None,
 			all_embeds: bool = True,
@@ -1218,3 +1582,42 @@ class VideoObservations():
 		self._stitch_translation = track_to_longterm_id
 		self._tracklets = original_tracklets
 		self._tracklet_stitch_method = "greedy"
+
+	def stitch_greedy_tracklets(self, num_tracks: int = None, all_embeds: bool = True, prioritize_long: bool = False):
+		"""Greedy method that links merges tracklets 1 at a time based on lowest cost.
+
+		Args:
+			num_tracks: number of tracks to produce
+			all_embeds: bool to include original tracklet centers as merges are made
+			prioritize_long: bool to adjust cost of linking with length of tracklets
+		"""
+		if num_tracks is None:
+			num_tracks = self._avg_observation
+
+		# copy original tracklet list, so that we can revert at the end
+		original_tracklets = self._tracklets
+
+		# We can use pandas to do slightly easier searching
+		current_costs = pd.DataFrame(self._get_transition_costs(all_embeds, True, longer_track_priority=float(prioritize_long)))
+		while not np.all(np.isinf(current_costs.to_numpy(na_value=np.inf))):
+			t1, t2 = np.unravel_index(np.argmin(current_costs.to_numpy(na_value=np.inf)), current_costs.shape)
+			tracklet_1 = current_costs.index[t1]
+			tracklet_2 = current_costs.columns[t2]
+			new_tracklet = Tracklet.from_tracklets([self._tracklets[tracklet_1], self._tracklets[tracklet_2]], True)
+			self._tracklets = [x for i, x in enumerate(self._tracklets) if i not in [tracklet_1, tracklet_2]] + [new_tracklet]
+			current_costs = pd.DataFrame(self._get_transition_costs(all_embeds, True, longer_track_priority=float(prioritize_long)))
+
+		# Tracklets are formed. Now we should assign the longest ones IDs.
+		tracklet_lengths = [len(x.frames) for x in self._tracklets]
+		assignment_order = np.argsort(tracklet_lengths)[::-1]
+		track_to_longterm_id = {0: 0}
+		current_id = num_tracks
+		for cur_assignment in assignment_order:
+			ids_to_assign = self._tracklets[cur_assignment].track_id
+			for cur_tracklet_id in ids_to_assign:
+				track_to_longterm_id[int(cur_tracklet_id + 1)] = current_id if current_id > 0 else 0
+			current_id -= 1
+
+		self._stitch_translation = track_to_longterm_id
+		self._tracklets = original_tracklets
+		self._tracklet_stitch_method = 'greedy'
