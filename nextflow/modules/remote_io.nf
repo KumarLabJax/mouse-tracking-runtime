@@ -80,8 +80,10 @@ process TRANSFER_GLOBUS {
 
     script:
     // Globus is asynchronous, so we need to capture the task and wait.
+    // TODO: Input file is assumed to have the to/from prefixes.
+    // This should be checked or properly documented.
     """
-    id=$(globus transfer --jq "task_id" --format=UNIX ${globus_src_endpoint}:/${video_filename} ${globus_dst_endpoint}:/${video_filename})
+    id=\$(globus transfer --jq "task_id" --format=UNIX --batch ${files_to_transfer} ${globus_src_endpoint} ${globus_dst_endpoint})
     globus task wait --polling-interval=10 \$id
     echo \${pwd} > globus_cache_folder.txt
     """

@@ -1,3 +1,27 @@
+/**
+ * Lazy nextflow module for creating files, useful for testing.
+ *
+ * @param file_name The name of the file to be created
+ * @param file_content The content to be written to the file
+ * @return A path to the created file
+ */
+process CREATE_FILE {
+    label "r_util"
+
+    input:
+    val file_name
+    val file_content
+
+    output:
+    path file_name, emit: created_file
+
+    script:
+    """
+    echo "${file_content}" > ${file_name}
+    sleep 10
+    """
+}
+
 process FILTER_LOCAL_BATCH {
     label "r_util"
 
