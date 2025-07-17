@@ -34,11 +34,15 @@ class TestFecalBoliImplementation:
             "neither_specified_error",
         ],
     )
-    def test_fecal_boli_input_validation(self, video_arg, frame_arg, expected_success):
+    @patch("mouse_tracking.cli.infer.infer_fecal_boli_pytorch")
+    def test_fecal_boli_input_validation(
+        self, mock_infer, video_arg, frame_arg, expected_success
+    ):
         """
         Test input validation for fecal boli implementation.
 
         Args:
+            mock_infer: Mock for the inference function
             video_arg: Video argument flag or None
             frame_arg: Frame argument flag or None
             expected_success: Whether the command should succeed
@@ -59,10 +63,11 @@ class TestFecalBoliImplementation:
             # Assert
             if expected_success:
                 assert result.exit_code == 0
-                assert "Running PyTorch inference" in result.stdout
+                mock_infer.assert_called_once()
             else:
                 assert result.exit_code == 1
                 assert "Error:" in result.stdout
+                mock_infer.assert_not_called()
 
     @pytest.mark.parametrize(
         "model_choice,runtime_choice,expected_success",
@@ -73,13 +78,15 @@ class TestFecalBoliImplementation:
         ],
         ids=["valid_choices", "invalid_model", "invalid_runtime"],
     )
+    @patch("mouse_tracking.cli.infer.infer_fecal_boli_pytorch")
     def test_fecal_boli_choice_validation(
-        self, model_choice, runtime_choice, expected_success
+        self, mock_infer, model_choice, runtime_choice, expected_success
     ):
         """
         Test model and runtime choice validation.
 
         Args:
+            mock_infer: Mock for the inference function
             model_choice: Model choice to test
             runtime_choice: Runtime choice to test
             expected_success: Whether the command should succeed
@@ -102,9 +109,14 @@ class TestFecalBoliImplementation:
             # Assert
             if expected_success:
                 assert result.exit_code == 0
-                assert f"Model: {model_choice}" in result.stdout
+                mock_infer.assert_called_once()
+                # Verify the args object passed to the inference function
+                args = mock_infer.call_args[0][0]
+                assert args.model == model_choice
+                assert args.runtime == runtime_choice
             else:
                 assert result.exit_code != 0
+                mock_infer.assert_not_called()
 
     @pytest.mark.parametrize(
         "file_exists,expected_success",
@@ -114,11 +126,15 @@ class TestFecalBoliImplementation:
         ],
         ids=["file_exists", "file_not_exists"],
     )
-    def test_fecal_boli_file_existence_validation(self, file_exists, expected_success):
+    @patch("mouse_tracking.cli.infer.infer_fecal_boli_pytorch")
+    def test_fecal_boli_file_existence_validation(
+        self, mock_infer, file_exists, expected_success
+    ):
         """
         Test file existence validation.
 
         Args:
+            mock_infer: Mock for the inference function
             file_exists: Whether the input file should exist
             expected_success: Whether the command should succeed
         """
@@ -132,28 +148,20 @@ class TestFecalBoliImplementation:
             # Assert
             if expected_success:
                 assert result.exit_code == 0
-                assert "Running PyTorch inference" in result.stdout
+                mock_infer.assert_called_once()
             else:
                 assert result.exit_code == 1
                 assert "does not exist" in result.stdout
+                mock_infer.assert_not_called()
 
     @pytest.mark.parametrize(
-        "out_file,out_image,out_video,expected_outputs",
+        "out_file,out_image,out_video",
         [
-            (None, None, None, []),
-            ("output.json", None, None, ["Output file: output.json"]),
-            (None, "output.png", None, ["Output image: output.png"]),
-            (None, None, "output.mp4", ["Output video: output.mp4"]),
-            (
-                "output.json",
-                "output.png",
-                "output.mp4",
-                [
-                    "Output file: output.json",
-                    "Output image: output.png",
-                    "Output video: output.mp4",
-                ],
-            ),
+            (None, None, None),
+            ("output.json", None, None),
+            (None, "output.png", None),
+            (None, None, "output.mp4"),
+            ("output.json", "output.png", "output.mp4"),
         ],
         ids=[
             "no_outputs",
@@ -163,17 +171,18 @@ class TestFecalBoliImplementation:
             "all_outputs",
         ],
     )
+    @patch("mouse_tracking.cli.infer.infer_fecal_boli_pytorch")
     def test_fecal_boli_output_options(
-        self, out_file, out_image, out_video, expected_outputs
+        self, mock_infer, out_file, out_image, out_video
     ):
         """
         Test output options functionality.
 
         Args:
+            mock_infer: Mock for the inference function
             out_file: Output file path or None
             out_image: Output image path or None
             out_video: Output video path or None
-            expected_outputs: Expected output messages
         """
         # Arrange
         cmd_args = ["fecal-boli", "--video", str(self.test_video_path)]
@@ -191,29 +200,35 @@ class TestFecalBoliImplementation:
 
             # Assert
             assert result.exit_code == 0
-            for expected_output in expected_outputs:
-                assert expected_output in result.stdout
+            mock_infer.assert_called_once()
+
+            # Verify the args object contains the correct output paths
+            args = mock_infer.call_args[0][0]
+            assert args.out_file == out_file
+            assert args.out_image == out_image
+            assert args.out_video == out_video
 
     @pytest.mark.parametrize(
-        "frame_interval,batch_size,expected_in_output",
+        "frame_interval,batch_size",
         [
-            (1800, 1, "Frame interval: 1800, Batch size: 1"),  # defaults
-            (3600, 2, "Frame interval: 3600, Batch size: 2"),  # custom values
-            (1, 1, "Frame interval: 1, Batch size: 1"),  # minimal values
-            (7200, 10, "Frame interval: 7200, Batch size: 10"),  # large values
+            (1800, 1),  # defaults
+            (3600, 2),  # custom values
+            (1, 1),  # minimal values
+            (7200, 10),  # large values
         ],
         ids=["default_values", "custom_values", "minimal_values", "large_values"],
     )
+    @patch("mouse_tracking.cli.infer.infer_fecal_boli_pytorch")
     def test_fecal_boli_frame_interval_and_batch_size_options(
-        self, frame_interval, batch_size, expected_in_output
+        self, mock_infer, frame_interval, batch_size
     ):
         """
         Test frame interval and batch size options.
 
         Args:
+            mock_infer: Mock for the inference function
             frame_interval: Frame interval to test
             batch_size: Batch size to test
-            expected_in_output: Expected output message containing these values
         """
         # Arrange
         cmd_args = [
@@ -232,9 +247,15 @@ class TestFecalBoliImplementation:
 
             # Assert
             assert result.exit_code == 0
-            assert expected_in_output in result.stdout
+            mock_infer.assert_called_once()
 
-    def test_fecal_boli_default_values(self):
+            # Verify the args object contains the correct values
+            args = mock_infer.call_args[0][0]
+            assert args.frame_interval == frame_interval
+            assert args.batch_size == batch_size
+
+    @patch("mouse_tracking.cli.infer.infer_fecal_boli_pytorch")
+    def test_fecal_boli_default_values(self, mock_infer):
         """Test that fecal boli uses the correct default values."""
         # Arrange
         cmd_args = ["fecal-boli", "--video", str(self.test_video_path)]
@@ -245,9 +266,16 @@ class TestFecalBoliImplementation:
 
             # Assert
             assert result.exit_code == 0
-            assert "Model: fecal-boli" in result.stdout
-            assert "Frame interval: 1800, Batch size: 1" in result.stdout
-            assert "Running PyTorch inference" in result.stdout
+            mock_infer.assert_called_once()
+
+            args = mock_infer.call_args[0][0]
+            assert args.model == "fecal-boli"
+            assert args.runtime == "pytorch"
+            assert args.frame_interval == 1800
+            assert args.batch_size == 1
+            assert args.out_file is None
+            assert args.out_image is None
+            assert args.out_video is None
 
     def test_fecal_boli_help_text(self):
         """Test that the fecal boli command has proper help text."""
@@ -288,7 +316,8 @@ class TestFecalBoliImplementation:
             assert result.exit_code == 1
             assert "does not exist" in result.stdout
 
-    def test_fecal_boli_integration_flow(self):
+    @patch("mouse_tracking.cli.infer.infer_fecal_boli_pytorch")
+    def test_fecal_boli_integration_flow(self, mock_infer):
         """Test the complete integration flow of fecal boli inference."""
         # Arrange
         cmd_args = [
@@ -317,21 +346,22 @@ class TestFecalBoliImplementation:
 
             # Assert
             assert result.exit_code == 0
+            mock_infer.assert_called_once()
 
-            # Verify all expected outputs are in the result
-            expected_messages = [
-                "Running PyTorch inference on video",
-                "Model: fecal-boli",
-                "Frame interval: 3600, Batch size: 4",
-                "Output file: output.json",
-                "Output image: output.png",
-                "Output video: output.mp4",
-            ]
+            # Verify the args object has all the expected values
+            args = mock_infer.call_args[0][0]
+            assert args.model == "fecal-boli"
+            assert args.runtime == "pytorch"
+            assert args.video == str(self.test_video_path)
+            assert args.frame is None
+            assert args.out_file == "output.json"
+            assert args.out_image == "output.png"
+            assert args.out_video == "output.mp4"
+            assert args.frame_interval == 3600
+            assert args.batch_size == 4
 
-            for message in expected_messages:
-                assert message in result.stdout
-
-    def test_fecal_boli_video_input_processing(self):
+    @patch("mouse_tracking.cli.infer.infer_fecal_boli_pytorch")
+    def test_fecal_boli_video_input_processing(self, mock_infer):
         """Test fecal boli specifically with video input."""
         # Arrange
         cmd_args = ["fecal-boli", "--video", str(self.test_video_path)]
@@ -342,10 +372,14 @@ class TestFecalBoliImplementation:
 
             # Assert
             assert result.exit_code == 0
-            assert "Running PyTorch inference on video" in result.stdout
-            assert str(self.test_video_path) in result.stdout
+            mock_infer.assert_called_once()
 
-    def test_fecal_boli_frame_input_processing(self):
+            args = mock_infer.call_args[0][0]
+            assert args.video == str(self.test_video_path)
+            assert args.frame is None
+
+    @patch("mouse_tracking.cli.infer.infer_fecal_boli_pytorch")
+    def test_fecal_boli_frame_input_processing(self, mock_infer):
         """Test fecal boli specifically with frame input."""
         # Arrange
         cmd_args = ["fecal-boli", "--frame", str(self.test_frame_path)]
@@ -356,8 +390,11 @@ class TestFecalBoliImplementation:
 
             # Assert
             assert result.exit_code == 0
-            assert "Running PyTorch inference on frame" in result.stdout
-            assert str(self.test_frame_path) in result.stdout
+            mock_infer.assert_called_once()
+
+            args = mock_infer.call_args[0][0]
+            assert args.video is None
+            assert args.frame == str(self.test_frame_path)
 
     @pytest.mark.parametrize(
         "edge_case_path",
@@ -376,11 +413,13 @@ class TestFecalBoliImplementation:
             "relative_path",
         ],
     )
-    def test_fecal_boli_edge_case_paths(self, edge_case_path):
+    @patch("mouse_tracking.cli.infer.infer_fecal_boli_pytorch")
+    def test_fecal_boli_edge_case_paths(self, mock_infer, edge_case_path):
         """
         Test fecal boli with edge case file paths.
 
         Args:
+            mock_infer: Mock for the inference function
             edge_case_path: Path with special characters to test
         """
         # Arrange
@@ -390,40 +429,73 @@ class TestFecalBoliImplementation:
 
             # Assert
             assert result.exit_code == 0
-            assert "Running PyTorch inference" in result.stdout
+            mock_infer.assert_called_once()
 
-    def test_fecal_boli_batch_size_edge_cases(self):
+            args = mock_infer.call_args[0][0]
+            assert args.video == edge_case_path
+
+    @pytest.mark.parametrize(
+        "batch_size",
+        [0, 1, 2, 10, 100],
+        ids=[
+            "zero_batch",
+            "minimal_batch",
+            "small_batch",
+            "medium_batch",
+            "large_batch",
+        ],
+    )
+    @patch("mouse_tracking.cli.infer.infer_fecal_boli_pytorch")
+    def test_fecal_boli_batch_size_edge_cases(self, mock_infer, batch_size):
         """Test fecal boli with edge case batch sizes."""
-        # Arrange & Act - very small batch size
+        # Arrange
+        cmd_args = [
+            "fecal-boli",
+            "--video",
+            str(self.test_video_path),
+            "--batch-size",
+            str(batch_size),
+        ]
+
         with patch("pathlib.Path.exists", return_value=True):
-            result = self.runner.invoke(
-                app,
-                [
-                    "fecal-boli",
-                    "--video",
-                    str(self.test_video_path),
-                    "--batch-size",
-                    "0",
-                ],
-            )
+            # Act
+            result = self.runner.invoke(app, cmd_args)
 
             # Assert
             assert result.exit_code == 0
-            assert "Batch size: 0" in result.stdout
+            mock_infer.assert_called_once()
 
-        # Arrange & Act - large batch size
+            args = mock_infer.call_args[0][0]
+            assert args.batch_size == batch_size
+
+    @patch("mouse_tracking.cli.infer.infer_fecal_boli_pytorch")
+    def test_fecal_boli_args_compatibility_object(self, mock_infer):
+        """Test that the InferenceArgs compatibility object is properly structured."""
+        # Arrange
+        cmd_args = [
+            "fecal-boli",
+            "--video",
+            str(self.test_video_path),
+            "--out-file",
+            "test.json",
+        ]
+
         with patch("pathlib.Path.exists", return_value=True):
-            result = self.runner.invoke(
-                app,
-                [
-                    "fecal-boli",
-                    "--video",
-                    str(self.test_video_path),
-                    "--batch-size",
-                    "100",
-                ],
-            )
+            # Act
+            result = self.runner.invoke(app, cmd_args)
 
             # Assert
             assert result.exit_code == 0
-            assert "Batch size: 100" in result.stdout
+            mock_infer.assert_called_once()
+
+            # Verify that the args object has all expected attributes
+            args = mock_infer.call_args[0][0]
+            assert hasattr(args, "model")
+            assert hasattr(args, "runtime")
+            assert hasattr(args, "video")
+            assert hasattr(args, "frame")
+            assert hasattr(args, "out_file")
+            assert hasattr(args, "out_image")
+            assert hasattr(args, "out_video")
+            assert hasattr(args, "frame_interval")
+            assert hasattr(args, "batch_size")

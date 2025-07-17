@@ -34,13 +34,15 @@ class TestMultiIdentityImplementation:
             "neither_specified_error",
         ],
     )
+    @patch("mouse_tracking.cli.infer.infer_multi_identity_tfs")
     def test_multi_identity_input_validation(
-        self, video_arg, frame_arg, expected_success
+        self, mock_infer, video_arg, frame_arg, expected_success
     ):
         """
         Test input validation for multi-identity implementation.
 
         Args:
+            mock_infer: Mock for the inference function
             video_arg: Video argument flag or None
             frame_arg: Frame argument flag or None
             expected_success: Whether the command should succeed
@@ -61,11 +63,11 @@ class TestMultiIdentityImplementation:
             # Assert
             if expected_success:
                 assert result.exit_code == 0
-                assert "Running TFS inference" in result.stdout
-                assert "Multi-identity inference completed" in result.stdout
+                mock_infer.assert_called_once()
             else:
                 assert result.exit_code == 1
                 assert "Error:" in result.stdout
+                mock_infer.assert_not_called()
 
     @pytest.mark.parametrize(
         "model_choice,runtime_choice,expected_success",
@@ -77,13 +79,15 @@ class TestMultiIdentityImplementation:
         ],
         ids=["valid_social_paper", "valid_2023", "invalid_model", "invalid_runtime"],
     )
+    @patch("mouse_tracking.cli.infer.infer_multi_identity_tfs")
     def test_multi_identity_choice_validation(
-        self, model_choice, runtime_choice, expected_success
+        self, mock_infer, model_choice, runtime_choice, expected_success
     ):
         """
         Test model and runtime choice validation.
 
         Args:
+            mock_infer: Mock for the inference function
             model_choice: Model choice to test
             runtime_choice: Runtime choice to test
             expected_success: Whether the command should succeed
@@ -108,9 +112,14 @@ class TestMultiIdentityImplementation:
             # Assert
             if expected_success:
                 assert result.exit_code == 0
-                assert f"Model: {model_choice}" in result.stdout
+                mock_infer.assert_called_once()
+                # Verify the args object passed to the inference function
+                args = mock_infer.call_args[0][0]
+                assert args.model == model_choice
+                assert args.runtime == runtime_choice
             else:
                 assert result.exit_code != 0
+                mock_infer.assert_not_called()
 
     @pytest.mark.parametrize(
         "file_exists,expected_success",
@@ -120,13 +129,15 @@ class TestMultiIdentityImplementation:
         ],
         ids=["file_exists", "file_not_exists"],
     )
+    @patch("mouse_tracking.cli.infer.infer_multi_identity_tfs")
     def test_multi_identity_file_existence_validation(
-        self, file_exists, expected_success
+        self, mock_infer, file_exists, expected_success
     ):
         """
         Test file existence validation.
 
         Args:
+            mock_infer: Mock for the inference function
             file_exists: Whether the input file should exist
             expected_success: Whether the command should succeed
         """
@@ -146,10 +157,11 @@ class TestMultiIdentityImplementation:
             # Assert
             if expected_success:
                 assert result.exit_code == 0
-                assert "Running TFS inference" in result.stdout
+                mock_infer.assert_called_once()
             else:
                 assert result.exit_code == 1
                 assert "does not exist" in result.stdout
+                mock_infer.assert_not_called()
 
     def test_multi_identity_required_out_file(self):
         """Test that out-file parameter is required."""
@@ -164,7 +176,8 @@ class TestMultiIdentityImplementation:
             assert result.exit_code != 0
             # Should fail because --out-file is missing
 
-    def test_multi_identity_default_values(self):
+    @patch("mouse_tracking.cli.infer.infer_multi_identity_tfs")
+    def test_multi_identity_default_values(self, mock_infer):
         """Test that multi-identity uses the correct default values."""
         # Arrange
         cmd_args = [
@@ -181,9 +194,12 @@ class TestMultiIdentityImplementation:
 
             # Assert
             assert result.exit_code == 0
-            assert "Model: social-paper" in result.stdout
-            assert "Running TFS inference" in result.stdout
-            assert f"Output file: {self.test_output_path}" in result.stdout
+            mock_infer.assert_called_once()
+            
+            args = mock_infer.call_args[0][0]
+            assert args.model == "social-paper"
+            assert args.runtime == "tfs"
+            assert args.out_file == str(self.test_output_path)
 
     def test_multi_identity_help_text(self):
         """Test that the multi-identity command has proper help text."""
@@ -235,7 +251,8 @@ class TestMultiIdentityImplementation:
             assert result.exit_code == 1
             assert "does not exist" in result.stdout
 
-    def test_multi_identity_integration_flow(self):
+    @patch("mouse_tracking.cli.infer.infer_multi_identity_tfs")
+    def test_multi_identity_integration_flow(self, mock_infer):
         """Test the complete integration flow of multi-identity inference."""
         # Arrange
         cmd_args = [
@@ -256,19 +273,18 @@ class TestMultiIdentityImplementation:
 
             # Assert
             assert result.exit_code == 0
+            mock_infer.assert_called_once()
+            
+            # Verify the args object has all the expected values
+            args = mock_infer.call_args[0][0]
+            assert args.model == "2023"
+            assert args.runtime == "tfs"
+            assert args.video == str(self.test_video_path)
+            assert args.frame is None
+            assert args.out_file == str(self.test_output_path)
 
-            # Verify all expected outputs are in the result
-            expected_messages = [
-                "Running TFS inference on video",
-                "Model: 2023",
-                f"Output file: {self.test_output_path}",
-                "Multi-identity inference completed",
-            ]
-
-            for message in expected_messages:
-                assert message in result.stdout
-
-    def test_multi_identity_video_input_processing(self):
+    @patch("mouse_tracking.cli.infer.infer_multi_identity_tfs")
+    def test_multi_identity_video_input_processing(self, mock_infer):
         """Test multi-identity specifically with video input."""
         # Arrange
         cmd_args = [
@@ -285,10 +301,14 @@ class TestMultiIdentityImplementation:
 
             # Assert
             assert result.exit_code == 0
-            assert "Running TFS inference on video" in result.stdout
-            assert str(self.test_video_path) in result.stdout
+            mock_infer.assert_called_once()
+            
+            args = mock_infer.call_args[0][0]
+            assert args.video == str(self.test_video_path)
+            assert args.frame is None
 
-    def test_multi_identity_frame_input_processing(self):
+    @patch("mouse_tracking.cli.infer.infer_multi_identity_tfs")
+    def test_multi_identity_frame_input_processing(self, mock_infer):
         """Test multi-identity specifically with frame input."""
         # Arrange
         cmd_args = [
@@ -305,8 +325,11 @@ class TestMultiIdentityImplementation:
 
             # Assert
             assert result.exit_code == 0
-            assert "Running TFS inference on frame" in result.stdout
-            assert str(self.test_frame_path) in result.stdout
+            mock_infer.assert_called_once()
+            
+            args = mock_infer.call_args[0][0]
+            assert args.video is None
+            assert args.frame == str(self.test_frame_path)
 
     @pytest.mark.parametrize(
         "edge_case_path",
@@ -325,11 +348,13 @@ class TestMultiIdentityImplementation:
             "relative_path",
         ],
     )
-    def test_multi_identity_edge_case_paths(self, edge_case_path):
+    @patch("mouse_tracking.cli.infer.infer_multi_identity_tfs")
+    def test_multi_identity_edge_case_paths(self, mock_infer, edge_case_path):
         """
         Test multi-identity with edge case file paths.
 
         Args:
+            mock_infer: Mock for the inference function
             edge_case_path: Path with special characters to test
         """
         # Arrange
@@ -348,18 +373,23 @@ class TestMultiIdentityImplementation:
 
             # Assert
             assert result.exit_code == 0
-            assert "Running TFS inference" in result.stdout
+            mock_infer.assert_called_once()
+            
+            args = mock_infer.call_args[0][0]
+            assert args.video == edge_case_path
 
     @pytest.mark.parametrize(
         "model_variant",
         ["social-paper", "2023"],
         ids=["social_paper_model", "2023_model"],
     )
-    def test_multi_identity_model_variants(self, model_variant):
+    @patch("mouse_tracking.cli.infer.infer_multi_identity_tfs")
+    def test_multi_identity_model_variants(self, mock_infer, model_variant):
         """
         Test multi-identity with different model variants.
 
         Args:
+            mock_infer: Mock for the inference function
             model_variant: Model variant to test
         """
         # Arrange
@@ -379,10 +409,13 @@ class TestMultiIdentityImplementation:
 
             # Assert
             assert result.exit_code == 0
-            assert f"Model: {model_variant}" in result.stdout
-            assert "Multi-identity inference completed" in result.stdout
+            mock_infer.assert_called_once()
+            
+            args = mock_infer.call_args[0][0]
+            assert args.model == model_variant
 
-    def test_multi_identity_mouse_identity_specific_functionality(self):
+    @patch("mouse_tracking.cli.infer.infer_multi_identity_tfs")
+    def test_multi_identity_mouse_identity_specific_functionality(self, mock_infer):
         """Test multi-identity-specific functionality for mouse identity detection."""
         # Arrange
         cmd_args = [
@@ -403,12 +436,15 @@ class TestMultiIdentityImplementation:
 
             # Assert
             assert result.exit_code == 0
-            assert "Running TFS inference on video" in result.stdout
-            assert "Model: 2023" in result.stdout
-            assert "Output file: mouse_identities.json" in result.stdout
-            assert "Multi-identity inference completed" in result.stdout
+            mock_infer.assert_called_once()
+            
+            args = mock_infer.call_args[0][0]
+            assert args.model == "2023"
+            assert args.runtime == "tfs"
+            assert args.out_file == "mouse_identities.json"
 
-    def test_multi_identity_minimal_configuration(self):
+    @patch("mouse_tracking.cli.infer.infer_multi_identity_tfs")
+    def test_multi_identity_minimal_configuration(self, mock_infer):
         """Test multi-identity with minimal required configuration."""
         # Arrange
         cmd_args = [
@@ -425,11 +461,15 @@ class TestMultiIdentityImplementation:
 
             # Assert
             assert result.exit_code == 0
-            assert "Running TFS inference on frame" in result.stdout
-            assert "Model: social-paper" in result.stdout  # default model
-            assert f"Output file: {self.test_output_path}" in result.stdout
+            mock_infer.assert_called_once()
+            
+            args = mock_infer.call_args[0][0]
+            assert args.model == "social-paper"  # default model
+            assert args.runtime == "tfs"  # default runtime
+            assert args.out_file == str(self.test_output_path)
 
-    def test_multi_identity_maximum_configuration(self):
+    @patch("mouse_tracking.cli.infer.infer_multi_identity_tfs")
+    def test_multi_identity_maximum_configuration(self, mock_infer):
         """Test multi-identity with all possible options specified."""
         # Arrange
         cmd_args = [
@@ -450,19 +490,16 @@ class TestMultiIdentityImplementation:
 
             # Assert
             assert result.exit_code == 0
-
+            mock_infer.assert_called_once()
+            
             # Verify all options are processed correctly
-            expected_in_output = [
-                "Running TFS inference on video",
-                "Model: 2023",
-                "Output file: complete_identity_output.json",
-                "Multi-identity inference completed",
-            ]
+            args = mock_infer.call_args[0][0]
+            assert args.model == "2023"
+            assert args.runtime == "tfs"
+            assert args.out_file == "complete_identity_output.json"
 
-            for expected in expected_in_output:
-                assert expected in result.stdout
-
-    def test_multi_identity_simplified_interface(self):
+    @patch("mouse_tracking.cli.infer.infer_multi_identity_tfs")
+    def test_multi_identity_simplified_interface(self, mock_infer):
         """Test that multi-identity has a simplified interface compared to other commands."""
         # This test ensures that multi-identity doesn't have the extra parameters
         # that other inference commands have
@@ -482,20 +519,16 @@ class TestMultiIdentityImplementation:
 
             # Assert
             assert result.exit_code == 0
+            mock_infer.assert_called_once()
+            
+            args = mock_infer.call_args[0][0]
+            assert args.model == "social-paper"
+            assert args.runtime == "tfs"
+            assert args.out_file == str(self.test_output_path)
 
-            # Verify it's simpler - no frame count, interval, image/video outputs
-            assert "Frames:" not in result.stdout
-            assert "Interval:" not in result.stdout
-            assert "Output image:" not in result.stdout
-            assert "Output video:" not in result.stdout
-
-            # But should have the basic functionality
-            assert "Running TFS inference" in result.stdout
-            assert "Model: social-paper" in result.stdout
-            assert f"Output file: {self.test_output_path}" in result.stdout
-
-    def test_multi_identity_comparison_with_other_commands(self):
-        """Test that multi-identity maintains consistency with other inference commands."""
+    @patch("mouse_tracking.cli.infer.infer_multi_identity_tfs")
+    def test_multi_identity_args_compatibility_object(self, mock_infer):
+        """Test that the InferenceArgs compatibility object is properly structured."""
         # Arrange
         cmd_args = [
             "multi-identity",
@@ -503,10 +536,6 @@ class TestMultiIdentityImplementation:
             str(self.test_output_path),
             "--video",
             str(self.test_video_path),
-            "--model",
-            "social-paper",
-            "--runtime",
-            "tfs",
         ]
 
         with patch("pathlib.Path.exists", return_value=True):
@@ -515,6 +544,12 @@ class TestMultiIdentityImplementation:
 
             # Assert
             assert result.exit_code == 0
-            # Should use consistent patterns with other commands
-            assert "Running TFS inference on video" in result.stdout
-            assert "Model: social-paper" in result.stdout
+            mock_infer.assert_called_once()
+            
+            # Verify that the args object has all expected attributes
+            args = mock_infer.call_args[0][0]
+            assert hasattr(args, "model")
+            assert hasattr(args, "runtime")
+            assert hasattr(args, "video")
+            assert hasattr(args, "frame")
+            assert hasattr(args, "out_file")
