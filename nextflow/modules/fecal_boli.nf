@@ -12,7 +12,7 @@ process PREDICT_FECAL_BOLI {
     script:
     """
     cp ${in_pose} "${video_file.baseName}_with_fecal_boli.h5"
-    python3 ${params.tracking_code_dir}/infer_fecal_boli.py --video ${video_file} --out-file "${video_file.baseName}_with_fecal_boli.h5" --frame-interval 1800
+    mouse-tracking infer fecal-boli --video ${video_file} --out-file "${video_file.baseName}_with_fecal_boli.h5" --frame-interval 1800
     """
 }
 
@@ -31,6 +31,6 @@ process EXTRACT_FECAL_BOLI_BINS {
     if [ ! -f "${video_file.baseName}_pose_est_v6.h5" ]; then
         ln -s ${in_pose} "${video_file.baseName}_pose_est_v6.h5"
     fi
-    python3 ${params.tracking_code_dir}/aggregate_fecal_boli.py --folder . --folder_depth 0 --num_bins ${params.clip_duration.intdiv(1800)} --output ${video_file.baseName}_fecal_boli.csv
+    mouse-tracking utils aggregate-fecal-boli . --folder-depth 0 --num-bins ${params.clip_duration.intdiv(1800)} --output ${video_file.baseName}_fecal_boli.csv
     """
 }
