@@ -23,6 +23,7 @@ nextflow_process {
                 """
                 test_batch = CREATE_FILE.out.created_file
                 input[0] = test_batch
+                input[1] = "labdropbox:\\\"/KumarLab's shared workspace/VideoData/MDS_Tests/\\\""
                 """
             }
         }
@@ -30,7 +31,8 @@ nextflow_process {
         then {
 
             assert process.success
-            assert process.trace.tasks().size() == 1
+            // Remote files use glob and it returns with shape [1, n]
+            assert process.out.remote_files[0].size() == 2
 
         }
 
