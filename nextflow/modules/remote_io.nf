@@ -50,6 +50,7 @@ process FILTER_UNPROCESSED_DROPBOX {
 
     input:
     path test_files
+    val dropbox_prefix
 
     output:
     path "unprocessed_files.txt", emit unprocessed_files
@@ -59,7 +60,7 @@ process FILTER_UNPROCESSED_DROPBOX {
     touch unprocessed_files.txt
     while read test_file; do
         test_pose=\${test_file/.*}_pose_est_v6.h5
-        rclone ls ${DROPBOX_PREFIX}/\${test_pose} > /dev/null 2>&1
+        rclone ls ${dropbox_prefix}/\${test_pose} > /dev/null 2>&1
         if [[ \$? != 0 ]]; then
             echo \$test_file >> unprocessed_files.txt
         fi
@@ -116,9 +117,10 @@ process PUT_DATA_TO_DROPBOX {
     input:
     path file_to_upload
     tuple path(result_file), val(publish_filename)
+    val dropbox_prefix
 
     script:
     """
-    rclone copy ${result_file} ${DROPBOX_PREFIX}/${publish_filename}
+    rclone copy ${result_file} ${dropbox_prefix}/${publish_filename}
     """
 }
