@@ -1,0 +1,40 @@
+nextflow_process {
+    
+    name "Test Process TRANSFER_GLOBUS"
+    tag "remote"
+    tag "globus"
+    script "../../modules/remote_io.nf"
+    process "TRANSFER_GLOBUS"
+
+    test("Transfer Files via Globus from remote to compute") {
+
+        setup {
+            run ("CREATE_FILE") {
+                script "../../modules/utils.nf"
+                process {
+                    """
+                    input[0] = "files_to_transfer.txt"
+                    input[1] = "kumarlab-new/dataset-releases/strain-survey-open-field/data/LL1-B2B/2018-04-17_SPD/WT001G2N21717M-17-PSY.mp4\\nkumarlab-new/dataset-releases/strain-survey-open-field/data/LL1-B2B/2018-04-17_SPD/WT001G2N21717M-17-PSY_pose_est_v6.h5"
+                    """
+                }
+            }
+        }
+
+        when {
+            process {
+                """
+                input[0] = "${params.globus_remote_endpoint}"
+                input[1] = "${params.globus_compute_endpoint}"
+                input[2] = CREATE_FILE.out.created_file
+                """
+            }
+        }
+
+        then {
+
+            assert process.success
+
+        }
+
+    }
+}
