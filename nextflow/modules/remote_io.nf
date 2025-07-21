@@ -106,7 +106,7 @@ process GET_DATA_FROM_DROPBOX {
     script:
     """
     echo ${dropbox_prefix}
-    rclone copy --include-from ${files_to_transfer} ${dropbox_prefix} retrieved_files/.
+    rclone copy --transfers=1 --include-from ${files_to_transfer} ${dropbox_prefix} retrieved_files/.
     """
 }
 
@@ -121,6 +121,6 @@ process PUT_DATA_TO_DROPBOX {
 
     script:
     """
-    rclone copy ${result_file} ${dropbox_prefix}/${publish_filename}
+    rclone copy --transfers=1 ${result_file} ${dropbox_prefix}/${publish_filename}
     """
 }
