@@ -1,5 +1,5 @@
 nextflow_process {
-    
+
     name "Test Process TRANSFER_GLOBUS"
     tag "remote"
     tag "globus"
@@ -23,8 +23,9 @@ nextflow_process {
         when {
             process {
                 """
-                input[0] = "${params.globus_remote_endpoint}"
-                input[1] = "${params.globus_compute_endpoint}"
+                input[0] = "${params.globus_remote_endpoint}:${params.globus_remote_folder}"
+                // This test placed the files onto T1, not locally. Cache folder can only be checked manually.
+                input[1] = "b8377de1-47c2-11e7-bd5c-22000b9a448b:/projects/kumar-lab/multimouse-pipeline/nextflow-test-results/globus_test/"
                 input[2] = CREATE_FILE.out.created_file
                 """
             }
