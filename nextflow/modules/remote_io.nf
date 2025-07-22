@@ -84,9 +84,9 @@ process TRANSFER_GLOBUS {
     """
     while read line; do
         line_space_escaped=\$(echo \$line | sed 's: :\\ :g')
-        echo ${globus_src_endpoint}/\$line_space_escaped ${globus_dst_endpoint}/\$line_space_escaped >> batch_to_from.txt
+        echo \${line_space_escaped} \${line_space_escaped} >> batch_to_from.txt
     done < ${files_to_transfer}
-    id=\$(globus transfer --jq "task_id" --format=UNIX --batch ${files_to_transfer} ${globus_src_endpoint} ${globus_dst_endpoint})
+    id=\$(globus transfer --jq "task_id" --format=UNIX --batch batch_to_from.txt ${globus_src_endpoint} ${globus_dst_endpoint})
     globus task wait --polling-interval=10 \$id
     echo \${pwd} > globus_cache_folder.txt
     """

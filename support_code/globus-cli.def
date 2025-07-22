@@ -1,0 +1,6 @@
+Bootstrap: docker
+from: python:3.10-bookworm
+
+%post
+	# Install python dependencies
+	pip install globus-cli
