@@ -35,15 +35,14 @@ def vectorized_greedy_matching(cost_matrix: np.ndarray, max_cost: float) -> dict
 	valid_rows = valid_indices[0]
 	valid_cols = valid_indices[1]
 	
-	# Sort by cost (ascending) - this is the key optimization
-	# O(k log k) where k is number of valid costs, typically k << n²
+	# Sort by cost (ascending)
 	sorted_indices = np.argsort(valid_costs)
 	
 	# Track which rows and columns have been used
 	used_rows = np.zeros(n1, dtype=bool)
 	used_cols = np.zeros(n2, dtype=bool)
 	
-	# Process matches in cost order - O(k) instead of O(n³)
+	# Process matches in cost order
 	for idx in sorted_indices:
 		row = valid_rows[idx]
 		col = valid_cols[idx]
