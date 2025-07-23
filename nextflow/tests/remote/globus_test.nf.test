@@ -40,4 +40,36 @@ nextflow_process {
         }
 
     }
+
+    test("Fail globus transfer for files that don't exist") {
+        setup {
+            run ("CREATE_FILE") {
+                script "../../modules/utils.nf"
+                process {
+                    """
+                    input[0] = "files_to_transfer.txt"
+                    input[1] = "FILE_THAT_DOESNT_EXIST.mp4"
+                    """
+                }
+            }
+        }
+        when {
+            process {
+                """
+                // input[0] = "${params.globus_remote_endpoint}:${params.globus_remote_folder}"
+                input[0] = "70850914-722d-11e7-aa01-22000bf2d287:/tier2/vkumar/"
+                // This test placed the files onto T1, not locally. Cache folder can only be checked manually.
+                // input[1] = "${params.globus_compute_endpoint}:[folder_on_compute]"
+                input[1] = "b8377de1-47c2-11e7-bd5c-22000b9a448b:/projects/kumar-lab/multimouse-pipeline/nextflow-test-results/globus_test/"
+                input[2] = CREATE_FILE.out.created_file
+                """
+            }
+        }
+
+        then {
+            // TODO: This test may need to get a time limit set, because failing this test may be an infinite wait.
+            assert process.exitStatus == 1
+
+        }
+    }
 }
