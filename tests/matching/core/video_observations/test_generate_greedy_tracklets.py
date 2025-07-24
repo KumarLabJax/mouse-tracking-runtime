@@ -9,7 +9,7 @@ from unittest.mock import MagicMock, patch
 import numpy as np
 import pytest
 
-from mouse_tracking.utils.matching import Detection, VideoObservations
+from mouse_tracking.matching.core import Detection, VideoObservations
 
 
 class TestGenerateGreedyTracklets:
