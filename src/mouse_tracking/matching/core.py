@@ -1,4 +1,4 @@
-"""Functions related to matching poses with segmentation."""
+"""Core matching functions and classes for mouse tracking."""
 from __future__ import annotations
 import numpy as np
 import pandas as pd
@@ -9,6 +9,12 @@ import scipy
 import multiprocessing
 from itertools import chain
 from mouse_tracking.utils.segmentation import get_contour_stack, render_blob
+from mouse_tracking.matching.vectorized_features import (
+    VectorizedDetectionFeatures,
+    compute_vectorized_match_costs
+)
+from mouse_tracking.matching.greedy_matching import vectorized_greedy_matching
+from mouse_tracking.matching.batch_processing import BatchedFrameProcessor
 from typing import List, Union, Tuple
 import warnings
 
@@ -1020,6 +1026,89 @@ class VideoObservations():
 				match_costs[i, j] = Detection.calculate_match_cost(cur_obs, next_obs, pose_rotation=rotate_pose)
 		return match_costs
 
+	def _calculate_costs_vectorized(self, frame_1: int, frame_2: int, rotate_pose: bool = False):
+		"""Vectorized version of cost calculation between observations in 2 frames.
+
+		Args:
+			frame_1: frame index 1 to compare
+			frame_2: frame index 2 to compare
+			rotate_pose: allow pose to be rotated 180 deg
+
+		Returns:
+			cost matrix computed using vectorized operations
+		"""
+		# Extract features for both frames
+		features1 = VectorizedDetectionFeatures(self._observations[frame_1])
+		features2 = VectorizedDetectionFeatures(self._observations[frame_2])
+		
+		# Compute vectorized match costs using the same parameters as original
+		return compute_vectorized_match_costs(
+			features1, features2,
+			max_dist=40,
+			default_cost=0.0,
+			beta=(1.0, 1.0, 1.0),
+			pose_rotation=rotate_pose
+		)
+
+	def generate_greedy_tracklets_vectorized(self, max_cost: float = -np.log(1e-3), rotate_pose: bool = False):
+		"""Vectorized version of greedy tracklet generation for improved performance.
+
+		Args:
+			max_cost: negative log probability associated with the maximum cost that will be greedily matched.
+			rotate_pose: allow pose to be rotated 180 deg when calculating distance cost
+		"""
+		# Seed first values
+		frame_dict = {0: {i: i for i in np.arange(len(self._observations[0]))}}
+		cur_tracklet_id = len(self._observations[0])
+		prev_matches = frame_dict[0]
+
+		# Main loop to cycle over greedy matching.
+		# Each match problem is posed as a bipartite graph between sequential frames
+		for frame in np.arange(len(self._observations) - 1) + 1:
+			# Calculate cost using vectorized method
+			match_costs = self._calculate_costs_vectorized(frame - 1, frame, rotate_pose)
+			
+			# Use optimized greedy matching - O(k log k) instead of O(n³)
+			matches = vectorized_greedy_matching(match_costs, max_cost)
+			
+			# Map the matches to tracklet IDs from previous frame
+			tracklet_matches = {}
+			for col_idx, row_idx in matches.items():
+				tracklet_matches[col_idx] = prev_matches[row_idx]
+			
+			# Fill any unmatched observations with new tracklet IDs
+			for j in range(len(self._observations[frame])):
+				if j not in tracklet_matches.keys():
+					tracklet_matches[j] = cur_tracklet_id
+					cur_tracklet_id += 1
+			
+			frame_dict[frame] = tracklet_matches
+			prev_matches = tracklet_matches
+		
+		# Final modification of internal state
+		self._observation_id_dict = frame_dict
+		self._tracklet_gen_method = 'greedy_vectorized'
+		self._make_tracklets()
+
+	def generate_greedy_tracklets_batched(self, max_cost: float = -np.log(1e-3), 
+										  rotate_pose: bool = False, batch_size: int = 32):
+		"""Memory-efficient batched version of greedy tracklet generation.
+		
+		Uses BatchedFrameProcessor to handle large videos with controlled memory usage.
+		
+		Args:
+			max_cost: negative log probability associated with the maximum cost that will be greedily matched.
+			rotate_pose: allow pose to be rotated 180 deg when calculating distance cost
+			batch_size: number of frames to process together in each batch
+		"""
+		processor = BatchedFrameProcessor(batch_size=batch_size)
+		frame_dict = processor.process_video_observations(self, max_cost, rotate_pose)
+		
+		# Final modification of internal state
+		self._observation_id_dict = frame_dict
+		self._tracklet_gen_method = 'greedy_vectorized_batched'
+		self._make_tracklets()
+
 	def generate_greedy_tracklets(self, max_cost: float = -np.log(1e-3), rotate_pose: bool = False, num_threads: int = 1):
 		"""Applies a greedy technique of identity matching to a list of frame observations.
 
@@ -1070,8 +1159,7 @@ class VideoObservations():
 		self._tracklet_gen_method = 'greedy'
 		self._make_tracklets()
 
-
-	def stitch_greedy_tracklets(
+	def stitch_greedy_tracklets_optimized(
 			self,
 			num_tracks: int | None = None,
 			all_embeds: bool = True,
@@ -1218,3 +1306,42 @@ class VideoObservations():
 		self._stitch_translation = track_to_longterm_id
 		self._tracklets = original_tracklets
 		self._tracklet_stitch_method = "greedy"
+
+	def stitch_greedy_tracklets(self, num_tracks: int = None, all_embeds: bool = True, prioritize_long: bool = False):
+		"""Greedy method that links merges tracklets 1 at a time based on lowest cost.
+
+		Args:
+			num_tracks: number of tracks to produce
+			all_embeds: bool to include original tracklet centers as merges are made
+			prioritize_long: bool to adjust cost of linking with length of tracklets
+		"""
+		if num_tracks is None:
+			num_tracks = self._avg_observation
+
+		# copy original tracklet list, so that we can revert at the end
+		original_tracklets = self._tracklets
+
+		# We can use pandas to do slightly easier searching
+		current_costs = pd.DataFrame(self._get_transition_costs(all_embeds, True, longer_track_priority=float(prioritize_long)))
+		while not np.all(np.isinf(current_costs.to_numpy(na_value=np.inf))):
+			t1, t2 = np.unravel_index(np.argmin(current_costs.to_numpy(na_value=np.inf)), current_costs.shape)
+			tracklet_1 = current_costs.index[t1]
+			tracklet_2 = current_costs.columns[t2]
+			new_tracklet = Tracklet.from_tracklets([self._tracklets[tracklet_1], self._tracklets[tracklet_2]], True)
+			self._tracklets = [x for i, x in enumerate(self._tracklets) if i not in [tracklet_1, tracklet_2]] + [new_tracklet]
+			current_costs = pd.DataFrame(self._get_transition_costs(all_embeds, True, longer_track_priority=float(prioritize_long)))
+
+		# Tracklets are formed. Now we should assign the longest ones IDs.
+		tracklet_lengths = [len(x.frames) for x in self._tracklets]
+		assignment_order = np.argsort(tracklet_lengths)[::-1]
+		track_to_longterm_id = {0: 0}
+		current_id = num_tracks
+		for cur_assignment in assignment_order:
+			ids_to_assign = self._tracklets[cur_assignment].track_id
+			for cur_tracklet_id in ids_to_assign:
+				track_to_longterm_id[int(cur_tracklet_id + 1)] = current_id if current_id > 0 else 0
+			current_id -= 1
+
+		self._stitch_translation = track_to_longterm_id
+		self._tracklets = original_tracklets
+		self._tracklet_stitch_method = 'greedy'

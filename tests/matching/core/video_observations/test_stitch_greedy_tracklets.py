@@ -10,7 +10,7 @@ from unittest.mock import patch
 import numpy as np
 import pytest
 
-from mouse_tracking.utils.matching import VideoObservations
+from mouse_tracking.matching.core import VideoObservations
 
 
 def test_stitch_greedy_tracklets_basic_functionality(
@@ -412,7 +412,7 @@ def test_stitch_greedy_tracklets_tracklet_properties(minimal_video_observations)
 def test_stitch_greedy_tracklets_error_handling_invalid_parameters():
     """Test that method handles edge cases gracefully."""
     # Create minimal video observations for testing
-    from mouse_tracking.utils.matching import Detection
+    from mouse_tracking.matching.core import Detection
 
     detection = Detection(frame=0, pose_idx=0, pose=np.random.rand(12, 2))
     video_obs = VideoObservations([[detection]])

@@ -7,7 +7,7 @@ class and its methods, particularly the stitch_greedy_tracklets functionality.
 import numpy as np
 import pytest
 
-from mouse_tracking.utils.matching import Detection, Tracklet, VideoObservations
+from mouse_tracking.matching.core import Detection, Tracklet, VideoObservations
 
 
 @pytest.fixture

@@ -9,7 +9,7 @@ Run with: pytest tests/utils/matching/video_observations/test_benchmark_stich_gr
 import numpy as np
 import pytest
 
-from mouse_tracking.utils.matching import Detection, VideoObservations
+from mouse_tracking.matching.core import Detection, VideoObservations
 
 
 @pytest.fixture

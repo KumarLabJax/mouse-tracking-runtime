@@ -5,7 +5,7 @@ import numpy as np
 from pathlib import Path
 from typing import Union, List
 from mouse_tracking.core.exceptions import InvalidPoseFileException
-from mouse_tracking.utils.matching import hungarian_match_points_seg
+from mouse_tracking.matching import hungarian_match_points_seg
 from mouse_tracking.utils.pose import convert_v2_to_v3
 
 
