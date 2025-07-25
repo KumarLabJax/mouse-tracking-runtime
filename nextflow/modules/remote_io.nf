@@ -29,7 +29,7 @@ process FILTER_UNPROCESSED_GLOBUS {
     path test_files
 
     output:
-    path "unprocessed_files.txt", emit unprocessed_files
+    path "unprocessed_files.txt", emit: unprocessed_files
 
     script:
     """
@@ -53,18 +53,21 @@ process FILTER_UNPROCESSED_DROPBOX {
     val dropbox_prefix
 
     output:
-    path "unprocessed_files.txt", emit unprocessed_files
+    path "unprocessed_files.txt", emit: unprocessed_files
 
     script:
     """
+    #!/bin/bash
+
     touch unprocessed_files.txt
     while read test_file; do
         test_pose=\${test_file/.*}_pose_est_v6.h5
-        rclone ls ${dropbox_prefix}/\${test_pose} > /dev/null 2>&1
+        rclone ls ${dropbox_prefix}\${test_pose} > /dev/null 2>&1
         if [[ \$? != 0 ]]; then
             echo \$test_file >> unprocessed_files.txt
         fi
     done < ${test_files}
+    exit 0
     """
 }
 
@@ -121,12 +124,13 @@ process GET_DATA_FROM_DROPBOX {
     val dropbox_prefix
 
     output:
-    path "retrieved_files/**", emit: remote_files
+    path "fetched_files.txt", emit: remote_files
 
     script:
     """
     echo ${dropbox_prefix}
     rclone copy --transfers=1 --include-from ${files_to_transfer} ${dropbox_prefix} retrieved_files/.
+    find \$(pwd)/retrieved_files/ -type f > fetched_files.txt
     """
 }
 

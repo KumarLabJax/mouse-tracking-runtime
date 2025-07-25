@@ -19,7 +19,7 @@ workflow PREPARE_DATA {
     // Validate input file extensions
     // TODO: This needs to be a file, not a list. Having the list here wrapping files as paths for filtering.
     // all_valid_files = validateInputFilelist(in_video_file, params.workflow)
-    all_valid_files = in_video_file
+    all_valid_files = file(in_video_file)
 
     if (location == "local") {
         file_batch = FILTER_LOCAL_BATCH(all_valid_files, params.ignore_invalid_inputs, params.filter_processed, params.pubdir).process_filelist
@@ -37,9 +37,9 @@ workflow PREPARE_DATA {
 
     // Files should be appropriately URLified to avoid collisions within the pipeline
     if (skip_urlify) {
-        file_processing_channel = file_batch
+        file_processing_channel = file_batch.readLines().flatMap { line -> file(line) }
     } else {
-        file_processing_channel = URLIFY_FILE(file_batch, params.path_depth).file
+        file_processing_channel = URLIFY_FILE(file_batch.readLines().flatMap(), params.path_depth).file
     }
 
     emit:
