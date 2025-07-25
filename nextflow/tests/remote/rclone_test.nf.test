@@ -3,6 +3,7 @@ nextflow_process {
     name "Test Process GET_DATA_FROM_DROPBOX"
     tag "remote"
     tag "rclone"
+    tag "integration"
     script "../../modules/remote_io.nf"
     process "GET_DATA_FROM_DROPBOX"
 

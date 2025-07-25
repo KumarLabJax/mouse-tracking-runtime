@@ -3,6 +3,7 @@ nextflow_process {
     name "Test Process TRANSFER_GLOBUS"
     tag "remote"
     tag "globus"
+    tag "integration"
     script "../../modules/remote_io.nf"
     process "TRANSFER_GLOBUS"
 

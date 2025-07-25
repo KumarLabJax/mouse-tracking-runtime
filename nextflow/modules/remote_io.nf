@@ -89,17 +89,17 @@ process TRANSFER_GLOBUS {
     id=\$(globus transfer --jq "task_id" --format=UNIX --batch batch_to_from.txt ${globus_src_endpoint} ${globus_dst_endpoint})
     while true; do
         globus task wait --timeout 60 --timeout-exit-code 2 \$id
-        // Task succeeded
+        # Task succeeded
         if [[ \$? == 0 ]]; then
             break
-        // Task failed
+        # Task failed
         elif [[ \$? == 1 ]]; then
             echo "Globus transfer failed."
             exit 1
-        // Timeout, still running. Figure out if something is wrong.
+        # Timeout, still running. Figure out if something is wrong.
         elif [[ \$? == 2 ]]; then
-            // To get all the task info:
-            // globus task show --format=UNIX \$id > globus_task_info.txt
+            # To get all the task info:
+            # globus task show --format=UNIX \$id > globus_task_info.txt
             fault_count=\$(globus task show --format=UNIX -jq "faults" \$id)
             if [[ \$fault_count -gt 0 ]]; then
                 echo "Globus transfer failed with faults."

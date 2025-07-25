@@ -10,19 +10,17 @@ include { SINGLE_MOUSE_TRACKING; SPLIT_BY_CORNERS } from './nextflow/workflows/s
 include { SINGLE_MOUSE_V2_FEATURES; SINGLE_MOUSE_V6_FEATURES } from './nextflow/workflows/feature_generation'
 include { MULTI_MOUSE_TRACKING } from './nextflow/workflows/multi_mouse_pipeline'
 include { MANUALLY_CORRECT_CORNERS; INTEGRATE_CORNER_ANNOTATIONS } from './nextflow/workflows/sleap_manual_correction'
-include { ADD_DUMMY_VIDEO; validateInputFile } from './nextflow/modules/utils'
+include { ADD_DUMMY_VIDEO } from './nextflow/modules/utils'
 
 
 /*
  * Run the selected workflow
  */
 workflow{
-    // Download the data locally if necessary
-    PREPARE_DATA(params.input_batch, params.location)
-
     // Generate pose files
     if (params.workflow == "single-mouse"){
-        SINGLE_MOUSE_TRACKING(PREPARE_DATA.out.out_file)
+        PREPARE_DATA(params.input_batch, params.location, false)
+        SINGLE_MOUSE_TRACKING(PREPARE_DATA.out.file_processing_channel)
         v2_outputs = SINGLE_MOUSE_TRACKING.out[0]
         all_v6_outputs = SINGLE_MOUSE_TRACKING.out[1]
         // Split and publish pose_v6 files depending on if corners were successful
@@ -42,8 +40,8 @@ workflow{
     if (params.workflow == "single-mouse-corrected-corners"){
         // Integrate annotations back into pose files
         // This branch requires files to be local and already url-ified
-        // Use a channel of `all_files` instead of `PREPARE_DATA.out.out_file`
-        INTEGRATE_CORNER_ANNOTATIONS(Channel.fromList(all_files), params.sleap_file)
+        PREPARE_DATA(params.input_batch, params.location, true)
+        INTEGRATE_CORNER_ANNOTATIONS(PREPATE_DATA.out.file_processing_channel, params.sleap_file)
         ADD_DUMMY_VIDEO(INTEGRATE_CORNER_ANNOTATIONS.out, params.clip_duration)
         paired_video_and_pose = ADD_DUMMY_VIDEO.out[0]
 
@@ -51,13 +49,14 @@ workflow{
         SINGLE_MOUSE_V6_FEATURES(paired_video_and_pose)
     }
     if (params.workflow == "single-mouse-v6-features"){
+        PREPARE_DATA(params.input_batch, params.location, false)
         // Generate features from pose_v6 files
         ADD_DUMMY_VIDEO(PREPARE_DATA.out.out_file, params.clip_duration)
         paired_video_and_pose = ADD_DUMMY_VIDEO.out[0]
         SINGLE_MOUSE_V6_FEATURES(paired_video_and_pose)
     }
     if (params.workflow == "multi-mouse"){
-        MULTI_MOUSE_TRACKING(PREPARE_DATA.out.out_file, params.num_mice)
+        MULTI_MOUSE_TRACKING(PREPARE_DATA.out.file_processing_channel, params.num_mice)
     }
 }
 
