@@ -56,6 +56,7 @@ workflow{
         SINGLE_MOUSE_V6_FEATURES(paired_video_and_pose)
     }
     if (params.workflow == "multi-mouse"){
+        PREPARE_DATA(params.input_batch, params.location, false)
         MULTI_MOUSE_TRACKING(PREPARE_DATA.out.file_processing_channel, params.num_mice)
     }
 }
