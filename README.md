@@ -7,107 +7,80 @@ This repository uses both Pytorch and Tensorflow Serving (TFS).
 
 # Installation
 
-Both Google Colab and singularity environments are supported
+Both Google Colab and singularity environments are supported. This environment is used because it is a convenient method to have both pytorch and tensorflow present.
 
 ## Singularity Containers
 
-See the container definition file in the vm folder. This container is based off a google colab public docker.
+See the [container definition file](vm/deployment-runtime-RHEL9.def) in the vm folder. This container is based off a google colab public docker.
 
-# Models
+# Available Models
 
-## Single Mouse Segmentation
+See [model docs](docs/models.md) for information about available models.
 
-Original Training Code: https://github.com/KumarLabJax/MouseTracking
-Trained Models:
-* Tracking Paper Model: https://zenodo.org/records/5806397
-* High Quality Segmenter: (Not published)
+# Running a pipeline
 
+Pipelines are run using nextflow. For a list of all available parameters, see [nextflow parameters](nextflow.config). Not all parameters will affect all pipeline workflows.
 
-### TSF Model
+If you are running the pipeline on the HPC, you should submit the workflow as a job. You can use the example test as a starting template: [test-nextflow.sh](test-nextflow.sh).
 
-The segmentation model was exported using code that resides in the obj-api codebase. This code was largely based on tensorflow example code for optimizing and freezing a model.
+Input files should include the full path. An easy way to generate the list of inputs for `input_batch` is to run `find $(pwd) -name '*.avi' > video_batch.txt`.
 
-## Single Mouse Pose
+## Single Mouse Pipelines
 
-Original Training Code: https://github.com/KumarLabJax/deep-hrnet-mouse
-Trained Models:
-* Gait Paper Model: https://zenodo.org/records/6380163
+See [docs/pipelines.md](docs/pipelines.md) for more specific information about the structure of the pipeline.
 
-### Pytorch Model
+### Video to Features
 
-The pytorch model is the released model.
+The nextflow workflow `single-mouse` generates feature tables from input video.
 
-## Multi-Mouse Pose
+Input:
+* Video Files
 
-Original Training Code: https://github.com/KumarLabJax/deep-hrnet-mouse
-Trained Models:
-* Top-down: In Progress
-* Bottom-up: (Not published)
+Output:
+* `workflow_version.txt` information related to the specific workflow run.
+* Folder named `results` with clipped videos, pose_v2 predictions, and pose_v6 predictions with corners.
+* Folder named `failed_corners` with pose_v6 predictions that failed corners.
+* `manual_corner_corrections.slp` sleap file containing frames to manually correct corners.
+* `qc_batch_[date].csv` QC file reporting single mouse pose quality metrics.
+* pose_v2 related features
+ * `gait.csv` feature file containing gait pipeline features.
+ * `morphometrics.csv` feature file containing morphometric features.
+* pose_v6 related features (successful corners only)
+ * `features.csv` feature file containing JABS-related features.
+ * `fecal_boli.csv` prediction file containing fecal boli counts for each video, used in growth curve modeling.
 
-### Pytorch Model
+Example Command:
+`nextflow -c nextflow.config -c nextflow/configs/profiles/development.config run main.nf --input_batch /path/to/video_batch.txt --workflow single-mouse --pubdir /path/to/output_folder`
 
-The pytorch model is the model saved by the original hrnet code.
+### Corner Correction to Features
 
-## Multi-Mouse Segmentation
+The nextflow workflow `single-mouse-corrected-corners` completes the `single-mouse` pipeline for files that required their corners to be manual correction.
 
-Original Training Code: fork of https://github.com/google-research/deeplab2
-Trained Models:
-* Panoptic Deeplab: Not yet released
+Input:
+* Corrected Sleap file
+* Folder containing pose_v6 predictions to add corners
 
-### TFS Model
+Output:
+* `workflow_version.txt` information related to the specific workflow run.
+* pose_v6 related features
+ * `features.csv` feature file containing JABS-related features.
+ * `fecal_boli.csv` prediction file containing fecal boli counts for each video, used in growth curve modeling.
 
-deeplab2 provides `export_model.py`. This transforms the checkpoint into a tensorflow serving model.
+Example Command:
+`nextflow -c nextflow.config -c nextflow/configs/profiles/development.config run main.nf --input_batch /path/to/pose_v6_batch.txt --sleap_file /path/to/corner-correction.slp --workflow single-mouse-corrected-corners --pubdir /path/to/output_folder`
 
-```
-python3 /deeplab2/deeplab2/export_model.py --checkpoint_path /deeplab2/trained_model/ckpt-125000 --experiment_option_path /deeplab2/trained_model/resnet50_os16.textproto --output_path tfs-models/multi-mouse-segmentation/panoptic-deeplab/
-```
+### Pose File (v6) to Features
 
-## Static Objects
+The nextflow workflow `single-mouse-v6-features` generates pose_v6 features from pose files.
 
-### Arena Corners
+Input:
+* Pose files (arena corners required!)
 
-Original Training Code: In Progress
-Trained Models:
-* Object Detection API (2022): Not yet released
+Output:
+* `workflow_version.txt` information related to the specific workflow run.
+* pose_v6 related features
+ * `features.csv` feature file containing JABS-related features.
+ * `fecal_boli.csv` prediction file containing fecal boli counts for each video, used in growth curve modeling.
 
-#### TFS Model
-
-Export the model using the tf-obj-api exporter (in obj-api environment):
-```
-python /object_detection/models/research/object_detection/exporter_main_v2.py --input_type image_tensor --pipeline_config_path /object_detection/code/tf-obj-api/corner-detection/single-object-testing/pipeline.config --trained_checkpoint_dir /media/bgeuther/Storage/TempStorage/pose-validation/movenet/arena_corner/output_models/ --output_directory /media/bgeuther/Storage/TempStorage/trained-models/static-objects/obj-api-corner/
-```
-Note that this needs to be run in the folder with annotations if the config points to label_map.pbtxt locally.
-`/media/bgeuther/Storage/TempStorage/pose-validation/movenet/arena_corner/` is the location of these annotations.
-
-### Food Hopper
-
-Original Training Code: In Progress
-Trained Models:
-* Object Detection API (2022): In Progress
-
-#### TFS Model
-
-Export the model using the tf-obj-api exporter (in obj-api environment):
-```
-python /object_detection/models/research/object_detection/exporter_main_v2.py --input_type image_tensor --pipeline_config_path /object_detection/code/tf-obj-api/food-detection/segmentation/pipeline.config --trained_checkpoint_dir /media/bgeuther/Storage/TempStorage/pose-validation/movenet/food_hopper/output_models/ --output_directory /media/bgeuther/Storage/TempStorage/trained-models/static-objects/obj-api-food/
-```
-Note that this needs to be run in the folder with annotations if the config points to label_map.pbtxt locally.
-`/media/bgeuther/Storage/TempStorage/pose-validation/movenet/food_hopper/` is the location of these annotations.
-
-### Lixit
-
-Original Training Code: In Progress
-Trained Models:
-* DeepLabCut: In Progress
-
-## Dynamic Objects
-
-### Fecal Boli
-
-Original Training Code: https://github.com/KumarLabJax/deep-hrnet-mouse
-Trained Models:
-* fecal-boli (2020): Not yet published.
-
-#### Pytorch Model
-
-The pytorch model is the model saved by the original hrnet code.
+Example Command:
+`nextflow -c nextflow.config -c nextflow/configs/profiles/development.config run main.nf --input_batch /path/to/pose_v6_batch.txt --workflow single-mouse-v6-features --pubdir /path/to/output_folder`

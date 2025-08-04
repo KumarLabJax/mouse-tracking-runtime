@@ -1,0 +1,38 @@
+Bootstrap: docker
+from: ubuntu:22.04
+
+%setup
+	mkdir -p ${SINGULARITY_ROOTFS}/mouse-tracking-runtime/support_code/
+
+%files
+	static-object-correct.py /mouse-tracking-runtime/support_code/.
+
+%post
+	apt-get update
+	export DEBIAN_FRONTEND=noninteractive TZ=Etc/UTC
+	# Base ubuntu getting wget + image formats + ffmpeg
+	apt-get install -y wget ffmpeg libsm6 libxext6 libjpeg8-dev zlib1g-dev
+	# Potential GUI stuff
+	apt-get install -y qt6-base-dev libglu1-mesa-dev libgl1-mesa-glx alsa-utils libnss3 libxkbfile1 'libxcb*'
+	# Get conda (SLEAPs official support route)
+	CONDA_INSTALL_PATH="/usr/local/conda-forge"
+	wget https://github.com/conda-forge/miniforge/releases/latest/download/Miniforge3-$(uname)-$(uname -m).sh
+	chmod +x Miniforge3-$(uname)-$(uname -m).sh
+	./Miniforge3-$(uname)-$(uname -m).sh -b -p $CONDA_INSTALL_PATH
+	. /usr/local/conda-forge/bin/activate
+	# Install SLEAP
+	conda create -y -n sleap -c conda-forge -c nvidia -c sleap/label/dev -c sleap -c anaconda sleap
+	# Setup some default environment loading
+	ENV_RC="/usr/local/conda-forge/activate-environment.bashrc"
+	echo "#!/bin/bash\n" > $ENV_RC
+	echo "source /usr/local/conda-forge/bin/activate\n" >> $ENV_RC
+	echo "conda activate sleap" >> $ENV_RC
+
+%environment
+	source /usr/local/conda-forge/activate-environment.bashrc
+
+%runscript
+	# Note: This environment is fragile and should be run in isolation mode (-I)
+	# The isolation flag disallows home folder site-packages
+	# See https://github.com/conda/conda/issues/13337
+	python -I /usr/local/conda-forge/envs/sleap/bin/sleap-label
