@@ -1,6 +1,7 @@
 process PREDICT_MULTI_MOUSE_SEGMENTATION {
-    label "gpu"
+    label "gpu_long"
     label "tracking"
+    label "r_multi_seg"
     
     input:
     tuple path(video_file), path(in_pose)
@@ -16,8 +17,9 @@ process PREDICT_MULTI_MOUSE_SEGMENTATION {
 }
 
 process PREDICT_MULTI_MOUSE_KEYPOINTS {
-    label "gpu"
+    label "gpu_long"
     label "tracking"
+    label "r_multi_keypoints"
     
     input:
     tuple path(video_file), path(in_pose)
@@ -35,6 +37,7 @@ process PREDICT_MULTI_MOUSE_KEYPOINTS {
 process PREDICT_MULTI_MOUSE_IDENTITY {
     label "gpu"
     label "tracking"
+    label "r_multi_identity"
     
     input:
     tuple path(video_file), path(in_pose)
