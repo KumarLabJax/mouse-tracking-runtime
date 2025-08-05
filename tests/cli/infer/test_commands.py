@@ -31,7 +31,7 @@ def test_infer_app_has_commands():
 @pytest.mark.parametrize(
     "command_name,expected_docstring",
     [
-        ("arena-corner", "Infer an onnx single mouse pose model."),
+        ("arena-corner", "Infer arena corner detection model."),
         ("fecal-boli", "Run fecal boli inference."),
         ("food-hopper", "Run food hopper inference."),
         ("lixit", "Run lixit inference."),
@@ -39,6 +39,7 @@ def test_infer_app_has_commands():
         ("multi-pose", "Run multi-pose inference."),
         ("single-pose", "Run single-pose inference."),
         ("single-segmentation", "Run single-segmentation inference."),
+        ("multi-segmentation", "Run multi-segmentation inference."),
     ],
     ids=[
         "arena_corner_command",
@@ -49,6 +50,7 @@ def test_infer_app_has_commands():
         "multi_pose_command",
         "single_pose_command",
         "single_segmentation_command",
+        "multi_segmentation_command",
     ],
 )
 def test_infer_commands_registered(command_name, expected_docstring):
@@ -84,6 +86,7 @@ def test_infer_commands_list():
         "multi-pose",
         "single-pose",
         "single-segmentation",
+        "multi-segmentation",
     ]
 
     for command in expected_commands:
@@ -103,6 +106,7 @@ def test_infer_commands_help_structure():
         "multi-pose",
         "single-pose",
         "single-segmentation",
+        "multi-segmentation",
     ]
 
     # Act & Assert
@@ -152,6 +156,7 @@ def test_infer_app_without_arguments():
         "multi_pose",
         "single_pose",
         "single_segmentation",
+        "multi_segmentation",
     ],
     ids=[
         "arena_corner_function",
@@ -162,6 +167,7 @@ def test_infer_app_without_arguments():
         "multi_pose_function",
         "single_pose_function",
         "single_segmentation_function",
+        "multi_segmentation_function",
     ],
 )
 def test_infer_command_functions_exist(command_function_name):
@@ -185,6 +191,7 @@ def test_infer_command_functions_exist(command_function_name):
         ("multi_pose", "multi-pose inference"),
         ("single_pose", "single-pose inference"),
         ("single_segmentation", "single-segmentation inference"),
+        ("multi_segmentation", "multi-segmentation inference"),
     ],
     ids=[
         "arena_corner_docstring",
@@ -195,6 +202,7 @@ def test_infer_command_functions_exist(command_function_name):
         "multi_pose_docstring",
         "single_pose_docstring",
         "single_segmentation_docstring",
+        "multi_segmentation_docstring",
     ],
 )
 def test_infer_command_function_docstrings(
@@ -224,6 +232,7 @@ def test_infer_command_function_docstrings(
         "multi-pose",
         "single-pose",
         "single-segmentation",
+        "multi-segmentation",
     ],
     ids=[
         "arena_corner_help",
@@ -234,6 +243,7 @@ def test_infer_command_function_docstrings(
         "multi_pose_help",
         "single_pose_help",
         "single_segmentation_help",
+        "multi_segmentation_help",
     ],
 )
 def test_infer_command_help_format(command_name):
@@ -263,6 +273,7 @@ def test_infer_command_name_conventions():
         "multi_pose",
         "single_pose",
         "single_segmentation",
+        "multi_segmentation",
     ]
 
     # Act
@@ -317,9 +328,22 @@ def test_infer_commands_with_minimal_valid_inputs():
         "multi-pose",
         "single-pose",
         "single-segmentation",
+        "multi-segmentation",
     ]
 
-    with patch("pathlib.Path.exists", return_value=True):
+    # Mock all the inference functions and file existence
+    with (
+        patch.object(Path, "exists", return_value=True),
+        patch("mouse_tracking.cli.infer.infer_arena_corner_model"),
+        patch("mouse_tracking.cli.infer.infer_fecal_boli_pytorch"),
+        patch("mouse_tracking.cli.infer.infer_food_hopper_model"),
+        patch("mouse_tracking.cli.infer.infer_lixit_model"),
+        patch("mouse_tracking.cli.infer.infer_multi_identity_tfs"),
+        patch("mouse_tracking.cli.infer.infer_multi_pose_pytorch"),
+        patch("mouse_tracking.cli.infer.infer_single_pose_pytorch"),
+        patch("mouse_tracking.cli.infer.infer_single_segmentation_tfs"),
+        patch("mouse_tracking.cli.infer.infer_multi_segmentation_tfs"),
+    ):
         # Test commands with optional out-file
         for command in commands_with_optional_outfile:
             result = runner.invoke(app, [command, "--video", str(test_video)])
@@ -351,6 +375,7 @@ def test_infer_commands_mutually_exclusive_validation():
         ("multi-pose", ["--out-file", str(test_output)]),
         ("single-pose", ["--out-file", str(test_output)]),
         ("single-segmentation", ["--out-file", str(test_output)]),
+        ("multi-segmentation", ["--out-file", str(test_output)]),
     ]
 
     with patch("pathlib.Path.exists", return_value=True):
@@ -367,7 +392,8 @@ def test_infer_commands_mutually_exclusive_validation():
                 str(test_video),
                 "--frame",
                 str(test_frame),
-            ] + extra_args
+                *extra_args,
+            ]
             result = runner.invoke(app, cmd_args)
             assert result.exit_code == 1
             assert "Cannot specify both --video and --frame" in result.stdout

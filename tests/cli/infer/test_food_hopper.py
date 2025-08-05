@@ -34,11 +34,15 @@ class TestFoodHopperImplementation:
             "neither_specified_error",
         ],
     )
-    def test_food_hopper_input_validation(self, video_arg, frame_arg, expected_success):
+    @patch("mouse_tracking.cli.infer.infer_food_hopper_model")
+    def test_food_hopper_input_validation(
+        self, mock_infer, video_arg, frame_arg, expected_success
+    ):
         """
         Test input validation for food hopper implementation.
 
         Args:
+            mock_infer: Mock for the inference function
             video_arg: Video argument flag or None
             frame_arg: Frame argument flag or None
             expected_success: Whether the command should succeed
@@ -59,10 +63,11 @@ class TestFoodHopperImplementation:
             # Assert
             if expected_success:
                 assert result.exit_code == 0
-                assert "Running TFS inference" in result.stdout
+                mock_infer.assert_called_once()
             else:
                 assert result.exit_code == 1
                 assert "Error:" in result.stdout
+                mock_infer.assert_not_called()
 
     @pytest.mark.parametrize(
         "model_choice,runtime_choice,expected_success",
@@ -73,13 +78,15 @@ class TestFoodHopperImplementation:
         ],
         ids=["valid_choices", "invalid_model", "invalid_runtime"],
     )
+    @patch("mouse_tracking.cli.infer.infer_food_hopper_model")
     def test_food_hopper_choice_validation(
-        self, model_choice, runtime_choice, expected_success
+        self, mock_infer, model_choice, runtime_choice, expected_success
     ):
         """
         Test model and runtime choice validation.
 
         Args:
+            mock_infer: Mock for the inference function
             model_choice: Model choice to test
             runtime_choice: Runtime choice to test
             expected_success: Whether the command should succeed
@@ -102,9 +109,14 @@ class TestFoodHopperImplementation:
             # Assert
             if expected_success:
                 assert result.exit_code == 0
-                assert f"Model: {model_choice}" in result.stdout
+                mock_infer.assert_called_once()
+                # Verify the args object passed to the inference function
+                args = mock_infer.call_args[0][0]
+                assert args.model == model_choice
+                assert args.runtime == runtime_choice
             else:
                 assert result.exit_code != 0
+                mock_infer.assert_not_called()
 
     @pytest.mark.parametrize(
         "file_exists,expected_success",
@@ -114,11 +126,15 @@ class TestFoodHopperImplementation:
         ],
         ids=["file_exists", "file_not_exists"],
     )
-    def test_food_hopper_file_existence_validation(self, file_exists, expected_success):
+    @patch("mouse_tracking.cli.infer.infer_food_hopper_model")
+    def test_food_hopper_file_existence_validation(
+        self, mock_infer, file_exists, expected_success
+    ):
         """
         Test file existence validation.
 
         Args:
+            mock_infer: Mock for the inference function
             file_exists: Whether the input file should exist
             expected_success: Whether the command should succeed
         """
@@ -132,28 +148,20 @@ class TestFoodHopperImplementation:
             # Assert
             if expected_success:
                 assert result.exit_code == 0
-                assert "Running TFS inference" in result.stdout
+                mock_infer.assert_called_once()
             else:
                 assert result.exit_code == 1
                 assert "does not exist" in result.stdout
+                mock_infer.assert_not_called()
 
     @pytest.mark.parametrize(
-        "out_file,out_image,out_video,expected_outputs",
+        "out_file,out_image,out_video",
         [
-            (None, None, None, []),
-            ("output.json", None, None, ["Output file: output.json"]),
-            (None, "output.png", None, ["Output image: output.png"]),
-            (None, None, "output.mp4", ["Output video: output.mp4"]),
-            (
-                "output.json",
-                "output.png",
-                "output.mp4",
-                [
-                    "Output file: output.json",
-                    "Output image: output.png",
-                    "Output video: output.mp4",
-                ],
-            ),
+            (None, None, None),
+            ("output.json", None, None),
+            (None, "output.png", None),
+            (None, None, "output.mp4"),
+            ("output.json", "output.png", "output.mp4"),
         ],
         ids=[
             "no_outputs",
@@ -163,17 +171,18 @@ class TestFoodHopperImplementation:
             "all_outputs",
         ],
     )
+    @patch("mouse_tracking.cli.infer.infer_food_hopper_model")
     def test_food_hopper_output_options(
-        self, out_file, out_image, out_video, expected_outputs
+        self, mock_infer, out_file, out_image, out_video
     ):
         """
         Test output options functionality.
 
         Args:
+            mock_infer: Mock for the inference function
             out_file: Output file path or None
             out_image: Output image path or None
             out_video: Output video path or None
-            expected_outputs: Expected output messages
         """
         # Arrange
         cmd_args = ["food-hopper", "--video", str(self.test_video_path)]
@@ -191,29 +200,33 @@ class TestFoodHopperImplementation:
 
             # Assert
             assert result.exit_code == 0
-            for expected_output in expected_outputs:
-                assert expected_output in result.stdout
+            mock_infer.assert_called_once()
+
+            # Verify the args object contains the correct output paths
+            args = mock_infer.call_args[0][0]
+            assert args.out_file == out_file
+            assert args.out_image == out_image
+            assert args.out_video == out_video
 
     @pytest.mark.parametrize(
-        "num_frames,frame_interval,expected_in_output",
+        "num_frames,frame_interval",
         [
-            (100, 100, "Frames: 100, Interval: 100"),  # defaults
-            (50, 10, "Frames: 50, Interval: 10"),  # custom values
-            (1, 1, "Frames: 1, Interval: 1"),  # minimal values
-            (1000, 500, "Frames: 1000, Interval: 500"),  # large values
+            (100, 100),  # defaults
+            (50, 10),  # custom values
+            (1, 1),  # minimal values
+            (1000, 500),  # large values
         ],
         ids=["default_values", "custom_values", "minimal_values", "large_values"],
     )
-    def test_food_hopper_frame_options(
-        self, num_frames, frame_interval, expected_in_output
-    ):
+    @patch("mouse_tracking.cli.infer.infer_food_hopper_model")
+    def test_food_hopper_frame_options(self, mock_infer, num_frames, frame_interval):
         """
         Test frame number and interval options.
 
         Args:
+            mock_infer: Mock for the inference function
             num_frames: Number of frames to process
             frame_interval: Frame interval
-            expected_in_output: Expected output message containing frame info
         """
         # Arrange
         cmd_args = [
@@ -232,9 +245,15 @@ class TestFoodHopperImplementation:
 
             # Assert
             assert result.exit_code == 0
-            assert expected_in_output in result.stdout
+            mock_infer.assert_called_once()
 
-    def test_food_hopper_default_values(self):
+            # Verify the args object contains the correct frame options
+            args = mock_infer.call_args[0][0]
+            assert args.num_frames == num_frames
+            assert args.frame_interval == frame_interval
+
+    @patch("mouse_tracking.cli.infer.infer_food_hopper_model")
+    def test_food_hopper_default_values(self, mock_infer):
         """Test that food hopper uses the correct default values."""
         # Arrange
         cmd_args = ["food-hopper", "--video", str(self.test_video_path)]
@@ -245,9 +264,16 @@ class TestFoodHopperImplementation:
 
             # Assert
             assert result.exit_code == 0
-            assert "Model: social-2022-pipeline" in result.stdout
-            assert "Frames: 100, Interval: 100" in result.stdout
-            assert "Running TFS inference" in result.stdout
+            mock_infer.assert_called_once()
+
+            args = mock_infer.call_args[0][0]
+            assert args.model == "social-2022-pipeline"
+            assert args.runtime == "tfs"
+            assert args.num_frames == 100
+            assert args.frame_interval == 100
+            assert args.out_file is None
+            assert args.out_image is None
+            assert args.out_video is None
 
     def test_food_hopper_help_text(self):
         """Test that the food hopper command has proper help text."""
@@ -288,7 +314,8 @@ class TestFoodHopperImplementation:
             assert result.exit_code == 1
             assert "does not exist" in result.stdout
 
-    def test_food_hopper_integration_flow(self):
+    @patch("mouse_tracking.cli.infer.infer_food_hopper_model")
+    def test_food_hopper_integration_flow(self, mock_infer):
         """Test the complete integration flow of food hopper inference."""
         # Arrange
         cmd_args = [
@@ -317,21 +344,22 @@ class TestFoodHopperImplementation:
 
             # Assert
             assert result.exit_code == 0
+            mock_infer.assert_called_once()
 
-            # Verify all expected outputs are in the result
-            expected_messages = [
-                "Running TFS inference on video",
-                "Model: social-2022-pipeline",
-                "Frames: 25, Interval: 5",
-                "Output file: output.json",
-                "Output image: output.png",
-                "Output video: output.mp4",
-            ]
+            # Verify the args object has all the expected values
+            args = mock_infer.call_args[0][0]
+            assert args.model == "social-2022-pipeline"
+            assert args.runtime == "tfs"
+            assert args.video == str(self.test_video_path)
+            assert args.frame is None
+            assert args.out_file == "output.json"
+            assert args.out_image == "output.png"
+            assert args.out_video == "output.mp4"
+            assert args.num_frames == 25
+            assert args.frame_interval == 5
 
-            for message in expected_messages:
-                assert message in result.stdout
-
-    def test_food_hopper_video_input_processing(self):
+    @patch("mouse_tracking.cli.infer.infer_food_hopper_model")
+    def test_food_hopper_video_input_processing(self, mock_infer):
         """Test food hopper specifically with video input."""
         # Arrange
         cmd_args = ["food-hopper", "--video", str(self.test_video_path)]
@@ -342,10 +370,14 @@ class TestFoodHopperImplementation:
 
             # Assert
             assert result.exit_code == 0
-            assert "Running TFS inference on video" in result.stdout
-            assert str(self.test_video_path) in result.stdout
+            mock_infer.assert_called_once()
 
-    def test_food_hopper_frame_input_processing(self):
+            args = mock_infer.call_args[0][0]
+            assert args.video == str(self.test_video_path)
+            assert args.frame is None
+
+    @patch("mouse_tracking.cli.infer.infer_food_hopper_model")
+    def test_food_hopper_frame_input_processing(self, mock_infer):
         """Test food hopper specifically with frame input."""
         # Arrange
         cmd_args = ["food-hopper", "--frame", str(self.test_frame_path)]
@@ -356,8 +388,11 @@ class TestFoodHopperImplementation:
 
             # Assert
             assert result.exit_code == 0
-            assert "Running TFS inference on frame" in result.stdout
-            assert str(self.test_frame_path) in result.stdout
+            mock_infer.assert_called_once()
+
+            args = mock_infer.call_args[0][0]
+            assert args.video is None
+            assert args.frame == str(self.test_frame_path)
 
     @pytest.mark.parametrize(
         "edge_case_path",
@@ -376,11 +411,13 @@ class TestFoodHopperImplementation:
             "relative_path",
         ],
     )
-    def test_food_hopper_edge_case_paths(self, edge_case_path):
+    @patch("mouse_tracking.cli.infer.infer_food_hopper_model")
+    def test_food_hopper_edge_case_paths(self, mock_infer, edge_case_path):
         """
         Test food hopper with edge case file paths.
 
         Args:
+            mock_infer: Mock for the inference function
             edge_case_path: Path with special characters to test
         """
         # Arrange
@@ -390,56 +427,32 @@ class TestFoodHopperImplementation:
 
             # Assert
             assert result.exit_code == 0
-            assert "Running TFS inference" in result.stdout
+            mock_infer.assert_called_once()
 
-    def test_food_hopper_frame_count_edge_cases(self):
+            args = mock_infer.call_args[0][0]
+            assert args.video == edge_case_path
+
+    @pytest.mark.parametrize(
+        "num_frames",
+        [1, 10, 100, 1000, 10000],
+        ids=[
+            "minimal_frames",
+            "small_frames",
+            "default_frames",
+            "large_frames",
+            "huge_frames",
+        ],
+    )
+    @patch("mouse_tracking.cli.infer.infer_food_hopper_model")
+    def test_food_hopper_frame_count_edge_cases(self, mock_infer, num_frames):
         """Test food hopper with edge case frame counts."""
-        # Arrange & Act - very small frame count
-        with patch("pathlib.Path.exists", return_value=True):
-            result = self.runner.invoke(
-                app,
-                [
-                    "food-hopper",
-                    "--video",
-                    str(self.test_video_path),
-                    "--num-frames",
-                    "1",
-                ],
-            )
-
-            # Assert
-            assert result.exit_code == 0
-            assert "Frames: 1, Interval: 100" in result.stdout
-
-        # Arrange & Act - large frame count
-        with patch("pathlib.Path.exists", return_value=True):
-            result = self.runner.invoke(
-                app,
-                [
-                    "food-hopper",
-                    "--video",
-                    str(self.test_video_path),
-                    "--num-frames",
-                    "10000",
-                ],
-            )
-
-            # Assert
-            assert result.exit_code == 0
-            assert "Frames: 10000, Interval: 100" in result.stdout
-
-    def test_food_hopper_comparison_with_arena_corner(self):
-        """Test that food hopper has same parameter structure as arena corner."""
-        # This test ensures consistency between similar commands
         # Arrange
         cmd_args = [
             "food-hopper",
             "--video",
             str(self.test_video_path),
-            "--model",
-            "social-2022-pipeline",
-            "--runtime",
-            "tfs",
+            "--num-frames",
+            str(num_frames),
         ]
 
         with patch("pathlib.Path.exists", return_value=True):
@@ -448,42 +461,63 @@ class TestFoodHopperImplementation:
 
             # Assert
             assert result.exit_code == 0
-            # Should use same model and runtime as arena_corner
-            assert "Model: social-2022-pipeline" in result.stdout
-            assert "Running TFS inference" in result.stdout
+            mock_infer.assert_called_once()
 
-    def test_food_hopper_parameter_independence(self):
+            args = mock_infer.call_args[0][0]
+            assert args.num_frames == num_frames
+
+    @patch("mouse_tracking.cli.infer.infer_food_hopper_model")
+    def test_food_hopper_parameter_independence(self, mock_infer):
         """Test that num_frames and frame_interval work independently."""
-        # Arrange & Act - only num_frames changed
+        # Arrange - only num_frames changed
+        cmd_args = [
+            "food-hopper",
+            "--video",
+            str(self.test_video_path),
+            "--num-frames",
+            "200",
+        ]
+
         with patch("pathlib.Path.exists", return_value=True):
-            result = self.runner.invoke(
-                app,
-                [
-                    "food-hopper",
-                    "--video",
-                    str(self.test_video_path),
-                    "--num-frames",
-                    "200",
-                ],
-            )
+            # Act
+            result = self.runner.invoke(app, cmd_args)
 
             # Assert
             assert result.exit_code == 0
-            assert "Frames: 200, Interval: 100" in result.stdout
+            mock_infer.assert_called_once()
 
-        # Arrange & Act - only frame_interval changed
+            args = mock_infer.call_args[0][0]
+            assert args.num_frames == 200
+            assert args.frame_interval == 100  # should be default
+
+    @patch("mouse_tracking.cli.infer.infer_food_hopper_model")
+    def test_food_hopper_args_compatibility_object(self, mock_infer):
+        """Test that the InferenceArgs compatibility object is properly structured."""
+        # Arrange
+        cmd_args = [
+            "food-hopper",
+            "--video",
+            str(self.test_video_path),
+            "--out-file",
+            "test.json",
+        ]
+
         with patch("pathlib.Path.exists", return_value=True):
-            result = self.runner.invoke(
-                app,
-                [
-                    "food-hopper",
-                    "--video",
-                    str(self.test_video_path),
-                    "--frame-interval",
-                    "50",
-                ],
-            )
+            # Act
+            result = self.runner.invoke(app, cmd_args)
 
             # Assert
             assert result.exit_code == 0
-            assert "Frames: 100, Interval: 50" in result.stdout
+            mock_infer.assert_called_once()
+
+            # Verify that the args object has all expected attributes
+            args = mock_infer.call_args[0][0]
+            assert hasattr(args, "model")
+            assert hasattr(args, "runtime")
+            assert hasattr(args, "video")
+            assert hasattr(args, "frame")
+            assert hasattr(args, "out_file")
+            assert hasattr(args, "out_image")
+            assert hasattr(args, "out_video")
+            assert hasattr(args, "num_frames")
+            assert hasattr(args, "frame_interval")
