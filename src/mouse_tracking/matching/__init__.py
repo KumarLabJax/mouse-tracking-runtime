@@ -16,50 +16,40 @@ Key algorithms:
 - Tracklet stitching for long-term identity management
 """
 
+from .batch_processing import BatchedFrameProcessor
 from .core import (
-    Detection,
-    Tracklet,
     Fragment,
+    Tracklet,
     VideoObservations,
-    get_point_dist,
     compare_pose_and_contours,
-    make_pose_seg_dist_mat,
+    get_point_dist,
     hungarian_match_points_seg,
+    make_pose_seg_dist_mat,
 )
-
+from .detection import Detection
+from .greedy_matching import vectorized_greedy_matching
 from .vectorized_features import (
     VectorizedDetectionFeatures,
-    compute_vectorized_pose_distances,
     compute_vectorized_embedding_distances,
-    compute_vectorized_segmentation_ious,
     compute_vectorized_match_costs,
+    compute_vectorized_pose_distances,
+    compute_vectorized_segmentation_ious,
 )
 
-from .greedy_matching import vectorized_greedy_matching
-
-from .batch_processing import BatchedFrameProcessor
-
 __all__ = [
-    # Core classes
-    "Detection",
-    "Tracklet", 
-    "Fragment",
-    "VideoObservations",
-    
-    # Core functions
-    "get_point_dist",
-    "compare_pose_and_contours",
-    "make_pose_seg_dist_mat",
-    "hungarian_match_points_seg",
-    
-    # Vectorized features
-    "VectorizedDetectionFeatures",
-    "compute_vectorized_pose_distances",
-    "compute_vectorized_embedding_distances",
-    "compute_vectorized_segmentation_ious",
-    "compute_vectorized_match_costs",
-    
-    # Optimized algorithms
-    "vectorized_greedy_matching",
     "BatchedFrameProcessor",
+    "Detection",
+    "Fragment",
+    "Tracklet",
+    "VectorizedDetectionFeatures",
+    "VideoObservations",
+    "compare_pose_and_contours",
+    "compute_vectorized_embedding_distances",
+    "compute_vectorized_match_costs",
+    "compute_vectorized_pose_distances",
+    "compute_vectorized_segmentation_ious",
+    "get_point_dist",
+    "hungarian_match_points_seg",
+    "make_pose_seg_dist_mat",
+    "vectorized_greedy_matching",
 ]

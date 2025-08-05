@@ -37,7 +37,7 @@ class TestCalculateCosts:
             args, kwargs = mock_cost.call_args
             assert len(args) == 2  # Two detections
             assert not kwargs.get("pose_rotation")
-            
+
             # Should return correct shape
             assert result.shape == (1, 1)
             assert result[0, 0] == 0.5
@@ -398,7 +398,10 @@ class TestCalculateCosts:
         video_obs._pool = None
 
         # Mock calculate_match_cost to not be called (simulating an error)
-        with patch.object(Detection, "calculate_match_cost", side_effect=RuntimeError), pytest.raises(RuntimeError):
+        with (
+            patch.object(Detection, "calculate_match_cost", side_effect=RuntimeError),
+            pytest.raises(RuntimeError),
+        ):
             video_obs._calculate_costs(0, 1)
 
     def test_calculate_costs_method_call_order_non_parallel(self, basic_detection):
