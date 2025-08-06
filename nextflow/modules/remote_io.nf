@@ -1,3 +1,10 @@
+/**
+ * Checks if the user has a valid Globus authentication session.
+ *
+ * @param globus_endpoint The Globus endpoint to check authentication against
+ *
+ * @exception If the user is not authenticated, the process will exit with an error.
+ */
 process CHECK_GLOBUS_AUTH {
     label "globus"
     
@@ -21,6 +28,14 @@ process CHECK_GLOBUS_AUTH {
     // But this needs to be parsed and compared with the endpoint expiration
 }
 
+/**
+ * Filters a list of video files to only those that do not have corresponding processed pose files on Globus.
+ *
+ * @param globus_endpoint The Globus endpoint where processed pose files are stored
+ * @param test_files A file containing a list of video files to check
+ *
+ * @return unprocessed_files A file containing a list of video files that do not have a corresponding pose file.
+ */
 process FILTER_UNPROCESSED_GLOBUS {
     label "globus"
 
@@ -44,6 +59,14 @@ process FILTER_UNPROCESSED_GLOBUS {
     """
 }
 
+/**
+ * Filters a list of video files to only those that do not have corresponding processed pose files on Dropbox.
+ *
+ * @param dropbox_prefix The rclone remote prefix where processed pose files are stored
+ * @param test_files A file containing a list of video files to check
+ *
+ * @return unprocessed_files A file containing a list of video files that do not have corresponding processed pose files
+ */
 process FILTER_UNPROCESSED_DROPBOX {
     label "rclone"
     label "dropbox"
@@ -71,6 +94,15 @@ process FILTER_UNPROCESSED_DROPBOX {
     """
 }
 
+/**
+ * Transfers files between 2 Globus endpoints.
+ *
+ * @param globus_src_endpoint The source Globus endpoint to transfer files from
+ * @param globus_dst_endpoint The destination Globus endpoint to transfer files to
+ * @param files_to_transfer A file containing a list of files to transfer
+ *
+ * @return globus_folder A file containing the path to this tasks folder.
+ */
 process TRANSFER_GLOBUS {
     label "globus"
     
@@ -115,6 +147,14 @@ process TRANSFER_GLOBUS {
     """
 }
 
+/**
+ * Retrieves files from Dropbox using rclone.
+ *
+ * @param files_to_transfer A file containing a list of files to transfer
+ * @param dropbox_prefix The rclone remote prefix where files are stored
+ *
+ * @return remote_files A file containing a list of the retrieved files with full paths.
+ */
 process GET_DATA_FROM_DROPBOX {
     label "rclone"
     label "dropbox"
@@ -134,6 +174,15 @@ process GET_DATA_FROM_DROPBOX {
     """
 }
 
+/**
+ * Uploads a file to Dropbox using rclone.
+ *
+ * @param file_to_upload The file to be uploaded
+ * @param tuple
+ *  - result_file The path to the result file
+ *  - publish_filename The desired publish filename
+ * @param dropbox_prefix The rclone remote prefix where files are to be uploaded
+ */
 process PUT_DATA_TO_DROPBOX {
     label "rclone"
     label "dropbox"
