@@ -157,9 +157,9 @@ class TestGenerateGreedyTracklets:
         for frame in range(3):
             assert len(video_obs._observation_id_dict[frame]) == 3
 
-    @patch("mouse_tracking.utils.matching.VideoObservations._calculate_costs")
-    @patch("mouse_tracking.utils.matching.VideoObservations._start_pool")
-    @patch("mouse_tracking.utils.matching.VideoObservations._kill_pool")
+    @patch("mouse_tracking.matching.core.VideoObservations._calculate_costs")
+    @patch("mouse_tracking.matching.core.VideoObservations._start_pool")
+    @patch("mouse_tracking.matching.core.VideoObservations._kill_pool")
     def test_generate_greedy_tracklets_multithreading(
         self, mock_kill_pool, mock_start_pool, mock_calculate_costs, basic_detection
     ):
@@ -194,8 +194,8 @@ class TestGenerateGreedyTracklets:
         # The pool should be killed after the processing is done
         mock_kill_pool.assert_called_once()
 
-    @patch("mouse_tracking.utils.matching.VideoObservations._start_pool")
-    @patch("mouse_tracking.utils.matching.VideoObservations._kill_pool")
+    @patch("mouse_tracking.matching.core.VideoObservations._start_pool")
+    @patch("mouse_tracking.matching.core.VideoObservations._kill_pool")
     def test_generate_greedy_tracklets_single_thread(
         self, mock_kill_pool, mock_start_pool, basic_detection
     ):
@@ -210,7 +210,7 @@ class TestGenerateGreedyTracklets:
         mock_start_pool.assert_not_called()
         mock_kill_pool.assert_not_called()
 
-    @patch("mouse_tracking.utils.matching.VideoObservations._calculate_costs")
+    @patch("mouse_tracking.matching.core.VideoObservations._calculate_costs")
     def test_generate_greedy_tracklets_calculate_costs_called(
         self, mock_calculate_costs, basic_detection
     ):
