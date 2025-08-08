@@ -58,7 +58,7 @@ process GENERATE_MULTI_MOUSE_TRACKLETS {
     val num_animals
 
     output:
-    tuple path(video_file), path("${video_file.baseName}_pose_est_v4.h5"), emit: pose_file
+    tuple path(video_file), path("${video_file.baseName}_pose_est_v4.h5"), emit: files
 
     // Number of tracklets is not yet a parameter accepted by code, so num_animals is currently ignored
     script:

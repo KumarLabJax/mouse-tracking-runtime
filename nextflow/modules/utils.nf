@@ -1,3 +1,68 @@
+/**
+ * Lazy nextflow module for creating files, useful for testing.
+ *
+ * @param file_name The name of the file to be created
+ * @param file_content The content to be written to the file
+ * @return A path to the created file
+ */
+process CREATE_FILE {
+    label "r_util"
+
+    input:
+    val file_name
+    val file_content
+
+    output:
+    path file_name, emit: created_file
+
+    script:
+    """
+    echo "${file_content}" > ${file_name}
+    sleep 10
+    """
+}
+
+process FILTER_LOCAL_BATCH {
+    label "r_util"
+
+    input:
+    path input_batch
+    val ignore_invalid_inputs
+    val filter_processed
+    val search_dir
+
+    output:
+    path "files_to_process.txt", emit: process_filelist
+
+    script:
+    """
+    touch files_to_process.txt
+    while IFS="" read -r file; do
+        if [[ ! -f "\${file}" && ${ignore_invalid_inputs} != "true" ]]; then
+            echo "File does not exist: \${file}"
+            exit 1
+        else
+            echo "\${file} exists, adding to process list."
+            echo "\${file}" >> files_to_process.txt
+        fi
+    done < ${input_batch}
+    
+    if [[ ${filter_processed} == "true" ]]; then
+        mv files_to_process.txt all_files.txt
+        touch files_to_process.txt
+        echo "Filtering out already processed files..."
+        while IFS="" read -f file; do
+            pose_file="${search_dir}/\${file/.*}_pose_est_v6.h5"
+            if [[ -f "\${pose_file}" ]]; then
+                echo "File \${file} already processed, skipping."
+            else
+                echo "\${file}" >> files_to_process.txt
+            fi
+        done < files_to_process.txt
+    fi
+    """
+}
+
 process VIDEO_TO_POSE {
     label "r_util"
 
@@ -11,30 +76,6 @@ process VIDEO_TO_POSE {
     script:
     """
     touch "${video_file.baseName}_pose_est_v0.h5"
-    sleep 10
-    """
-}
-
-process CHECK_FILE {
-    label "r_util"
-
-    input:
-    val file_to_check
-
-    output:
-    val file_to_check, emit: file
-    // path "file(${file_to_check})", emit: file
-    // val !file("${file_to_check}").exists(), emit: file_exists
-
-    script:
-    """
-    echo "Checking ${file_to_check}"
-    if [ -f "${file_to_check}" ]; then
-        echo "File exists"
-    else
-        echo "File does not exist"
-        exit 1
-    fi
     sleep 10
     """
 }
@@ -338,25 +379,68 @@ def validateInputFile(String file_path, String pipeline_type) {
     
     def extension = file_path.substring(file_path.lastIndexOf('.'))
     
-    // Check if file exists
-    if (!file.exists()) {
-        return [false, "File does not exist: ${file_path}"]
-    }
-    
-    // Check if file is readable
-    if (!file.canRead()) {
-        return [false, "File is not readable: ${file_path}"]
-    }
-    
-    // Check if file is non-empty
-    if (file.size() == 0) {
-        return [false, "File is empty: ${file_path}"]
-    }
-    
     // Check file extension against allowed extensions for pipeline type
     if (!valid_extensions[pipeline_type].contains(extension.toLowerCase())) {
         return [false, "Invalid file extension: ${extension}. For pipeline ${pipeline_type}, expected one of: ${valid_extensions[pipeline_type]}"]
     }
     
     return [true, ""]
+}
+
+/**
+ * Subsets an input file list by the formats allowed for a specific pipeline type.
+ *
+ * @param in_file_list The path to the file that contains the list of intut files
+ * @param pipeline_type The type of pipeline being run. See validateInputFile for valid types.
+ * @return A list of valid file paths that match the allowed formats for the specified pipeline type.
+ */
+def validateInputFilelist(String in_file_list, String pipeline_type) {
+    def all_valid_files = []
+    def invalid_files = []
+    def valid_files = []
+
+    def batch_lines = file(in_file_list).text.readLines()
+
+    // Validate each file in the batch
+    batch_lines.each { file_path ->
+        def (is_valid, error_message) = validateInputFile(file_path, pipeline_type)
+
+        if (is_valid) {
+            valid_files.add(file_path)
+        } else {
+            invalid_files.add([file_path, error_message])
+        }
+    }
+
+    // Report any invalid files
+    if (invalid_files.size() > 0) {
+        println "The following files failed validation:"
+        invalid_files.each { file_path, error_message ->
+            println "  - ${error_message}"
+        }
+
+        if (!params.ignore_invalid_inputs) {
+            println "Please check the input files and try again."
+            println "If you want to ignore invalid inputs, please set the parameter ignore_invalid_inputs to true."
+            System.exit(1)
+        }
+
+        // If all files are invalid, exit
+        if (valid_files.size() == 0) {
+            println "No valid files to process. Exiting."
+            System.exit(1)
+        }
+
+        // Otherwise, continue with valid files and warn the user
+        println "Continuing with ${valid_files.size()} valid files out of ${batch_lines.size()} total files."
+    }
+
+    all_valid_files.addAll(valid_files)
+
+    if (all_valid_files.size() == 0){
+        println "Missing any data to process, please assign either input_data or input_batch"
+        System.exit(1)
+    }
+
+    return all_valid_files
 }
