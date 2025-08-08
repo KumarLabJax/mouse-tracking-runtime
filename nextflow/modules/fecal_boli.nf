@@ -1,3 +1,18 @@
+/**
+ * This module contains process definitions for fecal boli prediction and feature calculations.
+ */
+
+ /**
+ * Predicts fecal boli in the video at minute intervals.
+ *
+ * @param tuple
+ *  - video_file The input video file.
+ *  - in_pose The input pose file.
+ *
+ * @return tuple files
+ *  - Path to the original video file.
+ *  - Modified pose file with fecal boli predictions.
+ */
 process PREDICT_FECAL_BOLI {
     label "gpu"
     label "tracking"
@@ -16,6 +31,15 @@ process PREDICT_FECAL_BOLI {
     """
 }
 
+/**
+ * Extracts fecal boli features from the pose data.
+ *
+ * @param tuple
+ *  - video_file The input video file.
+ *  - in_pose The input pose file.
+ *
+ * @return fecal_boli The generated fecal boli feature CSV file.
+ */
 process EXTRACT_FECAL_BOLI_BINS {
     label "tracking"
     label "r_fboli_extract"

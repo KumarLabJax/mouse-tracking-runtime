@@ -1,3 +1,18 @@
+/**
+ * This module contains process definitions related to JABS classifiers.
+ */
+
+/**
+ * Calculates features for JABS classifiers.
+ *
+ * @param tuple
+ *  - video_file The input video file.
+ *  - in_pose The input pose file.
+ *
+ * @return tuple files
+ *  - Path to the original pose file.
+ *  - Path to the generated feature cache directory.
+ */
 process GENERATE_FEATURE_CACHE {
     // This process will correct pose pathing to a v6 file
     label "jabs_classify"
@@ -23,6 +38,19 @@ process GENERATE_FEATURE_CACHE {
     """
 }  
 
+/**
+ * Predicts behaviors using JABS classifiers.
+ *
+ * @param tuple
+ *  - in_pose The input pose file.
+ *  - feature_cache The directory containing the generated features.
+ * @param classifiers A map of classifier names to their respective parameters.
+ *
+ * @return tuple files
+ *  - Path to the original pose file.
+ *  - Path to the feature cache directory.
+ *  - Path to the generated behavior file. All behavior predictions are stored in a single file.
+ */
 process PREDICT_CLASSIFIERS {
     label "jabs_classify"
     label "cpu"
@@ -46,6 +74,18 @@ process PREDICT_CLASSIFIERS {
     """
 }
 
+/**
+ * Generates behavior tables from pose file, feature file, and prediction file.
+ *
+ * @param tuple
+ *  - in_pose The input pose file.
+ *  - feature_cache The directory containing the generated features.
+ *  - behavior_files The behavior prediction file.
+ *
+ * @return tuple files
+ *  - Path to the generated behavior bout file.
+ *  - Path to the generated behavior summary file.
+ */
 process GENERATE_BEHAVIOR_TABLES {
     label "jabs_postprocess"
     label "cpu"
@@ -65,6 +105,18 @@ process GENERATE_BEHAVIOR_TABLES {
     """
 }
 
+/**
+ * Generates heuristic classifier predictions.
+ *
+ * @param tuple
+ *  - in_pose The input pose file.
+ *  - feature_cache The directory containing the generated features.
+ * @param heuristic_classifiers A list of heuristic classifier configuration files.
+ *
+ * @return tuple files
+ *  - Path to the generated bout file.
+ *  - Path to the generated summary file.
+ */
 process PREDICT_HEURISTICS {
     label "jabs_postprocess"
     label "cpu"
@@ -87,6 +139,14 @@ process PREDICT_HEURISTICS {
     """
 }
 
+/**
+ * Converts a behavior summary table to features.
+ *
+ * @param in_summary_table The input behavior summary table.
+ * @param bin_size The bin size for feature extraction.
+ *
+ * @return features The generated feature file.
+ */
 process BEHAVIOR_TABLE_TO_FEATURES {
     label "jabs_table_convert"
     label "r_jabs_table_convert"

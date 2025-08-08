@@ -1,4 +1,8 @@
 /**
+ * This module contains process definitions for single mouse pose estimation.
+ */
+
+/**
  * Predicts single mouse segmentation using a pre-trained model.
  *
  * @param tuple

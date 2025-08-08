@@ -1,4 +1,9 @@
 /**
+ * This module contains utility processes and functions for the Nextflow pipeline.
+ * It includes processes for file manipulation, data validation, and other utility functions.
+ */
+
+/**
  * Lazy nextflow module for creating files, useful for testing.
  *
  * @param file_name The name of the file to be created

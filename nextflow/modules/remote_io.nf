@@ -1,4 +1,8 @@
 /**
+ * This module contains process definitions for remote I/O operations.
+ */
+
+/**
  * Checks if the user has a valid Globus authentication session.
  *
  * @param globus_endpoint The Globus endpoint to check authentication against

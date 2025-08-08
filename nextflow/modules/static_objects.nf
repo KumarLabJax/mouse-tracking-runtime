@@ -1,4 +1,8 @@
 /**
+ * This module contains process definitions for predicting static objects.
+ */
+
+/**
  * Predicts arena corners.
  *
  * @param tuple

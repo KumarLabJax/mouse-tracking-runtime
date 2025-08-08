@@ -1,3 +1,21 @@
+/**
+ * This module contains process definitions for generating flexibility metrics.
+ * These metrics were published in https://doi.org/10.1038/s43587-022-00266-0
+ */
+
+/**
+ * Generates flexibility index metrics from pose data.
+ *
+ * @param tuple
+ *  - video_file The input video file.
+ *  - pose_file The input pose file.
+ *
+ * @return tuple files
+ *  - Path to the generated angles CSV file.
+ *  - Path to the generated dAC CSV file.
+ *  - Path to the generated dB CSV file.
+ *  - Path to the generated flexdexraw CSV file.
+ */
 process GENERATE_FLEXIBILITY_INDEX {
     label "frailty"
     label "cpu"
@@ -32,6 +50,16 @@ process GENERATE_FLEXIBILITY_INDEX {
     """
 }
 
+/**
+ * Generates rear paw width metrics from pose data.
+ *
+ * @param tuple
+ *  - video_file The input video file.
+ *  - pose_file The input pose file.
+ *
+ * @return rearpaw Path to the generated rear paw width CSV file.
+ * @return rearpawsave Path to the generated rear paw save CSV file.
+ */
 process GENERATE_REAR_PAW_WIDTH {
     label "frailty"
     label "cpu"
