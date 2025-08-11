@@ -1,3 +1,7 @@
+/**
+ * This module contains workflows that manipulate inputs and outputs to pipelines.
+ */
+ 
 include { FILTER_LOCAL_BATCH;
           URLIFY_FILE;
           validateInputFile;
@@ -9,6 +13,19 @@ include { CHECK_GLOBUS_AUTH;
           GET_DATA_FROM_DROPBOX;
         } from "${projectDir}/nextflow/modules/remote_io"
 
+/**
+ * Prepares data for the main pipeline. Steps include:
+ * - Validating input files by extension
+ * - [Optional] Filtering of already processed files
+ * - Retrieval of files if remote
+ * - URLifying file names to avoid collisions
+ *
+ * @param path in_video_file Text file containing list of files to process. One file per line.
+ * @param val location The location of the input files (local, dropbox, or globus).
+ * @param val skip_urlify If true, skips the URLification step. Some usages may already have URLified files.
+ *
+ * @return path file_processing_channel The channel containing the prepared input files.
+ */
 workflow PREPARE_DATA {
     take:
     in_video_file

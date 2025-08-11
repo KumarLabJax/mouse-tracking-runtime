@@ -1,3 +1,6 @@
+/**
+ * This module contains workflows related to feature generation from pose files.
+ */
 include { GENERATE_GAIT_H5; GENERATE_GAIT_BIN } from "${projectDir}/nextflow/modules/gait"
 include { GENERATE_FLEXIBILITY_INDEX; GENERATE_REAR_PAW_WIDTH } from "${projectDir}/nextflow/modules/flexibility"
 include { GET_WORKFLOW_VERSION;
@@ -32,6 +35,20 @@ include { GENERATE_FEATURE_CACHE;
           BEHAVIOR_TABLE_TO_FEATURES } from "${projectDir}/nextflow/modules/jabs_classifiers"
 include { EXTRACT_FECAL_BOLI_BINS } from "${projectDir}/nextflow/modules/fecal_boli"
 
+/**
+ * Workflow to generate features from single mouse pose v2 files.
+ * Generates gait and morphometric feature sets.
+ *
+ * @param tuple input_pose_v2_batch
+ *  - Path to the input video file.
+ *  - Path to the corresponding pose v2 file.
+ *
+ * @return path gait_results The channel of generated gait feature files.
+ * @return path morphometrics_results The channel of generated morphometric feature files.
+ *
+ * @publish ./results/ Gait feature files
+ * @publish ./results/ Morphometric feature files
+ */
 workflow SINGLE_MOUSE_V2_FEATURES {
     take:
     // tuple of video_file and pose_file from SINGLE_MOUSE_TRACKING
@@ -74,6 +91,20 @@ workflow SINGLE_MOUSE_V2_FEATURES {
     morphometrics_results
 }
 
+/**
+ * Workflow to generate JABS features from single mouse pose v6 files.
+ * Generates heuristic and classifier-based behavior features, as well as fecal boli counts.
+ *
+ * @param tuple input_pose_v6_batch
+ *  - Path to the input video file.
+ *  - Path to the corresponding pose v6 file.
+ *
+ * @return path wide_jabs_features The channel of generated JABS feature files.
+ * @return path fecal_boli_table The channel of generated fecal boli count files.
+ *
+ * @publish ./results/ JABS feature files
+ * @publish ./results/ Fecal boli count files
+ */
 workflow SINGLE_MOUSE_V6_FEATURES {
     take:
     // tuple of video_file and pose_file from SINGLE_MOUSE_TRACKING
