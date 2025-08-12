@@ -339,12 +339,16 @@ def write_seg_data(pose_file, seg_contours_matrix: np.ndarray, seg_external_flag
 	with h5py.File(pose_file, 'a') as out_file:
 		if 'poseest/seg_data' in out_file:
 			del out_file['poseest/seg_data']
-		out_file.create_dataset('poseest/seg_data', data=seg_contours_matrix, compression="gzip", compression_opts=9)
+		chunk_shape = list(seg_contours_matrix.shape)
+		chunk_shape[0] = 1  # Data is most frequently read frame-by-frame.
+		out_file.create_dataset('poseest/seg_data', data=seg_contours_matrix, compression="gzip", compression_opts=9, chunks=tuple(chunk_shape))
 		out_file['poseest/seg_data'].attrs['config'] = config_str
 		out_file['poseest/seg_data'].attrs['model'] = model_str
+		chunk_shape = list(seg_external_flags.shape)
+		chunk_shape[0] = 1  # Data is most frequently read frame-by-frame.
 		if 'poseest/seg_external_flag' in out_file:
 			del out_file['poseest/seg_external_flag']
-		out_file.create_dataset('poseest/seg_external_flag', data=seg_external_flags, compression="gzip", compression_opts=9)
+		out_file.create_dataset('poseest/seg_external_flag', data=seg_external_flags, compression="gzip", compression_opts=9, chunks=tuple(chunk_shape))
 
 	if not skip_matching:
 		adjust_pose_version(pose_file, 6)
@@ -449,7 +453,9 @@ def write_pose_clip(in_pose_f: Union[str, Path], out_pose_f: Union[str, Path], c
 			if all_compression_flags[key] is None:
 				out_f.create_dataset(key, data=data)
 			else:
-				out_f.create_dataset(key, data=data, compression='gzip', compression_opts=all_compression_flags[key])
+				chunk_shape = list(data.shape)
+				chunk_shape[0] = 1  # Data is most frequently read frame-by-frame.
+				out_f.create_dataset(key, data=data, compression='gzip', compression_opts=all_compression_flags[key], chunks=tuple(chunk_shape))
 		for key, attrs in all_attrs.items():
 			for cur_attr, data in attrs.items():
 				out_f[key].attrs.create(cur_attr, data)
