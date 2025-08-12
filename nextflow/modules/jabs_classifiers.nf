@@ -81,6 +81,7 @@ process PREDICT_CLASSIFIERS {
  *  - in_pose The input pose file.
  *  - feature_cache The directory containing the generated features.
  *  - behavior_files The behavior prediction file.
+ * @param classifiers A map of classifier names to their respective parameters.
  *
  * @return tuple files
  *  - Path to the generated behavior bout file.
@@ -93,14 +94,14 @@ process GENERATE_BEHAVIOR_TABLES {
 
     input:
     tuple path(in_pose), path(feature_cache), path(behavior_files)
-    val classifier
+    val classifiers
 
     output:
     tuple path("${in_pose.baseName}*_bouts.csv"), path("${in_pose.baseName}*_summaries.csv"), emit: files
 
     script:
     """
-    behavior_command="--behavior ${classifier.collect { entry -> "$entry.key --stitch_gap $entry.value.stitch_value --min_bout_length $entry.value.filter_value" }.join(' --behavior ')}"
+    behavior_command="--behavior ${classifiers.collect { entry -> "$entry.key --stitch_gap $entry.value.stitch_value --min_bout_length $entry.value.filter_value" }.join(' --behavior ')}"
     python3 /JABS-postprocess/generate_behavior_tables.py --project_folder . --feature_folder . --out_prefix ${in_pose.baseName} --out_bin_size 5 \${behavior_command}
     """
 }
