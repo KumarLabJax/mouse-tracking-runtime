@@ -387,6 +387,8 @@ process LONG_TO_WIDE {
  *  - publish_filename The name under which the file will be published
  *
  * @return published_file A path to the published file
+ *
+ * @publish ./ File published to the specified directory
  */
 process PUBLISH_RESULT_FILE {
     label "r_util"
@@ -416,6 +418,8 @@ process PUBLISH_RESULT_FILE {
  *
  * @return version The workflow version
  * @return version_file Path to the version file
+ *
+ * @publish ./ Workflow version information
  */
 process GET_WORKFLOW_VERSION {
     label "r_util"
@@ -469,6 +473,7 @@ process ADD_DUMMY_VIDEO {
  *
  * @param file_path The path to the file that needs validation
  * @param pipeline_type The type of pipeline being run (e.g. 'single-mouse', 'single-mouse-corrected-corners', etc.)
+ *
  * @return A boolean indicating if the file is valid and an error message if it's not
  */
 def validateInputFile(String file_path, String pipeline_type) {
@@ -500,6 +505,7 @@ def validateInputFile(String file_path, String pipeline_type) {
  *
  * @param in_file_list The path to the file that contains the list of intut files
  * @param pipeline_type The type of pipeline being run. See validateInputFile for valid types.
+ *
  * @return A list of valid file paths that match the allowed formats for the specified pipeline type.
  */
 def validateInputFilelist(String in_file_list, String pipeline_type) {
