@@ -2,8 +2,10 @@
 
 # Usage function
 usage() {
+    local script_name=$(basename "$0")
+
     cat << EOF
-Usage: $0 [OPTIONS] [-- NEXTFLOW_ARGS...]
+Usage: $script_name [OPTIONS] [-- NEXTFLOW_ARGS...]
 
 REQUIRED:
     -i, --input BATCH_FILE      Input batch file
@@ -28,14 +30,14 @@ ADDITIONAL NEXTFLOW ARGUMENTS:
     You can also mix additional nextflow arguments without using '--'.
 
 EXAMPLES:
-    $0 -i my_batch.txt -o results/
-    $0 -i data.txt -o output/ -w multi-mouse -t 7-00:00:00 -m 32G
-    $0 -i batch.txt -o results/ --resume --dry-run
-    $0 -n my-org/my-pipeline -i batch.txt -o results/
-    $0 -n KumarLabJax/mouse-tracking-runtime -r dev -i batch.txt -o results/
-    $0 -r v2.1.0 -i batch.txt -o results/
-    $0 -n ./local-pipeline -i corners_batch.txt -w single-mouse-corrected-corners -o test_output/ --sleap_file manual_correction.slp
-    $0 -i batch.txt -o results/ -- --sleap_file data.slp --some_other_param value
+    $script_name -i my_batch.txt -o results/
+    $script_name -i data.txt -o output/ -w multi-mouse -t 7-00:00:00 -m 32G
+    $script_name -i batch.txt -o results/ --resume --dry-run
+    $script_name -n my-org/my-pipeline -i batch.txt -o results/
+    $script_name -n KumarLabJax/mouse-tracking-runtime -r dev -i batch.txt -o results/
+    $script_name -r v2.1.0 -i batch.txt -o results/
+    $script_name -n ./local-pipeline -i corners_batch.txt -w single-mouse-corrected-corners -o test_output/ --sleap_file manual_correction.slp
+    $script_name -i batch.txt -o results/ -- --sleap_file data.slp --some_other_param value
 
 EOF
 }
