@@ -37,7 +37,7 @@ EXAMPLES:
     $script_name -n KumarLabJax/mouse-tracking-runtime -r dev -i batch.txt -o results/
     $script_name -r v2.1.0 -i batch.txt -o results/
     $script_name -n ./local-pipeline -i corners_batch.txt -w single-mouse-corrected-corners -o test_output/ --sleap_file manual_correction.slp
-    $script_name -i batch.txt -o results/ -- --sleap_file data.slp --some_other_param value
+    $script_name -i batch.txt -o results/ -- --some_other_param value -nextflow-flag
 
 EOF
 }
