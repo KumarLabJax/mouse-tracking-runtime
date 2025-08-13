@@ -24,7 +24,7 @@ if (params.input_batch != null) {
 
     // Validate each file in the batch
     batch_lines.each { file_path ->
-        def (is_valid, error_message) = validateInputFile(file_path, params.pipeline)
+        def (is_valid, error_message) = validateInputFile(file_path, params.workflow)
         
         if (is_valid) {
             valid_files.add(file_path)
