@@ -21,9 +21,37 @@ See [model docs](docs/models.md) for information about available models.
 
 Pipelines are run using nextflow. For a list of all available parameters, see [nextflow parameters](nextflow.config). Not all parameters will affect all pipeline workflows.
 
-If you are running the pipeline on the HPC, you should submit the workflow as a job. You can use the example test as a starting template: [test-nextflow.sh](test-nextflow.sh).
+You will need a batch file that lists the input files to process.
 
-Input files should include the full path. An easy way to generate the list of inputs for `input_batch` is to run `find $(pwd) -name '*.avi' > video_batch.txt`.
+An easy way to generate the list of inputs for `input_batch` is to run 
+`find $(pwd) -name '*.avi' > video_batch.txt`.
+
+## Running on Sumner2 HPC (Slurm)
+
+When running on the HPC (Sumner2),you should submit the workflow as a job. To make this 
+simple, we've provided a submission script that you can use to configure and submit 
+pipeline run.
+
+The script is provided in the kumar-lab scripts module. To load the module, run:
+```
+module use --append /projects/kumar-lab/meta/modules
+module load scripts
+```
+
+To see all available options, run:
+```
+submit-nextflow.sh --help
+```
+
+An example submission command is:
+```
+submit-nextflow.sh -i my_batch.txt -w single-mouse -o /path/to/output_folder --resume
+```
+
+To test a submission without actually submitting, you can use the `--dry-run` flag:
+```
+submit-nextflow.sh --dry-run -i my_batch.txt -w single-mouse -o /path/to/output_folder --resume
+```
 
 ## Single Mouse Pipelines
 
