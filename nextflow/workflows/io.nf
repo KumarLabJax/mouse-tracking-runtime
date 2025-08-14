@@ -9,10 +9,9 @@ workflow PREPARE_DATA {
 
     main:
     {
-        // if (location == "local")
-        //    video_file = CHECK_FILE(in_video_file).file
-        // else if (location == "dropbox")
-        if (location == "dropbox")
+         if (location == "local")
+            video_file = in_video_file
+        else if (location == "dropbox")
             video_file = GET_DATA_FROM_DROPBOX(in_video_file).out.video_file
         // T2 retrieval not implemented yet, due to globus permission issue.
         // else if (location == "t2")
