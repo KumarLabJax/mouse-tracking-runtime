@@ -130,7 +130,8 @@ class prediction_saver:
 				available_new_frames -= prediction_count
 				cur_mat_size = next_mat_size
 		# Clip out unused info from the matrices
-		prediction_matrix = prediction_matrix[:cur_frames_used_count]
+		if prediction_matrix is not None:
+			prediction_matrix = prediction_matrix[:cur_frames_used_count]
 		# Close down the dequeue thread
 		output_queue.put((prediction_matrix))
 

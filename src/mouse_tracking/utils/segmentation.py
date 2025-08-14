@@ -70,6 +70,10 @@ def merge_multiple_seg_instances(matrix_list: List[np.ndarray], flag_list: List[
 	"""
 	assert len(matrix_list) == len(flag_list)
 
+	# No predictions, just return default data containing smallest pads
+	if len(matrix_shapes) == 0:
+		return np.full([1, 1, 1, 2], default_val, dtype=np.int32), np.full([1, 1], default_val, dtype=np.int32)
+
 	matrix_shapes = np.asarray([x.shape for x in matrix_list])
 	flag_shapes = np.asarray([x.shape for x in flag_list])
 	n_predictions = len(matrix_list)

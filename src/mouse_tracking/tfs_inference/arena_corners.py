@@ -77,6 +77,8 @@ def infer_arena_corner_model(args):
 	corner_results.results_receiver_queue.put((None, None))
 	corner_matrix = corner_results.get_results()
 	try:
+		if corner_matrix is None:
+			raise ValueError("No corner predictions were generated")
 		filtered_corners = filter_square_keypoints(corner_matrix)
 		if args.out_file is not None:
 			write_static_object_data(args.out_file, filtered_corners, 'corners', model_definition['model-name'], model_definition['model-checkpoint'])

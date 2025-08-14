@@ -7,16 +7,14 @@
 #SBATCH --mem=16G
 #SBATCH --ntasks=1
 
-cd /projects/kumar-lab/multimouse-pipeline/nextflow-code/
-
 # LOAD NEXTFLOW
 module use --append /projects/kumar-lab/meta/modules
 module load nextflow/stable
 
 # RUN TEST PIPELINE
-nextflow run main.nf \
- -c nextflow.config \
- -c nextflow/configs/profiles/sumner2.config \
+nextflow run KumarLabJax/mouse-tracking-runtime \
+ -profile sumner2 \
  --input_batch /projects/kumar-lab/multimouse-pipeline/nextflow-tests/test_batch.txt \
  --workflow single-mouse \
- --pubdir /projects/kumar-lab/multimouse-pipeline/nextflow-test-results/ \
+ --pubdir /projects/kumar-lab/multimouse-pipeline/nextflow-test-results/
+ß
