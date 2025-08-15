@@ -537,6 +537,14 @@ dev = [
     { name = "pytest-cov" },
     { name = "ruff" },
 ]
+lint = [
+    { name = "ruff" },
+]
+test = [
+    { name = "pytest" },
+    { name = "pytest-benchmark" },
+    { name = "pytest-cov" },
+]
 
 [package.metadata]
 requires-dist = [
@@ -565,7 +573,7 @@ requires-dist = [
     { name = "six", specifier = "==1.16.0" },
     { name = "tensorflow", specifier = ">=2.15.0,<2.16.0" },
     { name = "torch", specifier = ">=2.3.0,<2.4.0" },
-    { name = "typer", specifier = ">=0.12.3" },
+    { name = "typer", specifier = ">=0.12.4" },
     { name = "tzdata", specifier = "==2024.1" },
 ]
 
@@ -575,6 +583,12 @@ dev = [
     { name = "pytest-benchmark", specifier = ">=5.1.0" },
     { name = "pytest-cov", specifier = ">=6.1.1" },
     { name = "ruff", specifier = ">=0.11.2" },
+]
+lint = [{ name = "ruff", specifier = ">=0.11.2" }]
+test = [
+    { name = "pytest", specifier = ">=8.3.5" },
+    { name = "pytest-benchmark", specifier = ">=5.1.0" },
+    { name = "pytest-cov", specifier = ">=6.1.1" },
 ]
 
 [[package]]
