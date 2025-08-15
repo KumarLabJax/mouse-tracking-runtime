@@ -1,4 +1,4 @@
-FROM us-docker.pkg.dev/colab-images/public/runtime:release-colab_20240626-060133_RC01
+FROM aberger4/mouse-tracking-test:latest
 
 # Install uv
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
