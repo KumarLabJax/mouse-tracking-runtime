@@ -4,12 +4,12 @@ on:
     inputs:
       python-version:
         description: Python version to set up'
-        required: true
+        required: false
         default: '3.10'
         type: string
       runner-os:
         description: 'Runner OS'
-        required: true
+        required: false
         default: 'ubuntu-latest'
         type: string
 jobs:
