@@ -1,0 +1,99 @@
+[project]
+name = "mouse-tracking"
+version = "0.1.0"
+description = "Runtime environment for mouse tracking experiments"
+requires-python = ">=3.10,<3.11"
+packages = ["src/mouse_tracking"]
+dependencies = [
+    # Core scientific computing - exact versions from container
+    "numpy==1.25.2",
+    "scipy==1.11.4",
+    "pandas==2.0.3",
+    # Computer vision and image processing
+    "opencv-python==4.8.0.76",
+    "imageio==2.31.6",
+    "pillow==9.4.0",
+    # Plotting and visualization
+    "matplotlib==3.7.1",
+    "contourpy==1.2.1",
+    "cycler==0.12.1",
+    "fonttools==4.53.0",
+    "kiwisolver==1.4.5",
+    # Machine learning frameworks - flexible versions to use pre-installed
+    "tensorflow>=2.15.0,<2.16.0",
+    "torch>=2.3.0,<2.4.0",
+    # Utilities and CLI
+    "click==8.1.7",
+    "typer>=0.12.4",
+    "absl-py==1.4.0",
+    # Data validation
+    "pydantic==2.7.4",
+    # Standard library extensions
+    "networkx==3.3",
+    "packaging==24.1",
+    "platformdirs==4.2.2",
+    "pyparsing==3.1.2",
+    "python-dateutil==2.8.2",
+    "pytz==2023.4",
+    "six==1.16.0",
+    "tzdata==2024.1",
+    "h5py==3.9.0",
+    "pydantic-settings>=2.10.1",
+]
+
+[project.scripts]
+mouse-tracking-runtime = "mouse_tracking.cli.main:app"
+mouse-tracking = "mouse_tracking.cli.main:app"
+mtr = "mouse_tracking.cli.main:app"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.ruff.lint]
+# Enable a selection of rules focused on code quality without being too restrictive
+select = [
+    "E",    # pycodestyle errors
+    "F",    # pyflakes
+    "D",    # pydocstyle
+    "I",    # isort
+    "UP",   # pyupgrade
+    "B",    # flake8-bugbear
+    "C4",   # flake8-comprehensions
+    "SIM",  # flake8-simplify
+    "RUF",  # Ruff-specific rules
+]
+
+# Ignore specific rules that might be too strict
+ignore = [
+    "D203",  # one-blank-line-before-class (conflicts with D211)
+    "D212",  # multi-line-summary-first-line (conflicts with D213)
+    "D107",  # missing docstring in __init__
+    "D105",  # missing docstring in magic method
+    "D100",  # missing module docstring (optional for smaller scripts)
+    "E501",  # line too long (handled by formatter)
+]
+
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.ruff.lint.per-file-ignores]
+"__init__.py" = ["F401"]  # Unused imports in __init__ files
+
+[tool.pytest.ini_options]
+addopts = "--benchmark-skip"
+
+[dependency-groups]
+dev = [
+  {include-group = "lint"},
+  {include-group = "test"}
+]
+test = [
+    "pytest>=8.3.5",
+    "pytest-benchmark>=5.1.0",
+    "pytest-cov>=6.1.1",
+]
+lint = [
+    "ruff>=0.11.2",
+]
