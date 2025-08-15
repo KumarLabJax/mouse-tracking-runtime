@@ -11,7 +11,7 @@ WORKDIR /app
 
 # Configure uv to use system Python and packages
 ENV UV_SYSTEM_PYTHON=1
-ENV UV_PYTHON=/usr/local/bin/python
+ENV UV_PYTHON=/usr/bin/python3.10
 
 # Copy dependency files first (better layer caching)
 COPY pyproject.toml .
