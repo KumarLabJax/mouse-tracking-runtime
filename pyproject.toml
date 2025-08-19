@@ -32,24 +32,41 @@ gpu = [
 
 # CPU-only convenience for local tests (unchanged idea)
 cpu = [
-  "tensorflow==2.20.0",
-  "torch==2.6.0",
+  "tensorflow>=2.15.0,<=2.20.0",
+  "torch>=2.3.0,<=2.6.0",
   "torchvision==0.21.0",
   "torchaudio==2.6.0",
 ]
 
 
 # ---- uv configuration: point Torch family at cu126 index ----
+# ---- uv indexes ----
 [[tool.uv.index]]
 name = "pytorch-cu126"
 url  = "https://download.pytorch.org/whl/cu126"
 explicit = true
 
-[tool.uv.sources]
-torch = { index = "pytorch-cu126" }
-torchvision = { index = "pytorch-cu126" }
-torchaudio = { index = "pytorch-cu126" }
+[[tool.uv.index]]
+name = "pytorch-cpu"
+url  = "https://download.pytorch.org/whl/cpu"
+explicit = true
 
+# ---- uv per-package sources with markers ----
+# Use CUDA wheels only when installing the `gpu` extra AND on platforms that can use them.
+# Fall back to CPU wheels when installing the `cpu` extra.
+[tool.uv.sources]
+torch = [
+  { index = "pytorch-cu126", marker = "sys_platform == 'linux' and extra == 'gpu'" },
+  { index = "pytorch-cpu",  marker = "extra == 'cpu' and extra != 'gpu'" }
+]
+torchvision = [
+  { index = "pytorch-cu126", marker = "sys_platform == 'linux' and extra == 'gpu'" },
+  { index = "pytorch-cpu",  marker = "extra == 'cpu' and extra != 'gpu'" }
+]
+torchaudio = [
+  { index = "pytorch-cu126", marker = "sys_platform == 'linux' and extra == 'gpu'" },
+  { index = "pytorch-cpu",  marker = "extra == 'cpu' and extra != 'gpu'" }
+]
 
 [project.scripts]
 mouse-tracking-runtime = "mouse_tracking.cli.main:app"
