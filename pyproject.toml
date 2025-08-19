@@ -80,7 +80,7 @@ convention = "google"
 
 [tool.ruff.lint.per-file-ignores]
 "__init__.py" = ["F401"]  # Unused imports in __init__ files
-"src/mouse_tracking/cli/*" = ["B008"]  # Missing docstring in public function (CLI functions)
+"src/mouse_tracking/cli/*" = ["B008"]  # Ignore Typer style function-call-in-default-argument
 "src/mouse_tracking/pytorch_inference/hrnet/*" = ["D"]  # Third-party code
 
 [tool.pytest.ini_options]
