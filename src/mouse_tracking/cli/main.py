@@ -1,9 +1,11 @@
 """Mouse Tracking Runtime CLI"""
 
-import typer
 from typing import Annotated
-from mouse_tracking.cli.utils import version_callback
+
+import typer
+
 from mouse_tracking.cli import infer, qa, utils
+from mouse_tracking.cli.utils import version_callback
 
 app = typer.Typer(no_args_is_help=True)
 

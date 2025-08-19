@@ -1,11 +1,12 @@
 """Unit tests for QA CLI commands."""
 
-import pytest
-from typer.testing import CliRunner
-from unittest.mock import patch
-from pathlib import Path
 import tempfile
+from pathlib import Path
+from unittest.mock import patch
+
+import pytest
 import typer
+from typer.testing import CliRunner
 
 from mouse_tracking.cli.qa import app
 
@@ -85,7 +86,7 @@ def test_qa_help_displays_all_commands():
     "command_name,expected_exit_code",
     [
         ("single-pose", 2),  # Missing required pose argument
-        ("multi-pose", 0),   # Empty implementation, no arguments required
+        ("multi-pose", 0),  # Empty implementation, no arguments required
     ],
     ids=["single_pose_execution", "multi_pose_execution"],
 )
@@ -105,21 +106,21 @@ def test_qa_single_pose_execution_with_mock_file():
     """Test that single-pose command can be executed with proper arguments."""
     # Arrange
     runner = CliRunner()
-    
-    with tempfile.NamedTemporaryFile(suffix='.h5', delete=False) as tmp_file:
+
+    with tempfile.NamedTemporaryFile(suffix=".h5", delete=False) as tmp_file:
         pose_file = Path(tmp_file.name)
-    
+
     # Mock the inspect_pose_v6 function to avoid actual file processing
-    with patch('mouse_tracking.cli.qa.inspect_pose_v6') as mock_inspect:
-        mock_inspect.return_value = {'metric1': 0.5, 'metric2': 0.8}
-        
+    with patch("mouse_tracking.cli.qa.inspect_pose_v6") as mock_inspect:
+        mock_inspect.return_value = {"metric1": 0.5, "metric2": 0.8}
+
         # Act
         result = runner.invoke(app, ["single-pose", str(pose_file)])
-        
+
         # Assert
         assert result.exit_code == 0
         mock_inspect.assert_called_once()
-    
+
     # Cleanup
     if pose_file.exists():
         pose_file.unlink()
@@ -196,8 +197,9 @@ def test_qa_command_function_docstrings(
 def test_qa_single_pose_has_parameters():
     """Test that single_pose command has the expected parameters."""
     # Arrange
-    from mouse_tracking.cli import qa
     import inspect
+
+    from mouse_tracking.cli import qa
 
     # Act
     func = qa.single_pose
@@ -212,8 +214,9 @@ def test_qa_single_pose_has_parameters():
 def test_qa_multi_pose_has_no_parameters():
     """Test that multi_pose command has no parameters (empty implementation)."""
     # Arrange
-    from mouse_tracking.cli import qa
     import inspect
+
+    from mouse_tracking.cli import qa
 
     # Act
     func = qa.multi_pose
@@ -237,27 +240,26 @@ def test_qa_multi_pose_returns_none():
 def test_qa_single_pose_execution_with_mocked_dependencies():
     """Test single_pose function execution with mocked dependencies."""
     # Arrange
-    from mouse_tracking.cli import qa
     from pathlib import Path
-    
+
+    from mouse_tracking.cli import qa
+
     mock_pose_path = Path("/fake/pose.h5")
     mock_result = {"metric1": 0.5, "metric2": 0.8}
-    
-    with patch('mouse_tracking.cli.qa.inspect_pose_v6') as mock_inspect, \
-         patch('pandas.DataFrame.to_csv') as mock_to_csv, \
-         patch('pandas.Timestamp.now') as mock_timestamp:
-        
+
+    with (
+        patch("mouse_tracking.cli.qa.inspect_pose_v6") as mock_inspect,
+        patch("pandas.DataFrame.to_csv") as mock_to_csv,
+        patch("pandas.Timestamp.now") as mock_timestamp,
+    ):
         mock_inspect.return_value = mock_result
         mock_timestamp.return_value.strftime.return_value = "20231201_120000"
-        
+
         # Act
         result = qa.single_pose(
-            pose=mock_pose_path,
-            output=None,
-            pad=150,
-            duration=108000
+            pose=mock_pose_path, output=None, pad=150, duration=108000
         )
-        
+
         # Assert
         assert result is None
         mock_inspect.assert_called_once_with(mock_pose_path, pad=150, duration=108000)
@@ -338,7 +340,7 @@ def test_qa_commands_are_properly_decorated():
     ],
     ids=[
         "qa_help",
-        "single_pose_help", 
+        "single_pose_help",
         "multi_pose_help",
         "multi_pose_run",
     ],

@@ -42,15 +42,12 @@ def inspect_pose_v2(pose_file, pad: int = 150, duration: int = 108000) -> dict:
     ).squeeze(1)
 
     return {
-       "first_frame_pose": safe_find_first(high_conf_keypoints),
-       "first_frame_full_high_conf": safe_find_first(high_conf_keypoints),
-       "pose_counts": np.sum(num_keypoints > CONFIG.MIN_JABS_CONFIDENCE),
-       "missing_poses": duration - np.sum(
-            (num_keypoints > CONFIG.MIN_JABS_CONFIDENCE)[pad : pad + duration]
-        ),
-        "missing_keypoint_frames": np.sum(
-            num_keypoints[pad : pad + duration] != 12
-        ),
+        "first_frame_pose": safe_find_first(high_conf_keypoints),
+        "first_frame_full_high_conf": safe_find_first(high_conf_keypoints),
+        "pose_counts": np.sum(num_keypoints > CONFIG.MIN_JABS_CONFIDENCE),
+        "missing_poses": duration
+        - np.sum((num_keypoints > CONFIG.MIN_JABS_CONFIDENCE)[pad : pad + duration]),
+        "missing_keypoint_frames": np.sum(num_keypoints[pad : pad + duration] != 12),
     }
 
 
@@ -125,14 +122,15 @@ def inspect_pose_v6(pose_file, pad: int = 150, duration: int = 108000) -> dict:
     return {
         "pose_file": Path(pose_file).name,
         "pose_hash": hash_file(Path(pose_file)),
-        "video_name": folder_name + re.sub(
-            "_pose_est_v[0-9]+", "", Path(pose_file).stem
-        ),
+        "video_name": folder_name
+        + re.sub("_pose_est_v[0-9]+", "", Path(pose_file).stem),
         "video_duration": pose_counts.shape[0],
         "corners_present": corners_present,
         "first_frame_pose": safe_find_first(pose_counts > 0),
         "first_frame_full_high_conf": safe_find_first(high_conf_keypoints),
-        "first_frame_jabs": safe_find_first(jabs_keypoints >= CONFIG.MIN_JABS_KEYPOINTS),
+        "first_frame_jabs": safe_find_first(
+            jabs_keypoints >= CONFIG.MIN_JABS_KEYPOINTS
+        ),
         "first_frame_gait": safe_find_first(gait_keypoints),
         "first_frame_seg": safe_find_first(seg_ids > 0),
         "pose_counts": np.sum(pose_counts),
@@ -141,10 +139,10 @@ def inspect_pose_v6(pose_file, pad: int = 150, duration: int = 108000) -> dict:
         "missing_segs": duration - np.sum(seg_ids[pad : pad + duration] > 0),
         "pose_tracklets": len(
             np.unique(
-                pose_tracks[pad : pad + duration][pose_counts[pad : pad + duration] == 1]
+                pose_tracks[pad : pad + duration][
+                    pose_counts[pad : pad + duration] == 1
+                ]
             )
         ),
-        "missing_keypoint_frames": np.sum(
-            num_keypoints[pad : pad + duration] != 12
-        ),
+        "missing_keypoint_frames": np.sum(num_keypoints[pad : pad + duration] != 12),
     }

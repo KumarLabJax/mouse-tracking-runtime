@@ -1,17 +1,18 @@
 """Helper utilities for the CLI."""
 
+from pathlib import Path
+
 import typer
 from rich import print
-from pathlib import Path
 
 from mouse_tracking import __version__
 
 app = typer.Typer()
-from mouse_tracking.utils import fecal_boli, static_objects
-from mouse_tracking.pose.convert import downgrade_pose_file
 from mouse_tracking.matching.match_predictions import match_predictions
-from mouse_tracking.utils.clip_video import clip_video_auto, clip_video_manual
 from mouse_tracking.pose import render
+from mouse_tracking.pose.convert import downgrade_pose_file
+from mouse_tracking.utils import fecal_boli, static_objects
+from mouse_tracking.utils.clip_video import clip_video_auto, clip_video_manual
 
 
 def version_callback(value: bool) -> None:
@@ -91,10 +92,10 @@ def auto(
     """Automatically detect the first frame based on pose"""
     if not allow_overwrite:
         if Path(out_video).exists():
-            msg = f'{out_video} exists. If you wish to overwrite, please include --allow-overwrite'
+            msg = f"{out_video} exists. If you wish to overwrite, please include --allow-overwrite"
             raise FileExistsError(msg)
         if Path(out_pose).exists():
-            msg = f'{out_pose} exists. If you wish to overwrite, please include --allow-overwrite'
+            msg = f"{out_pose} exists. If you wish to overwrite, please include --allow-overwrite"
             raise FileExistsError(msg)
     clip_video_auto(
         in_video,
@@ -131,10 +132,10 @@ def manual(
     """Manually set the first frame"""
     if not allow_overwrite:
         if Path(out_video).exists():
-            msg = f'{out_video} exists. If you wish to overwrite, please include --allow-overwrite'
+            msg = f"{out_video} exists. If you wish to overwrite, please include --allow-overwrite"
             raise FileExistsError(msg)
         if Path(out_pose).exists():
-            msg = f'{out_pose} exists. If you wish to overwrite, please include --allow-overwrite'
+            msg = f"{out_pose} exists. If you wish to overwrite, please include --allow-overwrite"
             raise FileExistsError(msg)
 
     clip_video_manual(
@@ -145,7 +146,6 @@ def manual(
         frame_start,
         observation_duration=observation_duration,
     )
-
 
 
 app.add_typer(
@@ -175,9 +175,7 @@ def downgrade_multi_to_single(
         "low confidence predictions were made instead of the original values "
         "which may affect performance."
     )
-    downgrade_pose_file(
-        str(in_pose), disable_id=disable_id
-    )
+    downgrade_pose_file(str(in_pose), disable_id=disable_id)
 
 
 @app.command()
