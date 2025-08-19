@@ -42,6 +42,11 @@ cpu = [
 # ---- uv configuration: point Torch family at cu126 index ----
 # ---- uv indexes ----
 [[tool.uv.index]]
+name = "pypi"
+url  = "https://pypi.org/simple"
+explicit = false
+
+[[tool.uv.index]]
 name = "pytorch-cu126"
 url  = "https://download.pytorch.org/whl/cu126"
 explicit = true
