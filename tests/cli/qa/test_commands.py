@@ -382,7 +382,7 @@ def test_qa_function_names_match_command_names():
     registered_commands = app.registered_commands
 
     # Assert
-    for func_name, command_name in function_to_command_mapping.items():
+    for func_name, _command_name in function_to_command_mapping.items():
         # Check that the function exists in the qa module
         from mouse_tracking.cli import qa
 

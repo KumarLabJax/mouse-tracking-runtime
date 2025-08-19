@@ -130,7 +130,7 @@ def convert_multi_to_v2(pose_data, conf_data, identity_data):
 def render_pose_overlay(
     image: np.ndarray,
     frame_points: np.ndarray,
-    exclude_points: list = [],
+    exclude_points: list | None = None,
     color: tuple = (255, 255, 255),
 ) -> np.ndarray:
     """Renders a single pose on an image.
@@ -144,6 +144,8 @@ def render_pose_overlay(
     Returns:
             modified image
     """
+    if exclude_points is None:
+        exclude_points = []
     new_image = image.copy()
     missing_keypoints = np.where(np.all(frame_points == 0, axis=-1))[0].tolist()
     exclude_points = set(exclude_points + missing_keypoints)

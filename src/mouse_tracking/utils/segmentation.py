@@ -77,23 +77,24 @@ def merge_multiple_seg_instances(
     """
     assert len(matrix_list) == len(flag_list)
 
+    matrix_shapes = np.asarray([x.shape for x in matrix_list])
+
     # No predictions, just return default data containing smallest pads
     if len(matrix_shapes) == 0:
         return np.full([1, 1, 1, 2], default_val, dtype=np.int32), np.full(
             [1, 1], default_val, dtype=np.int32
         )
 
-    matrix_shapes = np.asarray([x.shape for x in matrix_list])
     flag_shapes = np.asarray([x.shape for x in flag_list])
     n_predictions = len(matrix_list)
 
     padded_matrix = np.full(
-        [n_predictions] + np.max(matrix_shapes, axis=0).tolist(),
+        [n_predictions, *np.max(matrix_shapes, axis=0).tolist()],
         default_val,
         dtype=np.int32,
     )
     padded_flags = np.full(
-        [n_predictions] + np.max(flag_shapes, axis=0).tolist(),
+        [n_predictions, *np.max(flag_shapes, axis=0).tolist()],
         default_val,
         dtype=np.int32,
     )
@@ -160,7 +161,7 @@ def get_contour_stack(contour_mat, default_val=-1):
     return contour_stack
 
 
-def get_frame_masks(contour_mat, frame_size=[800, 800]):
+def get_frame_masks(contour_mat, frame_size=None):
     """Returns a stack of masks for all valid contours.
 
     Args:
@@ -170,6 +171,8 @@ def get_frame_masks(contour_mat, frame_size=[800, 800]):
     Returns:
             a stack of rendered contour masks
     """
+    if frame_size is None:
+        frame_size = [800, 800]
     frame_stack = []
     for animal_idx in np.arange(np.shape(contour_mat)[0]):
         new_frame = render_blob(contour_mat[animal_idx], frame_size=frame_size)
@@ -179,7 +182,7 @@ def get_frame_masks(contour_mat, frame_size=[800, 800]):
     return np.zeros([0, frame_size[0], frame_size[1]])
 
 
-def render_blob(contour, frame_size=[800, 800], default_val=-1):
+def render_blob(contour, frame_size=None, default_val=-1):
     """Renders a mask for an individual.
 
     Args:
@@ -190,6 +193,8 @@ def render_blob(contour, frame_size=[800, 800], default_val=-1):
     Returns:
             boolean image of the rendered mask
     """
+    if frame_size is None:
+        frame_size = [800, 800]
     new_mask = np.zeros(frame_size, dtype=np.uint8)
     contour_stack = get_contour_stack(contour, default_val=default_val)
     # Note: We need to plot them all at the same time to have opencv properly detect holes
@@ -197,7 +202,7 @@ def render_blob(contour, frame_size=[800, 800], default_val=-1):
     return new_mask.astype(bool)
 
 
-def get_frame_outlines(contour_mat, frame_size=[800, 800], thickness=1):
+def get_frame_outlines(contour_mat, frame_size=None, thickness=1):
     """Renders a stack of outlines for all valid contours.
 
     Args:
@@ -208,6 +213,8 @@ def get_frame_outlines(contour_mat, frame_size=[800, 800], thickness=1):
     Returns:
             a stack of rendered outlines
     """
+    if frame_size is None:
+        frame_size = [800, 800]
     frame_stack = []
     for animal_idx in np.arange(np.shape(contour_mat)[0]):
         new_frame = render_outline(
@@ -219,7 +226,7 @@ def get_frame_outlines(contour_mat, frame_size=[800, 800], thickness=1):
     return np.zeros([0, frame_size[0], frame_size[1]])
 
 
-def render_outline(contour, frame_size=[800, 800], thickness=1, default_val=-1):
+def render_outline(contour, frame_size=None, thickness=1, default_val=-1):
     """Renders a mask outline for an individual.
 
     Args:
@@ -231,6 +238,8 @@ def render_outline(contour, frame_size=[800, 800], thickness=1, default_val=-1):
     Returns:
             boolean image of the rendered mask outline
     """
+    if frame_size is None:
+        frame_size = [800, 800]
     new_mask = np.zeros(frame_size, dtype=np.uint8)
     contour_stack = get_contour_stack(contour)
     # Note: We need to plot them all at the same time to have opencv properly detect holes

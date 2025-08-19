@@ -36,10 +36,7 @@ def plot_keypoints(
             Copy of image with the keypoints rendered
     """
     img_copy = img.copy()
-    if is_yx:
-        kps_ordered = np.flip(kp, axis=-1)
-    else:
-        kps_ordered = kp
+    kps_ordered = np.flip(kp, axis=-1) if is_yx else kp
     if include_lines and kps_ordered.ndim == 2 and kps_ordered.shape[0] >= 1:
         img_copy = cv2.drawContours(
             img_copy, [kps_ordered.astype(np.int32)], 0, (0, 0, 0), 2, cv2.LINE_AA
@@ -47,7 +44,7 @@ def plot_keypoints(
         img_copy = cv2.drawContours(
             img_copy, [kps_ordered.astype(np.int32)], 0, color, 1, cv2.LINE_AA
         )
-    for i, kp_data in enumerate(kps_ordered):
+    for _i, kp_data in enumerate(kps_ordered):
         _ = cv2.circle(
             img_copy, (int(kp_data[0]), int(kp_data[1])), 3, (0, 0, 0), -1, cv2.LINE_AA
         )
@@ -265,6 +262,7 @@ def get_px_per_cm(corners: np.ndarray, arena_size_cm: float = ARENA_SIZE_CM) -> 
 
     Args:
             corners: corner prediction data of shape [4, 2]
+            arena_size_cm: size of the arena in cm
 
     Returns:
             coefficient to multiply pixels to get cm

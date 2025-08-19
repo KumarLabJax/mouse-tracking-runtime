@@ -43,7 +43,7 @@ def infer_single_segmentation_tfs(args):
     )
 
     with tf.Session(graph=tf.Graph(), config=core_config) as session:
-        model = tf.saved_model.loader.load(
+        _model = tf.saved_model.loader.load(
             session, ["serve"], model_definition["tfs-model"]
         )
         graph = tf.get_default_graph()

@@ -47,7 +47,7 @@ def infer_arena_corner_model(args):
     )
 
     with tf.Session(graph=tf.Graph(), config=core_config) as session:
-        model = tf.saved_model.loader.load(
+        _model = tf.saved_model.loader.load(
             session, ["serve"], model_definition["tfs-model"]
         )
         graph = tf.get_default_graph()
@@ -118,7 +118,7 @@ def infer_arena_corner_model(args):
             render = plot_keypoints(filtered_corners, frame)
             imageio.imwrite(args.out_image, render)
     except ValueError:
-        if frame.shape[0] in ARENA_IMAGING_RESOLUTION.keys():
+        if frame.shape[0] in ARENA_IMAGING_RESOLUTION:
             print("Corners not successfully detected, writing default px per cm...")
             px_per_cm = DEFAULT_CM_PER_PX[ARENA_IMAGING_RESOLUTION[frame.shape[0]]]
             if args.out_file is not None:
