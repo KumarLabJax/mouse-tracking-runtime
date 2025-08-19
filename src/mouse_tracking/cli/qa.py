@@ -1,7 +1,5 @@
 """Mouse Tracking Runtime QA CLI."""
 
-# ruff: noqa: B008
-
 from pathlib import Path
 
 import pandas as pd

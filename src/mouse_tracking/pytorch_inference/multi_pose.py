@@ -26,7 +26,7 @@ from mouse_tracking.utils.writers import (
 
 
 def predict_pose_topdown(
-    input_iter, mask_file, model, render: str = None, batch_size: int = 1
+    input_iter, mask_file, model, render: str | None = None, batch_size: int = 1
 ):
     """Main function that processes an iterator.
 
@@ -73,7 +73,7 @@ def predict_pose_topdown(
         batch_frame_count = []
         batch_count = 0
         num_frames_in_batch = 0
-        for batch_frame_idx in np.arange(batch_size):
+        for _batch_frame_idx in np.arange(batch_size):
             try:
                 input_frame = next(input_iter)
                 full_frame_batch.append(input_frame)

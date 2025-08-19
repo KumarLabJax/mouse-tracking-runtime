@@ -1,6 +1,4 @@
-"""
-Pose data conversion utilities.
-"""
+"""Pose data conversion utilities."""
 
 import os
 import re
