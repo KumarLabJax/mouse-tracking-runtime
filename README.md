@@ -7,11 +7,23 @@ This repository uses both Pytorch and Tensorflow Serving (TFS).
 
 # Installation
 
-Both Google Colab and singularity environments are supported. This environment is used because it is a convenient method to have both pytorch and tensorflow present.
+## Runtime Environments
 
-## Singularity Containers
+This repository supports both Docker and Singularity environments. 
 
-See the [container definition file](vm/deployment-runtime-RHEL9.def) in the vm folder. This container is based off a google colab public docker.
+The dockerfile is provided at the root of the repository ([Dockerfile](Dockerfile)), and the singularity 
+definition file is in the `vm` folder ([singularity.def](vm/singularity.def)).
+
+To learn more about how we support this, please read [vm/README.md](vm/README.md).
+
+## Development
+This repository uses [uv](https://uv.run/) to manage multiple python environments. 
+To install uv, see the [uv installation instructions](https://uv.run/docs/installation).
+
+To create the development environment, run:
+```
+uv sync --group cpu
+```
 
 # Available Models
 
@@ -19,7 +31,8 @@ See [model docs](docs/models.md) for information about available models.
 
 # Running a pipeline
 
-Pipelines are run using nextflow. For a list of all available parameters, see [nextflow parameters](nextflow.config). Not all parameters will affect all pipeline workflows.
+Pipelines are run using nextflow. For a list of all available parameters, see 
+[nextflow parameters](nextflow.config). Not all parameters will affect all pipeline workflows.
 
 You will need a batch file that lists the input files to process.
 

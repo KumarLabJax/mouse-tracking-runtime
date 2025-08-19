@@ -1,37 +1,21 @@
-FROM aberger4/mouse-tracking-test:latest
+FROM aberger4/mouse-tracking-base:python3.10-slim
 
 # Install uv
 COPY --from=ghcr.io/astral-sh/uv:latest /uv /usr/local/bin/uv
 
-# Verify existing packages (optional, for debugging)
-RUN python -m pip list
+ENV UV_SYSTEM_PYTHON=1 \
+    UV_PYTHON=/usr/local/bin/python \
+    PYTHONUNBUFFERED=1
 
-# Set working directory
-WORKDIR /app
+# Copy metadata first for layer caching
+COPY pyproject.toml uv.lock* README.md ./
 
-# Configure uv to use system Python and packages
-ENV UV_SYSTEM_PYTHON=1
-ENV UV_PYTHON=/usr/bin/python3.10
+# Only install runtime dependencies
+RUN uv sync --frozen --no-group dev --no-group test --no-group lint --no-install-project
 
-# Copy dependency files first (better layer caching)
-COPY pyproject.toml .
-COPY uv.lock* .
-COPY README.md .
+# Now add source and install the project itself
+COPY src ./src
 
-# Install dependencies while respecting system packages
-RUN uv pip install --system -r pyproject.toml
+RUN uv pip install --system .
 
-# Copy application code
-COPY src .
-
-# If you need to install your package in development mode
-RUN uv pip install --system -e .
-
-# Set Python to unbuffered mode
-ENV PYTHONUNBUFFERED=1
-
-# Reset the entrypoint to nothing
-ENTRYPOINT []
-
-# Entrypoint
-CMD ["mouse-tracking-runtime"]
+CMD ["mouse-tracking-runtime", "--help"]
