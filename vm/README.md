@@ -59,14 +59,9 @@ Both frameworks are configured to work together:
 - **Singularity**: Inherits GPU access from host system
 - **CUDA**: Both frameworks use compatible CUDA versions (12.4/12.x)
 
-### Memory Management
-- Frameworks are configured to avoid memory conflicts
-- Container environments provide isolation between inference sessions
-
-### Model Serving
+### Model Runtimes
 - **PyTorch**: Used for HRNet-based pose estimation models
-- **TensorFlow Serving**: Handles arena corners, segmentation, and identity tracking
-- Both can run simultaneously within the same container instance
+- **TensorFlow**: Handles arena corners, segmentation, and identity tracking
 
 ## Usage Examples
 

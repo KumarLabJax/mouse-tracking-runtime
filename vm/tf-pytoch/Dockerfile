@@ -19,11 +19,11 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     && rm -rf /var/lib/apt/lists/*
 
 
-# --- Versions (pin to avoid resolver scanning) ---
+# --- Versions ---
 ARG TORCH_VER=2.5.1
 ARG TORCHVISION_VER=0.20.1
 ARG TORCHAUDIO_VER=2.5.1
-ARG TORCH_CUDA_TAG=cu124
+ARG TORCH_CUDA_TAG=cu126
 ARG TENSORFLOW_VER=2.19.0
 
 # Install PyTorch + CUDA (bundled runtime)
