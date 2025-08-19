@@ -71,7 +71,9 @@ def run_length_encode(
     return run_start_positions, run_durations, run_values
 
 
-def rle(inarray: np.ndarray) -> tuple[np.ndarray | None, np.ndarray | None, np.ndarray | None]:
+def rle(
+    inarray: np.ndarray,
+) -> tuple[np.ndarray | None, np.ndarray | None, np.ndarray | None]:
     """
     Backward compatibility alias for run_length_encode.
 
@@ -82,7 +84,11 @@ def rle(inarray: np.ndarray) -> tuple[np.ndarray | None, np.ndarray | None, np.n
         A tuple of (start_positions, durations, values).
     """
     # TODO: deprecate this function in favor of find_first_nonzero_index
-    warnings.warn("`rle` is deprecated, use `run_length_encode` instead.", DeprecationWarning, stacklevel=2)
+    warnings.warn(
+        "`rle` is deprecated, use `run_length_encode` instead.",
+        DeprecationWarning,
+        stacklevel=2,
+    )
     # return run_length_encode(inarray)
     ia = np.asarray(inarray)
     n = len(ia)

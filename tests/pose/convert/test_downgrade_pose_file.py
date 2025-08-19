@@ -356,9 +356,7 @@ class TestDowngradePoseFileFilenameHandling:
         for input_file, expected_output in test_cases:
             with (
                 self._setup_basic_v3_mock(mock_multi_to_v2),
-                patch(
-                    "mouse_tracking.pose.convert.os.path.isfile", return_value=True
-                ),
+                patch("mouse_tracking.pose.convert.os.path.isfile", return_value=True),
                 patch(
                     "mouse_tracking.pose.convert.h5py.File",
                     return_value=self.mock_h5,
