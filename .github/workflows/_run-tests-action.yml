@@ -29,7 +29,7 @@ jobs:
           version: "latest"
 
       - name: Install dependencies with uv
-        run: uv sync --extra cpu
+        run: uv sync --extra cpu --index pytorch-cpu
 
       - name: Test with pytest
         run: uv run pytest tests
