@@ -5,41 +5,51 @@ description = "Runtime environment for mouse tracking experiments"
 requires-python = ">=3.10,<3.11"
 packages = ["src/mouse_tracking"]
 dependencies = [
-    # Core scientific computing - exact versions from container
-    "numpy==1.25.2",
-    "scipy==1.11.4",
-    "pandas==2.0.3",
-    # Computer vision and image processing
-    "opencv-python==4.8.0.76",
-    "imageio==2.31.6",
-    "pillow==9.4.0",
-    # Plotting and visualization
-    "matplotlib==3.7.1",
-    "contourpy==1.2.1",
-    "cycler==0.12.1",
-    "fonttools==4.53.0",
-    "kiwisolver==1.4.5",
-    # Machine learning frameworks - flexible versions to use pre-installed
-    "tensorflow>=2.15.0,<2.16.0",
-    "torch>=2.3.0,<2.4.0",
-    # Utilities and CLI
-    "click==8.1.7",
-    "typer>=0.12.4",
-    "absl-py==1.4.0",
-    # Data validation
-    "pydantic==2.7.4",
-    # Standard library extensions
-    "networkx==3.3",
-    "packaging==24.1",
-    "platformdirs==4.2.2",
-    "pyparsing==3.1.2",
-    "python-dateutil==2.8.2",
-    "pytz==2023.4",
-    "six==1.16.0",
-    "tzdata==2024.1",
-    "h5py==3.9.0",
-    "pydantic-settings>=2.10.1",
+  "numpy>=1.26.0,<2.2.0",
+  "scipy==1.11.4",
+  "pandas==2.0.3",
+  "opencv-python-headless==4.8.0.76",
+  "imageio==2.31.6",
+  "pillow==9.4.0",
+  "matplotlib==3.7.1",
+  "typer>=0.12.4",
+  "absl-py==1.4.0",
+  "pydantic==2.7.4",
+  "networkx==3.3",
+  "h5py>=3.11.0",
+  "pydantic-settings>=2.10.1",
+  "yacs>=0.1.8",
 ]
+
+[project.optional-dependencies]
+# Unified GPU stack (CUDA 12.6 line)
+gpu = [
+  "tensorflow[and-cuda]==2.20.0",
+  "torch==2.6.0",
+  "torchvision==0.21.0",
+  "torchaudio==2.6.0",
+]
+
+# CPU-only convenience for local tests (unchanged idea)
+cpu = [
+  "tensorflow==2.20.0",
+  "torch==2.6.0",
+  "torchvision==0.21.0",
+  "torchaudio==2.6.0",
+]
+
+
+# ---- uv configuration: point Torch family at cu126 index ----
+[[tool.uv.index]]
+name = "pytorch-cu126"
+url  = "https://download.pytorch.org/whl/cu126"
+explicit = true
+
+[tool.uv.sources]
+torch = { index = "pytorch-cu126" }
+torchvision = { index = "pytorch-cu126" }
+torchaudio = { index = "pytorch-cu126" }
+
 
 [project.scripts]
 mouse-tracking-runtime = "mouse_tracking.cli.main:app"
