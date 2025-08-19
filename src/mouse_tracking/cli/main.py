@@ -1,9 +1,11 @@
-"""Mouse Tracking Runtime CLI"""
+"""Mouse Tracking Runtime CLI."""
+
+from typing import Annotated
 
 import typer
-from typing import Annotated
-from mouse_tracking.cli.utils import version_callback
+
 from mouse_tracking.cli import infer, qa, utils
+from mouse_tracking.cli.utils import version_callback
 
 app = typer.Typer(no_args_is_help=True)
 
@@ -18,7 +20,7 @@ def callback(
     ] = None,
     verbose: bool = typer.Option(False, help="Enable verbose output"),
 ) -> None:
-    """Mouse Tracking Runtime CLI"""
+    """Mouse Tracking Runtime CLI."""
 
 
 app.add_typer(

@@ -1,7 +1,8 @@
 """Numpy array utility functions for mouse tracking."""
 
-import cv2
 import warnings
+
+import cv2
 import numpy as np
 
 

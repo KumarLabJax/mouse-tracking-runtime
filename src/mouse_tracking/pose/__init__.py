@@ -1,5 +1,3 @@
-from . import (
-    convert,
-    inspect,
-    render
-)
+"""Pose estimation module for Mouse Tracking Runtime."""
+
+from . import convert, inspect, render

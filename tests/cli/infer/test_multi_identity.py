@@ -195,7 +195,7 @@ class TestMultiIdentityImplementation:
             # Assert
             assert result.exit_code == 0
             mock_infer.assert_called_once()
-            
+
             args = mock_infer.call_args[0][0]
             assert args.model == "social-paper"
             assert args.runtime == "tfs"
@@ -274,7 +274,7 @@ class TestMultiIdentityImplementation:
             # Assert
             assert result.exit_code == 0
             mock_infer.assert_called_once()
-            
+
             # Verify the args object has all the expected values
             args = mock_infer.call_args[0][0]
             assert args.model == "2023"
@@ -302,7 +302,7 @@ class TestMultiIdentityImplementation:
             # Assert
             assert result.exit_code == 0
             mock_infer.assert_called_once()
-            
+
             args = mock_infer.call_args[0][0]
             assert args.video == str(self.test_video_path)
             assert args.frame is None
@@ -326,7 +326,7 @@ class TestMultiIdentityImplementation:
             # Assert
             assert result.exit_code == 0
             mock_infer.assert_called_once()
-            
+
             args = mock_infer.call_args[0][0]
             assert args.video is None
             assert args.frame == str(self.test_frame_path)
@@ -374,7 +374,7 @@ class TestMultiIdentityImplementation:
             # Assert
             assert result.exit_code == 0
             mock_infer.assert_called_once()
-            
+
             args = mock_infer.call_args[0][0]
             assert args.video == edge_case_path
 
@@ -410,7 +410,7 @@ class TestMultiIdentityImplementation:
             # Assert
             assert result.exit_code == 0
             mock_infer.assert_called_once()
-            
+
             args = mock_infer.call_args[0][0]
             assert args.model == model_variant
 
@@ -437,7 +437,7 @@ class TestMultiIdentityImplementation:
             # Assert
             assert result.exit_code == 0
             mock_infer.assert_called_once()
-            
+
             args = mock_infer.call_args[0][0]
             assert args.model == "2023"
             assert args.runtime == "tfs"
@@ -462,7 +462,7 @@ class TestMultiIdentityImplementation:
             # Assert
             assert result.exit_code == 0
             mock_infer.assert_called_once()
-            
+
             args = mock_infer.call_args[0][0]
             assert args.model == "social-paper"  # default model
             assert args.runtime == "tfs"  # default runtime
@@ -491,7 +491,7 @@ class TestMultiIdentityImplementation:
             # Assert
             assert result.exit_code == 0
             mock_infer.assert_called_once()
-            
+
             # Verify all options are processed correctly
             args = mock_infer.call_args[0][0]
             assert args.model == "2023"
@@ -520,7 +520,7 @@ class TestMultiIdentityImplementation:
             # Assert
             assert result.exit_code == 0
             mock_infer.assert_called_once()
-            
+
             args = mock_infer.call_args[0][0]
             assert args.model == "social-paper"
             assert args.runtime == "tfs"
@@ -545,7 +545,7 @@ class TestMultiIdentityImplementation:
             # Assert
             assert result.exit_code == 0
             mock_infer.assert_called_once()
-            
+
             # Verify that the args object has all expected attributes
             args = mock_infer.call_args[0][0]
             assert hasattr(args, "model")
