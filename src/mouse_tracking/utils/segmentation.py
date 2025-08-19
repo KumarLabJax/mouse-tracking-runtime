@@ -77,7 +77,6 @@ def merge_multiple_seg_instances(
     """
     assert len(matrix_list) == len(flag_list)
 
-
     matrix_shapes = np.asarray([x.shape for x in matrix_list])
 
     # No predictions, just return default data containing smallest pads

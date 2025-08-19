@@ -1,6 +1,5 @@
 """Mouse Tracking Runtime QA CLI."""
 
-
 from pathlib import Path
 
 import pandas as pd

@@ -14,6 +14,7 @@ from mouse_tracking.utils.clip_video import clip_video_auto, clip_video_manual
 
 app = typer.Typer()
 
+
 def version_callback(value: bool) -> None:
     """
     Display the application version and exit.

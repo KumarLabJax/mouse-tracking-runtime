@@ -21,7 +21,11 @@ from mouse_tracking.utils.writers import write_fecal_boli_data
 
 
 def predict_fecal_boli(
-    input_iter, model, render: str | None = None, frame_interval: int = 1, batch_size: int = 1
+    input_iter,
+    model,
+    render: str | None = None,
+    frame_interval: int = 1,
+    batch_size: int = 1,
 ):
     """Main function that processes an iterator.
 
