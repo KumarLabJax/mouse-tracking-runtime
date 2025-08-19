@@ -2,14 +2,16 @@
 Pose data conversion utilities.
 """
 
-import numpy as np
 import os
-import h5py
 import re
+
+import h5py
+import numpy as np
 
 from mouse_tracking.core.exceptions import InvalidPoseFileException
 from mouse_tracking.utils.run_length_encode import run_length_encode
-from mouse_tracking.utils.writers import write_pose_v2_data, write_pixel_per_cm_attr
+from mouse_tracking.utils.writers import write_pixel_per_cm_attr, write_pose_v2_data
+
 
 def v2_to_v3(pose_data, conf_data, threshold: float = 0.3):
 	"""Converts single mouse pose data into multimouse.
@@ -41,7 +43,7 @@ def v2_to_v3(pose_data, conf_data, threshold: float = 0.3):
 	# Tracks can only be continuous blocks
 	instance_track_id = np.full(pose_data_v3.shape[:2], 0, dtype=np.uint32)
 	rle_starts, rle_durations, rle_values = run_length_encode(instance_count)
-	for i, (start, duration) in enumerate(zip(rle_starts[rle_values == 1], rle_durations[rle_values == 1])):
+	for i, (start, duration) in enumerate(zip(rle_starts[rle_values == 1], rle_durations[rle_values == 1], strict=False)):
 		instance_track_id[start:start + duration] = i
 	return pose_data_v3, conf_data_v3, instance_count, instance_embedding, instance_track_id
 

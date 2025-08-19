@@ -1,6 +1,7 @@
 """Run-Length Encoding Utility."""
 
 import warnings
+
 import numpy as np
 
 

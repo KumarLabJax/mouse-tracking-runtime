@@ -1,9 +1,9 @@
 """Helper functions for performance timing."""
 
-import numpy as np
 import sys
-from typing import List
-from resource import getrusage, RUSAGE_SELF
+from resource import RUSAGE_SELF, getrusage
+
+import numpy as np
 
 SECONDS_PER_MINUTE = 60
 MINUTES_PER_HOUR = 60
@@ -30,7 +30,7 @@ def print_time(frames: int, fps: int = 30.0):
 
 class time_accumulator:
 	"""An accumulator object that collects performance timings."""
-	def __init__(self, n_breaks: int, labels: List[str] = None, frame_per_batch: int = 1, log_ram: bool = True):
+	def __init__(self, n_breaks: int, labels: list[str] = None, frame_per_batch: int = 1, log_ram: bool = True):
 		"""Initializes an accumulator.
 
 		Args:
@@ -47,7 +47,7 @@ class time_accumulator:
 		self.__count_samples = 0
 		self.__fpb = frame_per_batch
 
-	def add_batch_times(self, timings: List[float]):
+	def add_batch_times(self, timings: list[float]):
 		"""Adds timings of a batch.
 
 		Args:
@@ -62,7 +62,7 @@ class time_accumulator:
 		deltas = np.asarray(timings)[1:] - np.asarray(timings)[:-1]
 		self.add_batch_deltas(deltas)
 
-	def add_batch_deltas(self, deltas: List[float]):
+	def add_batch_deltas(self, deltas: list[float]):
 		"""Adds timing deltas for a batch.
 
 		Args:
@@ -77,7 +77,7 @@ class time_accumulator:
 		if len(deltas) != self.__n_breaks:
 			raise ValueError(f'Timer has {self.__n_breaks} breakpoints, received {len(deltas)}.')
 
-		_ = [arr.append(new_val) for arr, new_val in zip(self.__time_arrs, deltas)]
+		_ = [arr.append(new_val) for arr, new_val in zip(self.__time_arrs, deltas, strict=False)]
 		if self.__log_ram:
 			self.__ram_arr.append(getrusage(RUSAGE_SELF).ru_maxrss)
 		self.__count_samples += 1

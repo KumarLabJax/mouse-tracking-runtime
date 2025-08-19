@@ -1,8 +1,9 @@
 """Unit tests for CLI callback function."""
 
-import pytest
-from unittest.mock import patch
 from typing import get_type_hints
+from unittest.mock import patch
+
+import pytest
 
 from mouse_tracking.cli.main import callback
 

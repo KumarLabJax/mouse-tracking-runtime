@@ -1,16 +1,27 @@
 """Inference function for executing TFS for a static object model."""
-import tensorflow.compat.v1 as tf
+import queue
+import sys
+import time
+
+import cv2
 import imageio
 import numpy as np
-import cv2
-import queue
-import time
-import sys
-from mouse_tracking.utils.static_objects import filter_square_keypoints, plot_keypoints, get_px_per_cm, DEFAULT_CM_PER_PX, ARENA_IMAGING_RESOLUTION
-from mouse_tracking.utils.prediction_saver import prediction_saver
-from mouse_tracking.utils.writers import write_static_object_data, write_pixel_per_cm_attr
-from mouse_tracking.utils.timers import time_accumulator
+import tensorflow.compat.v1 as tf
+
 from mouse_tracking.models.model_definitions import STATIC_ARENA_CORNERS
+from mouse_tracking.utils.prediction_saver import prediction_saver
+from mouse_tracking.utils.static_objects import (
+	ARENA_IMAGING_RESOLUTION,
+	DEFAULT_CM_PER_PX,
+	filter_square_keypoints,
+	get_px_per_cm,
+	plot_keypoints,
+)
+from mouse_tracking.utils.timers import time_accumulator
+from mouse_tracking.utils.writers import (
+	write_pixel_per_cm_attr,
+	write_static_object_data,
+)
 
 
 def infer_arena_corner_model(args):

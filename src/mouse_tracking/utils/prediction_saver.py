@@ -16,8 +16,9 @@ Usage:
 	results_matrix = controller.get_results()
 """
 
-import numpy as np
 import multiprocessing as mp
+
+import numpy as np
 
 
 class prediction_saver:
@@ -133,7 +134,7 @@ class prediction_saver:
 		if prediction_matrix is not None:
 			prediction_matrix = prediction_matrix[:cur_frames_used_count]
 		# Close down the dequeue thread
-		output_queue.put((prediction_matrix))
+		output_queue.put(prediction_matrix)
 
 	def start_dequeue_results(self):
 		"""Starts a thread that dequeues results."""

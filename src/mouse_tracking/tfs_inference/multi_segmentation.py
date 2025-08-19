@@ -1,16 +1,23 @@
 """Inference function for executing TFS for a single mouse segmentation model."""
-import tensorflow as tf
+import queue
+import sys
+import time
+
 import imageio
 import numpy as np
-import queue
-import time
-import sys
-from mouse_tracking.utils.segmentation import get_contours, pad_contours, render_segmentation_overlay, merge_multiple_seg_instances
-from mouse_tracking.utils.prediction_saver import prediction_saver
-from mouse_tracking.utils.writers import write_seg_data
-from mouse_tracking.utils.timers import time_accumulator
-from mouse_tracking.models.model_definitions import MULTI_MOUSE_SEGMENTATION
+import tensorflow as tf
 from absl import logging
+
+from mouse_tracking.models.model_definitions import MULTI_MOUSE_SEGMENTATION
+from mouse_tracking.utils.prediction_saver import prediction_saver
+from mouse_tracking.utils.segmentation import (
+	get_contours,
+	merge_multiple_seg_instances,
+	pad_contours,
+	render_segmentation_overlay,
+)
+from mouse_tracking.utils.timers import time_accumulator
+from mouse_tracking.utils.writers import write_seg_data
 
 
 def infer_multi_segmentation_tfs(args):

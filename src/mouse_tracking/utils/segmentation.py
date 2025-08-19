@@ -1,9 +1,9 @@
-import numpy as np
+
 import cv2
-from typing import Tuple, List
+import numpy as np
 
 
-def get_contours(mask_img: np.ndarray, min_contour_area: float = 50.0) -> List[np.ndarray]:
+def get_contours(mask_img: np.ndarray, min_contour_area: float = 50.0) -> list[np.ndarray]:
 	"""Creates an opencv-complaint contour list given a mask.
 
 	Args:
@@ -32,7 +32,7 @@ def get_contours(mask_img: np.ndarray, min_contour_area: float = 50.0) -> List[n
 	return [np.zeros([0, 2], dtype=np.int32)], [np.zeros([0, 4], dtype=np.int32)]
 
 
-def pad_contours(contours: List[np.ndarray], default_val: int = -1) -> np.ndarray:
+def pad_contours(contours: list[np.ndarray], default_val: int = -1) -> np.ndarray:
 	"""Converts a list of contour data into a padded full matrix.
 
 	Args:
@@ -52,7 +52,7 @@ def pad_contours(contours: List[np.ndarray], default_val: int = -1) -> np.ndarra
 	return padded_matrix
 
 
-def merge_multiple_seg_instances(matrix_list: List[np.ndarray], flag_list: List[np.ndarray], default_val: int = -1):
+def merge_multiple_seg_instances(matrix_list: list[np.ndarray], flag_list: list[np.ndarray], default_val: int = -1):
 	"""Merges multiple segmentation predictions together.
 
 	Args:
@@ -219,7 +219,7 @@ def render_outline(contour, frame_size=[800, 800], thickness=1, default_val=-1):
 	return new_mask.astype(bool)
 
 
-def render_segmentation_overlay(contour, image, color: Tuple[int] = (0, 0, 255)) -> np.ndarray:
+def render_segmentation_overlay(contour, image, color: tuple[int] = (0, 0, 255)) -> np.ndarray:
 	"""Renders segmentation contour data onto a frame.
 
 	Args:

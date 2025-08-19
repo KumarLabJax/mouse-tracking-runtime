@@ -1,16 +1,18 @@
 """Inference function for executing TFS for a static object model."""
-import tensorflow as tf
+import queue
+import sys
+import time
+
 import imageio
 import numpy as np
-import queue
-import time
-import sys
-from mouse_tracking.utils.static_objects import plot_keypoints
-from mouse_tracking.utils.prediction_saver import prediction_saver
-from mouse_tracking.utils.writers import write_static_object_data
-from mouse_tracking.utils.timers import time_accumulator
-from mouse_tracking.models.model_definitions import STATIC_LIXIT
+import tensorflow as tf
 from absl import logging
+
+from mouse_tracking.models.model_definitions import STATIC_LIXIT
+from mouse_tracking.utils.prediction_saver import prediction_saver
+from mouse_tracking.utils.static_objects import plot_keypoints
+from mouse_tracking.utils.timers import time_accumulator
+from mouse_tracking.utils.writers import write_static_object_data
 
 
 def infer_lixit_model(args):

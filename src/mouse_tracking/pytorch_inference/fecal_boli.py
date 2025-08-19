@@ -1,20 +1,22 @@
 """Inference function for executing pytorch for a fecal boli detection model."""
+import queue
+import sys
+import time
+
 import imageio
 import numpy as np
-import queue
-import time
-import sys
-from mouse_tracking.utils.hrnet import preprocess_hrnet, localmax_2d_torch
-from mouse_tracking.utils.arrays import get_peak_coords
-from mouse_tracking.utils.static_objects import plot_keypoints
-from mouse_tracking.utils.prediction_saver import prediction_saver
-from mouse_tracking.utils.timers import time_accumulator
-from mouse_tracking.utils.writers import write_fecal_boli_data
-from mouse_tracking.models.model_definitions import FECAL_BOLI
 import torch
 import torch.backends.cudnn as cudnn
-from mouse_tracking.pytorch_inference.hrnet.models import pose_hrnet
+
+from mouse_tracking.models.model_definitions import FECAL_BOLI
 from mouse_tracking.pytorch_inference.hrnet.config import cfg
+from mouse_tracking.pytorch_inference.hrnet.models import pose_hrnet
+from mouse_tracking.utils.arrays import get_peak_coords
+from mouse_tracking.utils.hrnet import localmax_2d_torch, preprocess_hrnet
+from mouse_tracking.utils.prediction_saver import prediction_saver
+from mouse_tracking.utils.static_objects import plot_keypoints
+from mouse_tracking.utils.timers import time_accumulator
+from mouse_tracking.utils.writers import write_fecal_boli_data
 
 
 def predict_fecal_boli(input_iter, model, render: str = None, frame_interval: int = 1, batch_size: int = 1):

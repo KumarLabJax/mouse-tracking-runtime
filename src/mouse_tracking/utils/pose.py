@@ -5,10 +5,9 @@ import cv2
 import h5py
 import numpy as np
 
-from mouse_tracking.utils.run_length_encode import rle
 from mouse_tracking.utils.arrays import safe_find_first
 from mouse_tracking.utils.hashing import hash_file
-
+from mouse_tracking.utils.run_length_encode import rle
 
 NOSE_INDEX = 0
 LEFT_EAR_INDEX = 1
@@ -68,7 +67,7 @@ def convert_v2_to_v3(pose_data, conf_data, threshold: float = 0.3):
 	# Tracks can only be continuous blocks
 	instance_track_id = np.full(pose_data_v3.shape[:2], 0, dtype=np.uint32)
 	rle_starts, rle_durations, rle_values = rle(instance_count)
-	for i, (start, duration) in enumerate(zip(rle_starts[rle_values == 1], rle_durations[rle_values == 1])):
+	for i, (start, duration) in enumerate(zip(rle_starts[rle_values == 1], rle_durations[rle_values == 1], strict=False)):
 		instance_track_id[start:start + duration] = i
 	return pose_data_v3, conf_data_v3, instance_count, instance_embedding, instance_track_id
 

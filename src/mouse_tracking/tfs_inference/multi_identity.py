@@ -1,17 +1,22 @@
 """Inference function for executing TFS for a multi-mouse identity model."""
-import tensorflow as tf
+import queue
+import sys
+import time
+
+import h5py
 import imageio
 import numpy as np
-import h5py
-import queue
-import time
-import sys
-from mouse_tracking.utils.identity import InvalidIdentityException, crop_and_rotate_frame
-from mouse_tracking.utils.prediction_saver import prediction_saver
-from mouse_tracking.utils.writers import write_identity_data
-from mouse_tracking.utils.timers import time_accumulator
-from mouse_tracking.models.model_definitions import MULTI_MOUSE_IDENTITY
+import tensorflow as tf
 from absl import logging
+
+from mouse_tracking.models.model_definitions import MULTI_MOUSE_IDENTITY
+from mouse_tracking.utils.identity import (
+	InvalidIdentityException,
+	crop_and_rotate_frame,
+)
+from mouse_tracking.utils.prediction_saver import prediction_saver
+from mouse_tracking.utils.timers import time_accumulator
+from mouse_tracking.utils.writers import write_identity_data
 
 
 def infer_multi_identity_tfs(args):
@@ -54,7 +59,7 @@ def infer_multi_identity_tfs(args):
 			raw_predictions.append(prediction['out'])
 		t3 = time.time()
 		prediction_matrix = np.zeros([pose_data.shape[1], embed_size], dtype=np.float32)
-		for animal_idx, cur_prediction in zip(valid_poses, raw_predictions):
+		for animal_idx, cur_prediction in zip(valid_poses, raw_predictions, strict=False):
 			prediction_matrix[animal_idx] = cur_prediction
 
 		try:

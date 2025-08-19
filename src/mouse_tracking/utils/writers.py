@@ -1,9 +1,10 @@
 """Functions related to saving data to pose files."""
 
+from pathlib import Path
+
 import h5py
 import numpy as np
-from pathlib import Path
-from typing import Union, List
+
 from mouse_tracking.core.exceptions import InvalidPoseFileException
 from mouse_tracking.matching import hungarian_match_points_seg
 from mouse_tracking.utils.pose import convert_v2_to_v3
@@ -402,7 +403,7 @@ def write_fecal_boli_data(pose_file, detections: np.ndarray, count_detections: n
 		out_file['dynamic_objects/fecal_boli'].attrs['model'] = model_str
 
 
-def write_pose_clip(in_pose_f: Union[str, Path], out_pose_f: Union[str, Path], clip_idxs: Union[List, np.ndarray]):
+def write_pose_clip(in_pose_f: str | Path, out_pose_f: str | Path, clip_idxs: list | np.ndarray):
 	"""Writes a clip of a pose file.
 
 	Args:

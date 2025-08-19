@@ -1,11 +1,12 @@
 """Unit tests for typer subcommand registration in main CLI app."""
 
-import pytest
-from typer.testing import CliRunner
 from unittest.mock import patch
 
-from mouse_tracking.cli.main import app
+import pytest
+from typer.testing import CliRunner
+
 from mouse_tracking.cli import infer, qa, utils
+from mouse_tracking.cli.main import app
 
 
 def test_main_app_is_typer_instance():

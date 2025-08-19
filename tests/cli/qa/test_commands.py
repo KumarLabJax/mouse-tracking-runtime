@@ -1,11 +1,12 @@
 """Unit tests for QA CLI commands."""
 
-import pytest
-from typer.testing import CliRunner
-from unittest.mock import patch
-from pathlib import Path
 import tempfile
+from pathlib import Path
+from unittest.mock import patch
+
+import pytest
 import typer
+from typer.testing import CliRunner
 
 from mouse_tracking.cli.qa import app
 
@@ -196,8 +197,9 @@ def test_qa_command_function_docstrings(
 def test_qa_single_pose_has_parameters():
     """Test that single_pose command has the expected parameters."""
     # Arrange
-    from mouse_tracking.cli import qa
     import inspect
+
+    from mouse_tracking.cli import qa
 
     # Act
     func = qa.single_pose
@@ -212,8 +214,9 @@ def test_qa_single_pose_has_parameters():
 def test_qa_multi_pose_has_no_parameters():
     """Test that multi_pose command has no parameters (empty implementation)."""
     # Arrange
-    from mouse_tracking.cli import qa
     import inspect
+
+    from mouse_tracking.cli import qa
 
     # Act
     func = qa.multi_pose
@@ -237,8 +240,9 @@ def test_qa_multi_pose_returns_none():
 def test_qa_single_pose_execution_with_mocked_dependencies():
     """Test single_pose function execution with mocked dependencies."""
     # Arrange
-    from mouse_tracking.cli import qa
     from pathlib import Path
+
+    from mouse_tracking.cli import qa
     
     mock_pose_path = Path("/fake/pose.h5")
     mock_result = {"metric1": 0.5, "metric2": 0.8}

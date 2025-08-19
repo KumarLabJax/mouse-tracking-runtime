@@ -1,17 +1,18 @@
 """Helper utilities for the CLI."""
 
+from pathlib import Path
+
 import typer
 from rich import print
-from pathlib import Path
 
 from mouse_tracking import __version__
 
 app = typer.Typer()
-from mouse_tracking.utils import fecal_boli, static_objects
-from mouse_tracking.pose.convert import downgrade_pose_file
 from mouse_tracking.matching.match_predictions import match_predictions
-from mouse_tracking.utils.clip_video import clip_video_auto, clip_video_manual
 from mouse_tracking.pose import render
+from mouse_tracking.pose.convert import downgrade_pose_file
+from mouse_tracking.utils import fecal_boli, static_objects
+from mouse_tracking.utils.clip_video import clip_video_auto, clip_video_manual
 
 
 def version_callback(value: bool) -> None:

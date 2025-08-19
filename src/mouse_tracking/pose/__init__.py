@@ -1,5 +1,1 @@
-from . import (
-    convert,
-    inspect,
-    render
-)
+from . import convert, inspect, render

@@ -1,7 +1,7 @@
-import numpy as np
+
 import cv2
 import h5py
-from typing import Tuple
+import numpy as np
 from scipy.spatial.distance import cdist
 
 ARENA_SIZE_CM = 20.5 * 2.54  # 20.5 inches to cm
@@ -17,7 +17,7 @@ ARENA_IMAGING_RESOLUTION = {
 }
 
 
-def plot_keypoints(kp: np.ndarray, img: np.ndarray, color: Tuple = (0, 0, 255), is_yx: bool = False, include_lines: bool = False) -> np.ndarray:
+def plot_keypoints(kp: np.ndarray, img: np.ndarray, color: tuple = (0, 0, 255), is_yx: bool = False, include_lines: bool = False) -> np.ndarray:
 	"""Plots keypoints on an image.
 
 	Args:
@@ -115,7 +115,7 @@ def filter_static_keypoints(predictions: np.ndarray, tolerance: float = 25.0):
 	return np.mean(predictions, axis=0)
 
 
-def get_affine_xform(bbox: np.ndarray, img_size: Tuple[int] = (512, 512), warp_size: Tuple[int] = (255, 255)):
+def get_affine_xform(bbox: np.ndarray, img_size: tuple[int] = (512, 512), warp_size: tuple[int] = (255, 255)):
 	"""Obtains an affine transform for reshaping mask predictins.
 
 	Args:
@@ -160,7 +160,7 @@ def get_rot_rect(mask: np.ndarray):
 	return sort_corners(corners, mask.shape[:2])
 
 
-def sort_corners(corners: np.ndarray, img_size: Tuple[int]):
+def sort_corners(corners: np.ndarray, img_size: tuple[int]):
 	"""Sort the corners to be [TL, TR, BR, BL] from the frame the mouses egocentric viewpoint.
 
 	Args:
@@ -201,7 +201,7 @@ def sort_points_clockwise(points):
 	return np.roll(sorted_points, -first_point_idx, axis=0)
 
 
-def get_mask_corners(box: np.ndarray, mask: np.ndarray, img_size: Tuple[int]):
+def get_mask_corners(box: np.ndarray, mask: np.ndarray, img_size: tuple[int]):
 	"""Finds corners of a mask proposed in a bounding box.
 
 	Args:

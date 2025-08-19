@@ -1,16 +1,22 @@
 """Inference function for executing TFS for a static object model."""
-import tensorflow.compat.v1 as tf
+import queue
+import sys
+import time
+
+import cv2
 import imageio
 import numpy as np
-import cv2
-import queue
-import time
-import sys
-from mouse_tracking.utils.static_objects import filter_static_keypoints, plot_keypoints, get_mask_corners
-from mouse_tracking.utils.prediction_saver import prediction_saver
-from mouse_tracking.utils.writers import write_static_object_data
-from mouse_tracking.utils.timers import time_accumulator
+import tensorflow.compat.v1 as tf
+
 from mouse_tracking.models.model_definitions import STATIC_FOOD_CORNERS
+from mouse_tracking.utils.prediction_saver import prediction_saver
+from mouse_tracking.utils.static_objects import (
+	filter_static_keypoints,
+	get_mask_corners,
+	plot_keypoints,
+)
+from mouse_tracking.utils.timers import time_accumulator
+from mouse_tracking.utils.writers import write_static_object_data
 
 
 def infer_food_hopper_model(args):

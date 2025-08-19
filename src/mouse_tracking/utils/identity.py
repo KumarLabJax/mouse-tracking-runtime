@@ -1,10 +1,11 @@
-import numpy as np
+
 import cv2
-from typing import Tuple
+import numpy as np
+
 from mouse_tracking.core.exceptions import InvalidIdentityException
 
 
-def get_rotation_mat(pose: np.ndarray, input_size: Tuple[int], output_size: Tuple[int]) -> np.ndarray:
+def get_rotation_mat(pose: np.ndarray, input_size: tuple[int], output_size: tuple[int]) -> np.ndarray:
 	"""Generates a rotation matrix based on a pose.
 
 	Args:
@@ -45,13 +46,13 @@ def get_rotation_mat(pose: np.ndarray, input_size: Tuple[int], output_size: Tupl
 	return aff_mat[:2]
 
 
-def crop_and_rotate_frame(frame: np.ndarray, pose: np.ndarray, crop_size: Tuple[int]) -> np.ndarray:
+def crop_and_rotate_frame(frame: np.ndarray, pose: np.ndarray, crop_size: tuple[int]) -> np.ndarray:
 	"""Crops and rotates a frame based on pose predictions.
 
 	Args:
 		frame: frame to crop and rotate
 		pose: pose to use in transformation (sorted [y, x])
-alembic_version		crop_size: size of the resulting cropped frame
+	alembic_version		crop_size: size of the resulting cropped frame
 
 	Returns:
 		cropped and rotated frame.

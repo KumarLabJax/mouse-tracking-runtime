@@ -1,19 +1,21 @@
 """Inference function for executing pytorch for a single mouse pose model."""
+import queue
+import sys
+import time
+
 import imageio
 import numpy as np
-import queue
-import time
-import sys
-from mouse_tracking.utils.pose import render_pose_overlay
-from mouse_tracking.utils.hrnet import argmax_2d_torch, preprocess_hrnet
-from mouse_tracking.utils.prediction_saver import prediction_saver
-from mouse_tracking.utils.writers import write_pose_v2_data
-from mouse_tracking.utils.timers import time_accumulator
-from mouse_tracking.models.model_definitions import SINGLE_MOUSE_POSE
 import torch
 import torch.backends.cudnn as cudnn
-from mouse_tracking.pytorch_inference.hrnet.models import pose_hrnet
+
+from mouse_tracking.models.model_definitions import SINGLE_MOUSE_POSE
 from mouse_tracking.pytorch_inference.hrnet.config import cfg
+from mouse_tracking.pytorch_inference.hrnet.models import pose_hrnet
+from mouse_tracking.utils.hrnet import argmax_2d_torch, preprocess_hrnet
+from mouse_tracking.utils.pose import render_pose_overlay
+from mouse_tracking.utils.prediction_saver import prediction_saver
+from mouse_tracking.utils.timers import time_accumulator
+from mouse_tracking.utils.writers import write_pose_v2_data
 
 
 def predict_pose(input_iter, model, render: str = None, batch_size: int = 1):
