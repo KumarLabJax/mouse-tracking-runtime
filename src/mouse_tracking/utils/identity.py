@@ -68,7 +68,7 @@ def crop_and_rotate_frame(
     Args:
             frame: frame to crop and rotate
             pose: pose to use in transformation (sorted [y, x])
-    alembic_version		crop_size: size of the resulting cropped frame
+            crop_size: size of the resulting cropped frame
 
     Returns:
             cropped and rotated frame.

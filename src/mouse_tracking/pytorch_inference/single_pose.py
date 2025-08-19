@@ -19,7 +19,7 @@ from mouse_tracking.utils.timers import time_accumulator
 from mouse_tracking.utils.writers import write_pose_v2_data
 
 
-def predict_pose(input_iter, model, render: str = None, batch_size: int = 1):
+def predict_pose(input_iter, model, render: str | None = None, batch_size: int = 1):
     """Main function that processes an iterator.
 
     Args:

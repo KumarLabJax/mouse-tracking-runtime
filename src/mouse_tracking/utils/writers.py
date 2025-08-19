@@ -543,10 +543,10 @@ def write_pose_clip(
     all_attrs = {}
     all_compression_flags = {}
     with h5py.File(in_pose_f, "r") as in_f:
-        all_pose_fields = ["poseest/" + key for key in in_f["poseest"].keys()]
-        if "static_objects" in in_f.keys():
+        all_pose_fields = ["poseest/" + key for key in in_f["poseest"]]
+        if "static_objects" in in_f:
             all_static_fields = [
-                "static_objects/" + key for key in in_f["static_objects"].keys()
+                "static_objects/" + key for key in in_f["static_objects"]
             ]
         else:
             all_static_fields = []

@@ -35,7 +35,7 @@ class time_accumulator:
     def __init__(
         self,
         n_breaks: int,
-        labels: list[str] = None,
+        labels: list[str] | None = None,
         frame_per_batch: int = 1,
         log_ram: bool = True,
     ):
