@@ -22,7 +22,12 @@ To install uv, see the [uv installation instructions](https://uv.run/docs/instal
 
 To create the development environment, run:
 ```
-uv sync --group cpu
+uv sync --extra cpu
+```
+
+If you happen to have access to a GPU, you can create a GPU-enabled environment with:
+```
+uv sync --extra gpu
 ```
 
 # Available Models
