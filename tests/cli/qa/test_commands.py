@@ -282,7 +282,7 @@ def test_qa_command_help_format(command_name):
     runner = CliRunner()
 
     # Act
-    result = runner.invoke(app, [command_name, "--help"])
+    result = runner.invoke(app, [command_name, "--help"], env={"TERM": "dumb"})
 
     # Assert
     assert result.exit_code == 0

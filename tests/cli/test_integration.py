@@ -199,7 +199,7 @@ def test_help_command_accessibility():
 
     # Act & Assert
     for path in help_paths:
-        result = runner.invoke(app, path)
+        result = runner.invoke(app, path, env={"TERM": "dumb"})
         assert result.exit_code == 0
         assert "Usage:" in result.stdout
         assert "--help" in result.stdout
