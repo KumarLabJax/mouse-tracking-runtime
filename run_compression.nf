@@ -94,6 +94,7 @@ process COMPUTE_VIDEO_DIFFERENCE {
  */
 process RENDER_POSE {
     label "tracking"
+    publishDir "compressed/pose/", mode:'copy'
 
     input:
     tuple path(in_video), path(in_pose)
@@ -119,6 +120,6 @@ workflow {
     all_videos = crf_videos.map { original, compressed -> compressed }.concat(bitrate_videos.map { original, compressed -> compressed })
 
     COMPUTE_VIDEO_DIFFERENCE(crf_videos.concat(bitrate_videos))
-    //pose_out = MULTI_MOUSE_TRACKING(all_videos, params.num_mice).pose_v6
-    //RENDER_POSE(pose_out)
+    pose_out = MULTI_MOUSE_TRACKING(all_videos, params.num_mice).pose_v6
+    RENDER_POSE(pose_out)
 }
