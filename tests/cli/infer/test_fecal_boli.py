@@ -280,7 +280,7 @@ class TestFecalBoliImplementation:
     def test_fecal_boli_help_text(self):
         """Test that the fecal boli command has proper help text."""
         # Arrange & Act
-        result = self.runner.invoke(app, ["fecal-boli", "--help"])
+        result = self.runner.invoke(app, ["fecal-boli", "--help"], env={"TERM": "dumb"})
 
         # Assert
         assert result.exit_code == 0

@@ -251,7 +251,7 @@ class TestRenderPose:
     def test_help_message_content(self, runner):
         """Test that help message contains expected content."""
         # Arrange & Act
-        result = runner.invoke(app, ["render-pose", "--help"])
+        result = runner.invoke(app, ["render-pose", "--help"], env={"TERM": "dumb"})
 
         # Assert
         assert result.exit_code == 0

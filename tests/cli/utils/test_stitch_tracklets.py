@@ -97,7 +97,9 @@ class TestStitchTracklets:
     def test_help_message_content(self, runner):
         """Test that help message contains expected content."""
         # Arrange & Act
-        result = runner.invoke(app, ["stitch-tracklets", "--help"])
+        result = runner.invoke(
+            app, ["stitch-tracklets", "--help"], env={"TERM": "dumb"}
+        )
 
         # Assert
         assert result.exit_code == 0

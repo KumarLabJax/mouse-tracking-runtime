@@ -111,7 +111,11 @@ def test_qa_single_pose_execution_with_mock_file():
         pose_file = Path(tmp_file.name)
 
     # Mock the inspect_pose_v6 function to avoid actual file processing
-    with patch("mouse_tracking.cli.qa.inspect_pose_v6") as mock_inspect:
+    # and mock to_csv to avoid creating real CSV files
+    with (
+        patch("mouse_tracking.cli.qa.inspect_pose_v6") as mock_inspect,
+        patch("pandas.DataFrame.to_csv") as mock_to_csv,
+    ):
         mock_inspect.return_value = {"metric1": 0.5, "metric2": 0.8}
 
         # Act
@@ -120,6 +124,7 @@ def test_qa_single_pose_execution_with_mock_file():
         # Assert
         assert result.exit_code == 0
         mock_inspect.assert_called_once()
+        mock_to_csv.assert_called_once()
 
     # Cleanup
     if pose_file.exists():

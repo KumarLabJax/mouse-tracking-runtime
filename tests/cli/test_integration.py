@@ -398,7 +398,7 @@ def test_comprehensive_cli_structure():
     runner = CliRunner()
 
     # Act
-    main_help = runner.invoke(app, ["--help"])
+    main_help = runner.invoke(app, ["--help"], env={"TERM": "dumb"})
 
     # Assert - Main structure
     assert main_help.exit_code == 0

@@ -319,7 +319,7 @@ class TestMultiPoseImplementation:
     def test_multi_pose_help_text(self):
         """Test that the multi-pose command has proper help text."""
         # Arrange & Act
-        result = self.runner.invoke(app, ["multi-pose", "--help"])
+        result = self.runner.invoke(app, ["multi-pose", "--help"], env={"TERM": "dumb"})
 
         # Assert
         assert result.exit_code == 0
