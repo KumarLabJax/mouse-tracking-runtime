@@ -111,7 +111,7 @@ def test_infer_commands_help_structure():
 
     # Act & Assert
     for command in commands:
-        result = runner.invoke(app, [command, "--help"])
+        result = runner.invoke(app, [command, "--help"], env={"TTY_COMPATIBLE": "1"})
         assert result.exit_code == 0
         assert "Usage:" in result.stdout
         assert "--help" in result.stdout

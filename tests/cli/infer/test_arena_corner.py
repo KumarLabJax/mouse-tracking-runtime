@@ -256,7 +256,7 @@ class TestArenaCornerImplementation:
         """Test that the command has proper help text."""
         # Arrange & Act
         result = self.runner.invoke(
-            app, ["arena-corner", "--help"], env={"NO_COLOR": "1"}
+            app, ["arena-corner", "--help"], env={"TERM": "dumb"}
         )
 
         # Assert
