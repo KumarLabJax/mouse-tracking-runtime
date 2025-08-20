@@ -16,7 +16,7 @@ We use a multi-stage container architecture that supports both ML frameworks:
 
 The base image provides:
 - **Python 3.10** runtime environment
-- **PyTorch 2.5.1** with CUDA 12.4 support (`cu124`)
+- **PyTorch 2.5.1** with CUDA 12.6 support (`cu126`)
 - **TensorFlow 2.19.0** with CUDA support
 - Essential system dependencies (ffmpeg, libjpeg8-dev, etc.)
 
@@ -57,7 +57,7 @@ Both frameworks are configured to work together:
 ### GPU Access
 - **Docker**: Uses NVIDIA runtime with `NVIDIA_VISIBLE_DEVICES=all`
 - **Singularity**: Inherits GPU access from host system
-- **CUDA**: Both frameworks use compatible CUDA versions (12.4/12.x)
+- **CUDA**: Both frameworks use compatible CUDA versions (12.6)
 
 ### Model Runtimes
 - **PyTorch**: Used for HRNet-based pose estimation models
