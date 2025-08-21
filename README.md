@@ -34,6 +34,39 @@ uv sync --extra gpu
 
 See [model docs](docs/models.md) for information about available models.
 
+## Model Directory Configuration
+
+The model directory can be configured at runtime using environment variables or nextflow parameters:
+
+### Environment Variable
+Set the `MOUSE_TRACKING_MODEL_DIRECTORY` environment variable:
+```bash
+export MOUSE_TRACKING_MODEL_DIRECTORY=/path/to/your/models
+```
+
+### Nextflow Parameter
+Use the `--model_dir` parameter when running nextflow:
+```bash
+nextflow run main.nf --model_dir /path/to/your/models --input_batch video_batch.txt --workflow single-mouse
+```
+
+### Default Location
+By default, models are expected at `/kumar_lab_models/models/`. The directory structure should follow:
+```
+models/
+├── pytorch-models/
+│   ├── single-mouse-pose/
+│   ├── multi-mouse-pose/
+│   └── fecal-boli/
+└── tfs-models/
+    ├── single-mouse-segmentation/
+    ├── multi-mouse-segmentation/
+    ├── multi-mouse-identity/
+    ├── static-object-arena/
+    ├── static-object-food/
+    └── static-object-lixit/
+```
+
 # Running a pipeline
 
 Pipelines are run using nextflow. For a list of all available parameters, see 
