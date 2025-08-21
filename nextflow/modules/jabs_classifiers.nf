@@ -102,3 +102,45 @@ process BEHAVIOR_TABLE_TO_FEATURES {
     Rscript ${params.support_code_dir}behavior_summaries.R -f ${in_summary_table} -b ${bin_size} -o "${in_summary_table.baseName}_features_${bin_size}.csv"
     """
 }
+
+process AGGREGATE_BOUT_TABLES {
+    label "jabs_table_convert"
+    label "r_jabs_table_convert"
+
+    publishDir "${params.outdir}/merged_behavior_tables", mode: 'copy'
+
+    input:
+    path bout_tables
+
+    output:
+    path("merged_*_bouts_merged.csv"), emit: merged_bout_tables
+    path("merge_log.txt"), emit: merge_log
+
+    script:
+    """
+    # Create a temporary directory for organizing tables
+    mkdir -p table_staging
+    
+    # Copy all bout tables to staging directory
+    for table in ${bout_tables}; do
+        cp "\${table}" table_staging/
+    done
+    
+    # Use jabs-postprocess to merge tables by behavior
+    # This will automatically detect behaviors and create separate merged files for each
+    echo "Starting behavior table merging..." > merge_log.txt
+    echo "Input tables found:" >> merge_log.txt
+    ls table_staging/*.csv >> merge_log.txt
+    
+    uv run python -m jabs_postprocess.cli.main merge-multiple-tables \\
+        --table-folder table_staging \\
+        --table-pattern "*_bouts.csv" \\
+        --output-prefix merged \\
+        --overwrite \\
+        2>&1 | tee -a merge_log.txt
+    
+    # Log completion
+    echo "Merge completed. Output files:" >> merge_log.txt
+    ls merged_*_bouts_merged.csv >> merge_log.txt 2>/dev/null || echo "No merged files generated" >> merge_log.txt
+    """
+}
