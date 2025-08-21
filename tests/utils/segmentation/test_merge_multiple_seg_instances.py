@@ -164,52 +164,81 @@ class TestMergeMultipleSegInstances:
         np.testing.assert_array_equal(result_flags, expected_flags)
 
     def test_empty_matrices_list(self):
-        """Test with empty matrices and flags lists - should raise ValueError."""
+        """Test with empty matrices and flags lists - should return default data."""
         # Arrange
         matrix_list = []
         flag_list = []
 
-        # Act & Assert
-        with pytest.raises(
-            ValueError,
-            match="zero-size array to reduction operation maximum which has no identity",
-        ):
-            merge_multiple_seg_instances(matrix_list, flag_list)
+        # Act
+        result_matrix, result_flags = merge_multiple_seg_instances(
+            matrix_list, flag_list
+        )
+
+        # Assert
+        assert result_matrix.shape == (1, 1, 1, 2)
+        assert result_flags.shape == (1, 1)
+        assert result_matrix.dtype == np.int32
+        assert result_flags.dtype == np.int32
+
+        expected_matrix = np.full([1, 1, 1, 2], -1, dtype=np.int32)
+        expected_flags = np.full([1, 1], -1, dtype=np.int32)
+
+        np.testing.assert_array_equal(result_matrix, expected_matrix)
+        np.testing.assert_array_equal(result_flags, expected_flags)
 
     def test_no_detections_scenario_real_world_crash(self):
-        """Test real-world scenario: videos without mice causing merge function crash.
+        """Test real-world scenario: videos without mice - function should handle gracefully.
 
-        The error occurs at line:
-        padded_matrix = np.full([n_predictions] + np.max(matrix_shapes, axis=0).tolist(), default_val, dtype=np.int32)
+        Previously this would crash with:
+        "zero-size array to reduction operation maximum which has no identity"
 
-        When matrix_list is empty, matrix_shapes becomes an empty array, and np.max
-        on an empty array raises "zero-size array to reduction operation maximum which has no identity".
+        Now the function handles empty lists gracefully by returning default padded data.
         """
         # Arrange - Simulate the exact scenario from multi-segmentation pipeline
         # when no mice are detected in any frame
         frame_contours = []  # No contours detected in any frame
         frame_flags = []  # No flags for any frame
 
-        # Act & Assert - Should raise the exact error from the traceback
-        with pytest.raises(
-            ValueError,
-            match="zero-size array to reduction operation maximum which has no identity",
-        ):
-            merge_multiple_seg_instances(frame_contours, frame_flags)
+        # Act
+        result_matrix, result_flags = merge_multiple_seg_instances(
+            frame_contours, frame_flags
+        )
+
+        # Assert - Should return default padded data instead of crashing
+        assert result_matrix.shape == (1, 1, 1, 2)
+        assert result_flags.shape == (1, 1)
+        assert result_matrix.dtype == np.int32
+        assert result_flags.dtype == np.int32
+
+        expected_matrix = np.full([1, 1, 1, 2], -1, dtype=np.int32)
+        expected_flags = np.full([1, 1], -1, dtype=np.int32)
+
+        np.testing.assert_array_equal(result_matrix, expected_matrix)
+        np.testing.assert_array_equal(result_flags, expected_flags)
 
     def test_no_detections_with_custom_default_value(self):
-        """Test that empty lists scenario fails regardless of default_val parameter."""
+        """Test that empty lists scenario returns default data with custom default value."""
         # Arrange
         matrix_list = []
         flag_list = []
         custom_default = -999
 
-        # Act & Assert - Should fail even with custom default value
-        with pytest.raises(
-            ValueError,
-            match="zero-size array to reduction operation maximum which has no identity",
-        ):
-            merge_multiple_seg_instances(matrix_list, flag_list, custom_default)
+        # Act
+        result_matrix, result_flags = merge_multiple_seg_instances(
+            matrix_list, flag_list, custom_default
+        )
+
+        # Assert - Should return default padded data with custom default value
+        assert result_matrix.shape == (1, 1, 1, 2)
+        assert result_flags.shape == (1, 1)
+        assert result_matrix.dtype == np.int32
+        assert result_flags.dtype == np.int32
+
+        expected_matrix = np.full([1, 1, 1, 2], custom_default, dtype=np.int32)
+        expected_flags = np.full([1, 1], custom_default, dtype=np.int32)
+
+        np.testing.assert_array_equal(result_matrix, expected_matrix)
+        np.testing.assert_array_equal(result_flags, expected_flags)
 
     def test_edge_case_zero_predictions_various_defaults(self):
         """Test zero predictions scenario with various default values to ensure consistency."""
@@ -217,13 +246,24 @@ class TestMergeMultipleSegInstances:
         matrix_list = []
         flag_list = []
 
-        # Test with different default values - all should fail the same way
+        # Test with different default values - all should return consistent default data
         for default_val in [-1, 0, 1, -100, 100, -999]:
-            with pytest.raises(
-                ValueError,
-                match="zero-size array to reduction operation maximum which has no identity",
-            ):
-                merge_multiple_seg_instances(matrix_list, flag_list, default_val)
+            # Act
+            result_matrix, result_flags = merge_multiple_seg_instances(
+                matrix_list, flag_list, default_val
+            )
+
+            # Assert
+            assert result_matrix.shape == (1, 1, 1, 2)
+            assert result_flags.shape == (1, 1)
+            assert result_matrix.dtype == np.int32
+            assert result_flags.dtype == np.int32
+
+            expected_matrix = np.full([1, 1, 1, 2], default_val, dtype=np.int32)
+            expected_flags = np.full([1, 1], default_val, dtype=np.int32)
+
+            np.testing.assert_array_equal(result_matrix, expected_matrix)
+            np.testing.assert_array_equal(result_flags, expected_flags)
 
     def test_single_empty_matrix(self):
         """Test with single empty matrix (zero segmentation data)."""

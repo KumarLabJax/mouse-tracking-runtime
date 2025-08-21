@@ -276,7 +276,7 @@ class TestLixitImplementation:
     def test_lixit_help_text(self):
         """Test that the lixit command has proper help text."""
         # Arrange & Act
-        result = self.runner.invoke(app, ["lixit", "--help"])
+        result = self.runner.invoke(app, ["lixit", "--help"], env={"TERM": "dumb"})
 
         # Assert
         assert result.exit_code == 0

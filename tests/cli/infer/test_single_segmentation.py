@@ -244,7 +244,9 @@ class TestSingleSegmentationImplementation:
     def test_single_segmentation_help_text(self):
         """Test that the single-segmentation command has proper help text."""
         # Arrange & Act
-        result = self.runner.invoke(app, ["single-segmentation", "--help"])
+        result = self.runner.invoke(
+            app, ["single-segmentation", "--help"], env={"TERM": "dumb"}
+        )
 
         # Assert
         assert result.exit_code == 0

@@ -294,7 +294,9 @@ class TestSinglePoseImplementation:
     def test_single_pose_help_text(self):
         """Test that the single-pose command has proper help text."""
         # Arrange & Act
-        result = self.runner.invoke(app, ["single-pose", "--help"])
+        result = self.runner.invoke(
+            app, ["single-pose", "--help"], env={"TERM": "dumb"}
+        )
 
         # Assert
         assert result.exit_code == 0

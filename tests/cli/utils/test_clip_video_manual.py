@@ -420,7 +420,9 @@ class TestClipVideoManual:
     def test_help_message_content(self, runner):
         """Test that help message contains expected content."""
         # Arrange & Act
-        result = runner.invoke(app, ["clip-video-to-start", "manual", "--help"])
+        result = runner.invoke(
+            app, ["clip-video-to-start", "manual", "--help"], env={"TERM": "dumb"}
+        )
 
         # Assert
         assert result.exit_code == 0

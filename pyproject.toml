@@ -9,7 +9,7 @@ dependencies = [
   "scipy==1.11.4",
   "pandas==2.0.3",
   "opencv-python-headless==4.8.0.76",
-  "imageio==2.31.6",
+  "imageio[ffmpeg]==2.31.6",
   "pillow==9.4.0",
   "matplotlib==3.7.1",
   "typer>=0.12.4",
@@ -40,16 +40,33 @@ cpu = [
 
 
 # ---- uv configuration: point Torch family at cu126 index ----
+# ---- uv indexes ----
+[[tool.uv.index]]
+name = "pypi"
+url  = "https://pypi.org/simple"
+explicit = false
+
 [[tool.uv.index]]
 name = "pytorch-cu126"
 url  = "https://download.pytorch.org/whl/cu126"
 explicit = true
 
+# ---- uv per-package sources with markers ----
+# Use CUDA wheels only when installing the `gpu` extra AND on platforms that can use them.
+# Fall back to CPU wheels when installing the `cpu` extra.
 [tool.uv.sources]
-torch = { index = "pytorch-cu126" }
-torchvision = { index = "pytorch-cu126" }
-torchaudio = { index = "pytorch-cu126" }
-
+torch = [
+  { index = "pytorch-cu126", marker = "sys_platform == 'linux' and extra == 'gpu'" },
+  { index = "pypi", marker = "sys_platform == 'linux' and extra != 'gpu'" },
+]
+torchvision = [
+  { index = "pytorch-cu126", marker = "sys_platform == 'linux' and extra == 'gpu'" },
+  { index = "pypi", marker = "sys_platform == 'linux' and extra != 'gpu'" },
+]
+torchaudio = [
+  { index = "pytorch-cu126", marker = "sys_platform == 'linux' and extra == 'gpu'" },
+  { index = "pypi", marker = "sys_platform == 'linux' and extra != 'gpu'" },
+]
 
 [project.scripts]
 mouse-tracking-runtime = "mouse_tracking.cli.main:app"
@@ -98,8 +115,14 @@ addopts = "--benchmark-skip"
 
 [dependency-groups]
 dev = [
+  {include-group = "lint"},
+  {include-group = "test"}
+]
+test = [
     "pytest>=8.3.5",
     "pytest-benchmark>=5.1.0",
     "pytest-cov>=6.1.1",
+]
+lint = [
     "ruff>=0.11.2",
 ]

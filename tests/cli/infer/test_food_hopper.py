@@ -278,7 +278,9 @@ class TestFoodHopperImplementation:
     def test_food_hopper_help_text(self):
         """Test that the food hopper command has proper help text."""
         # Arrange & Act
-        result = self.runner.invoke(app, ["food-hopper", "--help"])
+        result = self.runner.invoke(
+            app, ["food-hopper", "--help"], env={"TERM": "dumb"}
+        )
 
         # Assert
         assert result.exit_code == 0

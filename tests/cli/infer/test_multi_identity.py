@@ -204,7 +204,9 @@ class TestMultiIdentityImplementation:
     def test_multi_identity_help_text(self):
         """Test that the multi-identity command has proper help text."""
         # Arrange & Act
-        result = self.runner.invoke(app, ["multi-identity", "--help"])
+        result = self.runner.invoke(
+            app, ["multi-identity", "--help"], env={"TERM": "dumb"}
+        )
 
         # Assert
         assert result.exit_code == 0

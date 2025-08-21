@@ -149,7 +149,9 @@ class TestDowngradeMultiToSingle:
     def test_help_message_content(self, runner):
         """Test that help message contains expected content."""
         # Arrange & Act
-        result = runner.invoke(app, ["downgrade-multi-to-single", "--help"])
+        result = runner.invoke(
+            app, ["downgrade-multi-to-single", "--help"], env={"TERM": "dumb"}
+        )
 
         # Assert
         assert result.exit_code == 0

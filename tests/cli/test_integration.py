@@ -199,7 +199,7 @@ def test_help_command_accessibility():
 
     # Act & Assert
     for path in help_paths:
-        result = runner.invoke(app, path)
+        result = runner.invoke(app, path, env={"TERM": "dumb"})
         assert result.exit_code == 0
         assert "Usage:" in result.stdout
         assert "--help" in result.stdout
@@ -398,7 +398,7 @@ def test_comprehensive_cli_structure():
     runner = CliRunner()
 
     # Act
-    main_help = runner.invoke(app, ["--help"])
+    main_help = runner.invoke(app, ["--help"], env={"TERM": "dumb"})
 
     # Assert - Main structure
     assert main_help.exit_code == 0
@@ -435,25 +435,39 @@ def test_commands_with_proper_arguments():
         tmp_folder = Path(tmp_dir)
 
         try:
-            # Test infer arena-corner with video
-            result = runner.invoke(
-                app, ["infer", "arena-corner", "--video", str(video_path)]
-            )
-            assert result.exit_code == 0
+            # Test infer arena-corner with video (mock the entire inference function)
+            with (
+                patch(
+                    "mouse_tracking.cli.infer.infer_arena_corner_model"
+                ) as mock_arena,
+                patch.object(Path, "exists", return_value=True),
+            ):
+                result = runner.invoke(
+                    app, ["infer", "arena-corner", "--video", str(video_path)]
+                )
+                assert result.exit_code == 0
+                mock_arena.assert_called_once()
 
-            # Test infer single-pose with proper arguments
-            result = runner.invoke(
-                app,
-                [
-                    "infer",
-                    "single-pose",
-                    "--video",
-                    str(video_path),
-                    "--out-file",
-                    str(out_path),
-                ],
-            )
-            assert result.exit_code == 0
+            # Test infer single-pose with proper arguments (mock the entire inference function)
+            with (
+                patch(
+                    "mouse_tracking.cli.infer.infer_single_pose_pytorch"
+                ) as mock_pose,
+                patch.object(Path, "exists", return_value=True),
+            ):
+                result = runner.invoke(
+                    app,
+                    [
+                        "infer",
+                        "single-pose",
+                        "--video",
+                        str(video_path),
+                        "--out-file",
+                        str(out_path),
+                    ],
+                )
+                assert result.exit_code == 0
+                mock_pose.assert_called_once()
 
             # Test qa single-pose with proper arguments (mock the inspect function)
             with (

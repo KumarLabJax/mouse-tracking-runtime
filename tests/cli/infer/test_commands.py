@@ -111,7 +111,7 @@ def test_infer_commands_help_structure():
 
     # Act & Assert
     for command in commands:
-        result = runner.invoke(app, [command, "--help"])
+        result = runner.invoke(app, [command, "--help"], env={"TERM": "dumb"})
         assert result.exit_code == 0
         assert "Usage:" in result.stdout
         assert "--help" in result.stdout
@@ -252,7 +252,7 @@ def test_infer_command_help_format(command_name):
     runner = CliRunner()
 
     # Act
-    result = runner.invoke(app, [command_name, "--help"])
+    result = runner.invoke(app, [command_name, "--help"], env={"TERM": "dumb"})
 
     # Assert
     assert result.exit_code == 0
