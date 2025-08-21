@@ -50,7 +50,6 @@ class MouseTrackingConfig(BaseSettings):
             "gait-paper": {
                 "model-name": "gait-model",
                 "model-checkpoint": "2019-06-26-param-search/mp-conf4.yaml",
-                "tfs-model": None,
                 "pytorch-config": self.model_directory
                 + "pytorch-models/single-mouse-pose/gait-model.yaml",
                 "pytorch-model": self.model_directory
@@ -65,17 +64,11 @@ class MouseTrackingConfig(BaseSettings):
             "social-paper-topdown": {
                 "model-name": "topdown",
                 "model-checkpoint": "multimouse_topdown_1.yaml",
-                "tfs-model": None,
                 "pytorch-config": self.model_directory
                 + "pytorch-models/multi-mouse-pose/social-topdown.yaml",
                 "pytorch-model": self.model_directory
                 + "pytorch-models/multi-mouse-pose/social-topdown.pth",
-            },
-            "social-paper-bottomup": {
-                "model-name": "bottomup",
-                "model-checkpoint": "multimouse_cloudfactory.yaml",
-                "tfs-model": None,
-            },
+            }
         }
 
     @property
@@ -103,7 +96,6 @@ class MouseTrackingConfig(BaseSettings):
             "fecal-boli": {
                 "model-name": "fecal-boli",
                 "model-checkpoint": "fecalboli/fecalboli_2020-06-19_02.yaml",
-                "tfs-model": None,
                 "pytorch-config": self.model_directory
                 + "pytorch-models/fecal-boli/fecalboli-2020-06-19.yaml",
                 "pytorch-model": self.model_directory
