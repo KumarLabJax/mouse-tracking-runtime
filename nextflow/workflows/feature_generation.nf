@@ -29,7 +29,8 @@ include { GENERATE_FEATURE_CACHE;
           PREDICT_CLASSIFIERS;
           GENERATE_BEHAVIOR_TABLES;
           PREDICT_HEURISTICS;
-          BEHAVIOR_TABLE_TO_FEATURES } from "${projectDir}/nextflow/modules/jabs_classifiers"
+          BEHAVIOR_TABLE_TO_FEATURES;
+          AGGREGATE_BOUT_TABLES } from "${projectDir}/nextflow/modules/jabs_classifiers"
 include { EXTRACT_FECAL_BOLI_BINS } from "${projectDir}/nextflow/modules/fecal_boli"
 
 workflow SINGLE_MOUSE_V2_FEATURES {
@@ -90,6 +91,14 @@ workflow SINGLE_MOUSE_V6_FEATURES {
     classifier_predictions = PREDICT_CLASSIFIERS(cached_features, params.single_mouse_classifiers)
     classifier_tables = GENERATE_BEHAVIOR_TABLES(classifier_predictions, params.single_mouse_classifiers)
 
+    // Aggregate bout tables by behavior for downstream analysis
+    all_bout_tables = heuristic_tables
+        .concat(classifier_tables)
+        .map { bout_table, summary_table -> bout_table }
+        .flatten()
+        .collect()
+    merged_bout_tables = AGGREGATE_BOUT_TABLES(all_bout_tables)
+
     // Combine table data into feature file
     all_summary_tables = heuristic_tables
         .concat(classifier_tables)
@@ -121,4 +130,5 @@ workflow SINGLE_MOUSE_V6_FEATURES {
     emit:
     wide_jabs_features
     fecal_boli_table
+    merged_bout_tables
 }
