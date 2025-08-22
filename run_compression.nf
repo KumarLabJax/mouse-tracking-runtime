@@ -17,6 +17,7 @@ include { MULTI_MOUSE_TRACKING } from './nextflow/workflows/multi_mouse_pipeline
  */
 process COMPRESS_VIDEO_CRF {
     label "compression"
+    publishDir "compressed/compressed/", mode:'copy'
 
     input:
     tuple path(video_file), val(crf), val(keyframe_interval)
@@ -44,6 +45,7 @@ process COMPRESS_VIDEO_CRF {
  */
 process COMPRESS_VIDEO_BR {
     label "compression"
+    publishDir "compressed/compressed/", mode:'copy'
 
     input:
     tuple path(video_file), val(bitrate), val(keyframe_interval)
@@ -70,7 +72,7 @@ process COMPRESS_VIDEO_BR {
  */
 process COMPUTE_VIDEO_DIFFERENCE {
     label "tracking"
-    publishDir "compressed/", mode:'copy'
+    publishDir "compressed/difference/", mode:'copy'
 
     input:
     tuple path(in_video1), path(in_video2)
@@ -117,7 +119,7 @@ workflow {
     in_videos = PREPARE_DATA(params.input_batch, params.location, false).file_processing_channel
     crf_videos = COMPRESS_VIDEO_CRF(in_videos.combine(crf_set).combine(keyframe_set)).files
     bitrate_videos = COMPRESS_VIDEO_BR(in_videos.combine(bitrate_set).combine(keyframe_set)).files
-    all_videos = crf_videos.map { original, compressed -> compressed }.concat(bitrate_videos.map { original, compressed -> compressed })
+    all_videos = in_videos.concat(crf_videos.map { original, compressed -> compressed }).concat(bitrate_videos.map { original, compressed -> compressed })
 
     COMPUTE_VIDEO_DIFFERENCE(crf_videos.concat(bitrate_videos))
     pose_out = MULTI_MOUSE_TRACKING(all_videos, params.num_mice).pose_v6
