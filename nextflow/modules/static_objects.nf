@@ -12,7 +12,7 @@ process PREDICT_ARENA_CORNERS {
     script:
     """
     cp ${in_pose} "${video_file.baseName}_with_corners.h5"
-    python3 ${params.tracking_code_dir}/infer_arena_corner.py --video $video_file --out-file "${video_file.baseName}_with_corners.h5"
+    python3 /projects/kumar-lab/pmatani/development/mouse-tracking-runtime/mouse-tracking-runtime/infer_arena_corner.py --video $video_file --out-file "${video_file.baseName}_with_corners.h5"
     """
 }
 
@@ -30,7 +30,7 @@ process PREDICT_FOOD_HOPPER {
     script:
     """
     cp ${in_pose} "${video_file.baseName}_with_food.h5"
-    python3 ${params.tracking_code_dir}/infer_food_hopper.py --video $video_file --out-file "${video_file.baseName}_with_food.h5"
+    python3 /projects/kumar-lab/pmatani/development/mouse-tracking-runtime/mouse-tracking-runtime/infer_food_hopper.py --video $video_file --out-file "${video_file.baseName}_with_food.h5"
     """
 }
 
@@ -48,6 +48,6 @@ process PREDICT_LIXIT {
     script:
     """
     cp ${in_pose} "${video_file.baseName}_with_lixit.h5"
-    python3 ${params.tracking_code_dir}/infer_lixit.py --video $video_file --out-file "${video_file.baseName}_with_lixit.h5"
+    python3 /projects/kumar-lab/pmatani/development/mouse-tracking-runtime/mouse-tracking-runtime/infer_lixit.py --video $video_file --out-file "${video_file.baseName}_with_lixit.h6"
     """
 }
