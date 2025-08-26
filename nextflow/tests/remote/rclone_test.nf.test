@@ -1,0 +1,43 @@
+nextflow_process {
+
+    name "Test Process GET_DATA_FROM_DROPBOX"
+    tag "remote"
+    tag "rclone"
+    tag "integration"
+    script "../../modules/remote_io.nf"
+    process "GET_DATA_FROM_DROPBOX"
+
+    test("Retrieve Example Data from Dropbox") {
+
+        setup {
+            run ("CREATE_FILE") {
+                script "../../modules/utils.nf"
+                process {
+                    """
+                    input[0] = "test_files.txt"
+                    input[1] = "Maze_FED3_B6J/NV7-CBAX2/2023-08-28/Maze0116_0_2023-08-28_10-59-58.avi\\nB6J_3M_ethanol_stranger_26day/NV5-CBAX2/2020-05-22/MDX0174 p2_2020-05-22_06-59-58.avi"
+                    """
+                }
+            }
+        }
+
+        when {
+            process {
+                """
+                test_batch = CREATE_FILE.out.created_file
+                input[0] = test_batch
+                input[1] = "labdropbox:\\\"/KumarLab's shared workspace/VideoData/MDS_Tests/\\\""
+                """
+            }
+        }
+
+        then {
+
+            assert process.success
+            // Remote files use glob and it returns with shape [1, n]
+            assert process.out.remote_files[0].size() == 2
+
+        }
+
+    }
+}

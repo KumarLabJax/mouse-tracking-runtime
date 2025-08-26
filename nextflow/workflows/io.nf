@@ -1,27 +1,47 @@
-include { CHECK_FILE; URLIFY_FILE } from "${projectDir}/nextflow/modules/utils"
-include { GET_DATA_FROM_T2; PUT_DATA_TO_T2 } from "${projectDir}/nextflow/modules/remote_io"
-include { GET_DATA_FROM_DROPBOX; PUT_DATA_TO_DROPBOX } from "${projectDir}/nextflow/modules/remote_io"
+include { FILTER_LOCAL_BATCH;
+          URLIFY_FILE;
+          validateInputFile;
+          validateInputFilelist } from "${projectDir}/nextflow/modules/utils"
+include { CHECK_GLOBUS_AUTH;
+          FILTER_UNPROCESSED_GLOBUS;
+          FILTER_UNPROCESSED_DROPBOX;
+          TRANSFER_GLOBUS;
+          GET_DATA_FROM_DROPBOX;
+        } from "${projectDir}/nextflow/modules/remote_io"
 
 workflow PREPARE_DATA {
     take:
     in_video_file
     location
+    skip_urlify
 
     main:
-    {
-        if (location == "local")
-            video_file = CHECK_FILE(in_video_file).file
-        else if (location == "dropbox")
-            video_file = GET_DATA_FROM_DROPBOX(in_video_file).out.video_file
-        // T2 retrieval not implemented yet, due to globus permission issue.
-        // else if (location == "t2")
-        // """
-        //    GET_DATA_FROM_T2(${in_video_file})
-        // """
-        else error "${location} is invalid, specify either local or dropbox"
-        out_file = URLIFY_FILE(video_file, params.path_depth).file
+    // Validate input file extensions
+    // TODO: This needs to be a file, not a list. Having the list here wrapping files as paths for filtering.
+    // all_valid_files = validateInputFilelist(in_video_file, params.workflow)
+    all_valid_files = file(in_video_file)
+
+    if (location == "local") {
+        file_batch = FILTER_LOCAL_BATCH(all_valid_files, params.ignore_invalid_inputs, params.filter_processed, params.pubdir).process_filelist
+    } else if (location == "dropbox") {
+        in_video_list = FILTER_UNPROCESSED_DROPBOX(all_valid_files, params.dropbox_prefix).unprocessed_files
+        file_batch = GET_DATA_FROM_DROPBOX(in_video_list, params.dropbox_prefix).remote_files
+    } else if (location == "globus") {
+        CHECK_GLOBUS_AUTH()
+        in_video_list = FILTER_UNPROCESSED_GLOBUS(params.globus_remote_endpoint, all_valid_files).unprocessed_files
+        globus_out_folder = TRANSFER_GLOBUS(params.globus_remote_endpoint, params.globus_compute_endpoint, in_video_list).globus_folder
+        file_batch = Channel.fromPath(file(globus_out_folder).text)
+    } else {
+        error "${location} is invalid, specify local, dropbox, or globus"
+    }
+
+    // Files should be appropriately URLified to avoid collisions within the pipeline
+    if (skip_urlify) {
+        file_processing_channel = file_batch.readLines().flatMap { line -> file(line) }
+    } else {
+        file_processing_channel = URLIFY_FILE(file_batch.readLines().flatMap(), params.path_depth).file
     }
 
     emit:
-    out_file
+    file_processing_channel
 }
