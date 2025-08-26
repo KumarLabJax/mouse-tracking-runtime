@@ -12,7 +12,6 @@ include { MULTI_MOUSE_TRACKING } from './nextflow/workflows/multi_mouse_pipeline
 include { MANUALLY_CORRECT_CORNERS; INTEGRATE_CORNER_ANNOTATIONS } from './nextflow/workflows/sleap_manual_correction'
 include { ADD_DUMMY_VIDEO } from './nextflow/modules/utils'
 
-
 /*
  * Run the selected workflow
  */
