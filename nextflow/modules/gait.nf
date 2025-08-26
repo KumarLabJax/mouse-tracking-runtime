@@ -1,3 +1,16 @@
+/**
+ * This module contains process definitions for gait analysis.
+ */
+
+/**
+ * Generates gait statistics from pose data.
+ *
+ * @param tuple
+ *  - video_file The input video file.
+ *  - pose_file The input pose file.
+ *
+ * @return gait_file The generated gait statistics file.
+ */
 process GENERATE_GAIT_H5 {
     label "gait"
     label "cpu"
@@ -24,7 +37,15 @@ process GENERATE_GAIT_H5 {
     """
 }
 
-
+/**
+ * Generates gait bin files from gait statistics.
+ *
+ * @param tuple
+ *  - gait_file The input gait statistics file.
+ *  - speed_bin The speed bin size for generating gait bins.
+ *
+ * @return gait_bin_csv The generated gait bin CSV file.
+ */
 process GENERATE_GAIT_BIN {
     label "gait"
     label "cpu"

@@ -1,3 +1,17 @@
+/**
+ * This module contains process definitions related to manually correcting pose data using SLEAP.
+ */
+
+/**
+ * Extracts a frame from a video as a png image.
+ *
+ * @param tuple
+ *  - video The input video file.
+ *  - pose_file The input pose file (not used in this process).
+ * @param frame_index The index of the frame to extract.
+ *
+ * @return frame A png image of the extracted frame.
+ */
 process EXTRACT_VIDEO_FRAME {
     label "sleap"
 
@@ -14,6 +28,13 @@ process EXTRACT_VIDEO_FRAME {
     """
 }
 
+/**
+ * Adds a set of frames to a new SLEAP project file for arena corner annotation.
+ *
+ * @param video_frames A list of png images to be added to the SLEAP project.
+ *
+ * @return sleap_file The generated SLEAP project file containing the frames and arena corner skeleton for annotation.
+ */
 process ADD_EXAMPLES_TO_SLEAP {
     label "sleap"
 
@@ -48,6 +69,14 @@ process ADD_EXAMPLES_TO_SLEAP {
     """
 }
 
+/**
+ * Integrates SLEAP corner annotations into a pose file.
+ *
+ * @param pose_file The input pose file to be corrected.
+ * @param sleap_file The SLEAP project file containing the corner annotations.
+ *
+ * @return pose_file The corrected pose file with integrated corner annotations.
+ */
 process INTEGRATE_SLEAP_CORNER_ANNOTATIONS {
     label "sleap_io"
 

@@ -1,3 +1,7 @@
+/**
+ * This module contains the multi-mouse tracking pipeline.
+ * It processes video input to track multiple mice, predict their poses, and identify static objects.
+ */
 include { PREDICT_MULTI_MOUSE_SEGMENTATION;
           PREDICT_MULTI_MOUSE_KEYPOINTS;
           PREDICT_MULTI_MOUSE_IDENTITY;
@@ -11,6 +15,18 @@ include { VIDEO_TO_POSE;
           PUBLISH_RESULT_FILE as PUBLISH_MM_POSE_V6;
  } from "${projectDir}/nextflow/modules/utils"
 
+/**
+ * Main workflow for predicting multimouse poses from video input.
+ *
+ * @param path input_video The input video file to process.
+ * @param val num_animals The number of animals to track in the video.
+ *
+ * @return tuple pose_v6
+ *  - Path to the input video file.
+ *  - Path to the pose v6 file produced.
+ *
+ * @publish ./results/ Pose v6 results
+ */
 workflow MULTI_MOUSE_TRACKING {
     take:
     input_video
