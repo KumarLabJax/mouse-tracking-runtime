@@ -53,7 +53,7 @@ process FILTER_LOCAL_BATCH {
     """
     touch files_to_process.txt
     while IFS="" read -r file; do
-        if [[ ! -f "\${file}" ]]
+        if [[ ! -f "\${file}" ]]; then
             if [[ ${ignore_invalid_inputs} != "true" ]]; then
                 echo "File does not exist: \${file}"
                 exit 1

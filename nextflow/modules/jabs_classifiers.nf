@@ -44,7 +44,8 @@ process GENERATE_FEATURE_CACHE {
  * @param tuple
  *  - in_pose The input pose file.
  *  - feature_cache The directory containing the generated features.
- * @param classifiers A map of classifier names to their respective parameters.
+ * @param classifiers A map of classifiers:
+ *  - <classifier_name>: classifier parameter maps (not used by this process)
  *
  * @return tuple files
  *  - Path to the original pose file.
@@ -81,7 +82,10 @@ process PREDICT_CLASSIFIERS {
  *  - in_pose The input pose file.
  *  - feature_cache The directory containing the generated features.
  *  - behavior_files The behavior prediction file.
- * @param classifiers A map of classifier names to their respective parameters.
+ * @param classifiers A map of classifiers:
+ *  - <classifier_name>: classifier parameter maps:
+ *    - stitch_value: the gap size for stitching behavior bouts
+ *    - filter_value: the minimum length for behavior bouts
  *
  * @return tuple files
  *  - Path to the generated behavior bout file.
