@@ -1,6 +1,6 @@
 [project]
 name = "mouse-tracking"
-version = "0.1.0"
+version = "0.1.1"
 description = "Runtime environment for mouse tracking experiments"
 requires-python = ">=3.10,<3.11"
 packages = ["src/mouse_tracking"]
