@@ -2,7 +2,7 @@ process PREDICT_MULTI_MOUSE_SEGMENTATION {
     label "gpu_long"
     label "tracking"
     label "r_multi_seg"
-    
+
     input:
     tuple path(video_file), path(in_pose)
 
@@ -20,7 +20,7 @@ process PREDICT_MULTI_MOUSE_KEYPOINTS {
     label "gpu_long"
     label "tracking"
     label "r_multi_keypoints"
-    
+
     input:
     tuple path(video_file), path(in_pose)
 
@@ -38,7 +38,7 @@ process PREDICT_MULTI_MOUSE_IDENTITY {
     label "gpu"
     label "tracking"
     label "r_multi_identity"
-    
+
     input:
     tuple path(video_file), path(in_pose)
 
@@ -55,7 +55,8 @@ process PREDICT_MULTI_MOUSE_IDENTITY {
 process GENERATE_MULTI_MOUSE_TRACKLETS {
     label "cpu"
     label "tracking"
-    
+    label "r_multi_tracklets"
+
     input:
     tuple path(video_file), path(in_pose)
     val num_animals
