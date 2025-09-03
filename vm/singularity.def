@@ -8,4 +8,4 @@ From: aberger4/mouse-tracking:python3.10-slim
     mkdir -p ${SINGULARITY_ROOTFS}/workspace/models/
 
 %files
-    ./models ${SINGULARITY_ROOTFS}/workspace/
+    ./models /workspace/
