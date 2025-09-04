@@ -103,6 +103,17 @@ process BEHAVIOR_TABLE_TO_FEATURES {
     """
 }
 
+/**
+* Aggregate bout tables by behavior across all videos.
+*
+* This process uses jabs-postprocess to merge tables by behavior,
+* creating separate merged files for each behavior detected.
+*
+* @param bout_tables List of paths to bout tables to be merged.
+*
+* @return merged_bout_tables List of paths to merged bout tables, one per behavior.
+* @return merge_log Path to the log file detailing the merge process.
+*/
 process AGGREGATE_BOUT_TABLES {
     label "jabs_table_convert"
     label "r_jabs_table_convert"
