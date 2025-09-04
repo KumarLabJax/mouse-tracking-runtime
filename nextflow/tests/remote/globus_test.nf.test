@@ -1,0 +1,76 @@
+nextflow_process {
+
+    name "Test Process TRANSFER_GLOBUS"
+    tag "remote"
+    tag "globus"
+    tag "integration"
+    script "../../modules/remote_io.nf"
+    process "TRANSFER_GLOBUS"
+
+    test("Transfer Files via Globus from remote to compute") {
+
+        setup {
+            run ("CREATE_FILE") {
+                script "../../modules/utils.nf"
+                process {
+                    """
+                    input[0] = "files_to_transfer.txt"
+                    input[1] = "kumarlab-new/dataset-releases/strain-survey-open-field/data/LL1-B2B/2018-04-17_SPD/WT001G2N21717M-17-PSY.mp4\\nkumarlab-new/dataset-releases/strain-survey-open-field/data/LL1-B2B/2018-04-17_SPD/WT001G2N21717M-17-PSY_pose_est_v6.h5"
+                    """
+                }
+            }
+        }
+
+        when {
+            process {
+                """
+                // input[0] = "${params.globus_remote_endpoint}:${params.globus_remote_folder}"
+                input[0] = "70850914-722d-11e7-aa01-22000bf2d287:/tier2/vkumar/"
+                // This test placed the files onto T1, not locally. Cache folder can only be checked manually.
+                // input[1] = "${params.globus_compute_endpoint}:[folder_on_compute]"
+                input[1] = "b8377de1-47c2-11e7-bd5c-22000b9a448b:/projects/kumar-lab/multimouse-pipeline/nextflow-test-results/globus_test/"
+                input[2] = CREATE_FILE.out.created_file
+                """
+            }
+        }
+
+        then {
+
+            assert process.success
+
+        }
+
+    }
+
+    test("Fail globus transfer for files that don't exist") {
+        setup {
+            run ("CREATE_FILE") {
+                script "../../modules/utils.nf"
+                process {
+                    """
+                    input[0] = "files_to_transfer.txt"
+                    input[1] = "FILE_THAT_DOESNT_EXIST.mp4"
+                    """
+                }
+            }
+        }
+        when {
+            process {
+                """
+                // input[0] = "${params.globus_remote_endpoint}:${params.globus_remote_folder}"
+                input[0] = "70850914-722d-11e7-aa01-22000bf2d287:/tier2/vkumar/"
+                // This test placed the files onto T1, not locally. Cache folder can only be checked manually.
+                // input[1] = "${params.globus_compute_endpoint}:[folder_on_compute]"
+                input[1] = "b8377de1-47c2-11e7-bd5c-22000b9a448b:/projects/kumar-lab/multimouse-pipeline/nextflow-test-results/globus_test/"
+                input[2] = CREATE_FILE.out.created_file
+                """
+            }
+        }
+
+        then {
+            // TODO: This test may need to get a time limit set, because failing this test may be an infinite wait.
+            assert process.exitStatus == 1
+
+        }
+    }
+}

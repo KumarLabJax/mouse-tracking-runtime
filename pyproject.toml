@@ -1,0 +1,128 @@
+[project]
+name = "mouse-tracking"
+version = "0.1.1"
+description = "Runtime environment for mouse tracking experiments"
+requires-python = ">=3.10,<3.11"
+packages = ["src/mouse_tracking"]
+dependencies = [
+  "numpy>=1.26.0,<2.2.0",
+  "scipy==1.11.4",
+  "pandas==2.0.3",
+  "opencv-python-headless==4.8.0.76",
+  "imageio[ffmpeg]==2.31.6",
+  "pillow==9.4.0",
+  "matplotlib==3.7.1",
+  "typer>=0.12.4",
+  "absl-py==1.4.0",
+  "pydantic==2.7.4",
+  "networkx==3.3",
+  "h5py>=3.11.0",
+  "pydantic-settings>=2.10.1",
+  "yacs>=0.1.8",
+]
+
+[project.optional-dependencies]
+# Unified GPU stack (CUDA 12.6 line)
+gpu = [
+  "tensorflow[and-cuda]==2.20.0",
+  "torch==2.6.0",
+  "torchvision==0.21.0",
+  "torchaudio==2.6.0",
+]
+
+# CPU-only convenience for local tests (unchanged idea)
+cpu = [
+  "tensorflow==2.20.0",
+  "torch==2.6.0",
+  "torchvision==0.21.0",
+  "torchaudio==2.6.0",
+]
+
+
+# ---- uv configuration: point Torch family at cu126 index ----
+# ---- uv indexes ----
+[[tool.uv.index]]
+name = "pypi"
+url  = "https://pypi.org/simple"
+explicit = false
+
+[[tool.uv.index]]
+name = "pytorch-cu126"
+url  = "https://download.pytorch.org/whl/cu126"
+explicit = true
+
+# ---- uv per-package sources with markers ----
+# Use CUDA wheels only when installing the `gpu` extra AND on platforms that can use them.
+# Fall back to CPU wheels when installing the `cpu` extra.
+[tool.uv.sources]
+torch = [
+  { index = "pytorch-cu126", marker = "sys_platform == 'linux' and extra == 'gpu'" },
+  { index = "pypi", marker = "sys_platform == 'linux' and extra != 'gpu'" },
+]
+torchvision = [
+  { index = "pytorch-cu126", marker = "sys_platform == 'linux' and extra == 'gpu'" },
+  { index = "pypi", marker = "sys_platform == 'linux' and extra != 'gpu'" },
+]
+torchaudio = [
+  { index = "pytorch-cu126", marker = "sys_platform == 'linux' and extra == 'gpu'" },
+  { index = "pypi", marker = "sys_platform == 'linux' and extra != 'gpu'" },
+]
+
+[project.scripts]
+mouse-tracking-runtime = "mouse_tracking.cli.main:app"
+mouse-tracking = "mouse_tracking.cli.main:app"
+mtr = "mouse_tracking.cli.main:app"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.ruff.lint]
+# Enable a selection of rules focused on code quality without being too restrictive
+select = [
+    "E",    # pycodestyle errors
+    "F",    # pyflakes
+    "D",    # pydocstyle
+    "I",    # isort
+    "UP",   # pyupgrade
+    "B",    # flake8-bugbear
+    "C4",   # flake8-comprehensions
+    "SIM",  # flake8-simplify
+    "RUF",  # Ruff-specific rules
+]
+
+# Ignore specific rules that might be too strict
+ignore = [
+    "D203",  # one-blank-line-before-class (conflicts with D211)
+    "D212",  # multi-line-summary-first-line (conflicts with D213)
+    "D107",  # missing docstring in __init__
+    "D105",  # missing docstring in magic method
+    "D100",  # missing module docstring (optional for smaller scripts)
+    "E501",  # line too long (handled by formatter)
+]
+
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+[tool.ruff.lint.per-file-ignores]
+"__init__.py" = ["F401"]  # Unused imports in __init__ files
+"src/mouse_tracking/cli/*" = ["B008"]  # Ignore Typer style function-call-in-default-argument
+"src/mouse_tracking/pytorch_inference/hrnet/*" = ["D"]  # Third-party code
+
+[tool.pytest.ini_options]
+addopts = "--benchmark-skip"
+
+[dependency-groups]
+dev = [
+  {include-group = "lint"},
+  {include-group = "test"}
+]
+test = [
+    "pytest>=8.3.5",
+    "pytest-benchmark>=5.1.0",
+    "pytest-cov>=6.1.1",
+]
+lint = [
+    "ruff>=0.11.2",
+]
