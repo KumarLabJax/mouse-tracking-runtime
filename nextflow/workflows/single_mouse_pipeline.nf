@@ -1,3 +1,7 @@
+/**
+ * This module contains the single mouse tracking pipeline.
+ * It processes video input to track a single mouse.
+ */
 include { PREDICT_SINGLE_MOUSE_SEGMENTATION; PREDICT_SINGLE_MOUSE_KEYPOINTS; CLIP_VIDEO_AND_POSE } from "${projectDir}/nextflow/modules/single_mouse"
 include { PREDICT_ARENA_CORNERS } from "${projectDir}/nextflow/modules/static_objects"
 include { PREDICT_FECAL_BOLI } from "${projectDir}/nextflow/modules/fecal_boli"
@@ -14,6 +18,21 @@ include { VIDEO_TO_POSE;
           PUBLISH_RESULT_FILE as PUBLISH_SM_POSE_V6_NOCORN;
  } from "${projectDir}/nextflow/modules/utils"
 
+/**
+ * Main workflow for single mouse tracking.
+ *
+ * @param path input_video The input video file to process.
+ *
+ * @return tuple pose_v2_data
+ *  - Path to the input video file.
+ *  - Path to the pose v2 file produced.
+ * @return tuple pose_v6_data
+ *  - Path to the input video file.
+ *  - Path to the pose v6 file produced.
+ *
+ * @publish ./results/ Trimmed video files
+ * @publish ./results/ Single mouse pose v2 results
+ */
 workflow SINGLE_MOUSE_TRACKING {
     take:
     input_video
@@ -46,6 +65,26 @@ workflow SINGLE_MOUSE_TRACKING {
     pose_v6_data
 }
 
+/**
+ * Workflow to split pose files based on whether corners were detected.
+ * If corners are missing, the pose file is sent for manual correction.
+ * Default files are provided if either channel in the split is empty.
+ *
+ * @param tuple input_pose_v6_batch
+ *  - Path to the input video file.
+ *  - Path to the pose v6 file produced.
+ *
+ * @return tuple v6_with_corners
+ *  - Path to the input video file.
+ *  - Path to the pose v6 file with corners present.
+ * @return tuple v6_without_corners
+ *  - Path to the input video file.
+ *  - Path to the pose v6 file without corners present.
+ *
+ * @publish ./ Single mouse quality control results
+ * @publish ./results/ Single mouse pose v6 results with corners
+ * @publish ./failed_corners/ Single mouse pose v6 results without corners. Files are url-ified.
+ */
 workflow SPLIT_BY_CORNERS {
     take:
     input_pose_v6_batch

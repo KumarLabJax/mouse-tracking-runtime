@@ -1,3 +1,14 @@
+/**
+ * Predicts multi-mouse segmentation.
+ *
+ * @param tuple
+ *  - video_file The input video file
+ *  - in_pose The input pose file
+ *
+ * @return tuple files
+ *  - Path to the original video file.
+ *  - Modified pose file with multi-mouse segmentation predicted.
+ */
 process PREDICT_MULTI_MOUSE_SEGMENTATION {
     label "gpu_long"
     label "tracking"
@@ -16,6 +27,17 @@ process PREDICT_MULTI_MOUSE_SEGMENTATION {
     """
 }
 
+/**
+ * Predicts multi-mouse keypoints.
+ *
+ * @param tuple
+ *  - video_file The input video file
+ *  - in_pose The input pose file
+ *
+ * @return tuple files
+ *  - Path to the original video file.
+ *  - Modified pose file with multi-mouse keypoints predicted.
+ */
 process PREDICT_MULTI_MOUSE_KEYPOINTS {
     label "gpu_long"
     label "tracking"
@@ -34,6 +56,17 @@ process PREDICT_MULTI_MOUSE_KEYPOINTS {
     """
 }
 
+/**
+ * Predicts multi-mouse identity.
+ *
+ * @param tuple
+ *  - video_file The input video file
+ *  - in_pose The input pose file
+ *
+ * @return tuple files
+ *  - Path to the original video file.
+ *  - Modified pose file with multi-mouse identity predicted.
+ */
 process PREDICT_MULTI_MOUSE_IDENTITY {
     label "gpu"
     label "tracking"
@@ -52,6 +85,18 @@ process PREDICT_MULTI_MOUSE_IDENTITY {
     """
 }
 
+/**
+ * Generates multi-mouse tracklets from the pose, segmentaiton, and identity data.
+ *
+ * @param tuple
+ *  - video_file The input video file
+ *  - in_pose The input pose file
+ *  - num_animals The number of animals to generate tracklets for
+ *
+ * @return tuple files
+ *  - Path to the original video file.
+ *  - Modified pose file with multi-mouse tracklets generated.
+ */
 process GENERATE_MULTI_MOUSE_TRACKLETS {
     label "cpu"
     label "tracking"
