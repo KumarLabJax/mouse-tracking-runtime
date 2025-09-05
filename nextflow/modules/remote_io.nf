@@ -51,6 +51,7 @@ process FILTER_UNPROCESSED_DROPBOX {
     input:
     path test_files
     val dropbox_prefix
+    path rclone_config
 
     output:
     path "unprocessed_files.txt", emit: unprocessed_files
@@ -62,7 +63,7 @@ process FILTER_UNPROCESSED_DROPBOX {
     touch unprocessed_files.txt
     while read test_file; do
         test_pose=\${test_file/.*}_pose_est_v6.h5
-        rclone ls ${dropbox_prefix}\${test_pose} > /dev/null 2>&1
+        rclone ls --config=${rclone_config} ${dropbox_prefix}\${test_pose} > /dev/null 2>&1
         if [[ \$? != 0 ]]; then
             echo \$test_file >> unprocessed_files.txt
         fi
@@ -122,6 +123,7 @@ process GET_DATA_FROM_DROPBOX {
     input:
     path files_to_transfer
     val dropbox_prefix
+    path rclone_config
 
     output:
     path "fetched_files.txt", emit: remote_files
@@ -129,7 +131,7 @@ process GET_DATA_FROM_DROPBOX {
     script:
     """
     echo ${dropbox_prefix}
-    rclone copy --transfers=1 --include-from ${files_to_transfer} ${dropbox_prefix} retrieved_files/.
+    rclone copy --config=${rclone_config} --transfers=1 --include-from ${files_to_transfer} ${dropbox_prefix} retrieved_files/.
     find \$(pwd)/retrieved_files/ -type f > fetched_files.txt
     """
 }
@@ -142,9 +144,10 @@ process PUT_DATA_TO_DROPBOX {
     path file_to_upload
     tuple path(result_file), val(publish_filename)
     val dropbox_prefix
+    path rclone_config
 
     script:
     """
-    rclone copy --transfers=1 ${result_file} ${dropbox_prefix}/${publish_filename}
+    rclone copy --config=${rclone_config} --transfers=1 ${result_file} ${dropbox_prefix}/${publish_filename}
     """
 }

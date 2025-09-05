@@ -24,8 +24,8 @@ workflow PREPARE_DATA {
     if (location == "local") {
         file_batch = FILTER_LOCAL_BATCH(all_valid_files, params.ignore_invalid_inputs, params.filter_processed, params.pubdir).process_filelist
     } else if (location == "dropbox") {
-        in_video_list = FILTER_UNPROCESSED_DROPBOX(all_valid_files, params.dropbox_prefix).unprocessed_files
-        file_batch = GET_DATA_FROM_DROPBOX(in_video_list, params.dropbox_prefix).remote_files
+        in_video_list = FILTER_UNPROCESSED_DROPBOX(all_valid_files, params.dropbox_prefix, params.rclone_config).unprocessed_files
+        file_batch = GET_DATA_FROM_DROPBOX(in_video_list, params.dropbox_prefix, params.rclone_config).remote_files
     } else if (location == "globus") {
         CHECK_GLOBUS_AUTH()
         in_video_list = FILTER_UNPROCESSED_GLOBUS(params.globus_remote_endpoint, all_valid_files).unprocessed_files
