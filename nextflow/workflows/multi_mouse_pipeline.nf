@@ -9,6 +9,7 @@ include { PREDICT_ARENA_CORNERS;
  } from "${projectDir}/nextflow/modules/static_objects"
 include { VIDEO_TO_POSE;
           PUBLISH_RESULT_FILE as PUBLISH_MM_POSE_V6;
+          PUBLISH_RESULT_FILE as PUBLISH_COMPRESSED_VIDEO;
  } from "${projectDir}/nextflow/modules/utils"
  include { COMPRESS_VIDEO_CRF } from "${projectDir}/nextflow/modules/compression"
 
@@ -37,8 +38,9 @@ workflow MULTI_MOUSE_TRACKING {
     // Compress the original video
     compressed_videos = COMPRESS_VIDEO_CRF(input_video.combine([23]).combine([3000]))
     compressed_renamed = compressed_videos.map { video -> 
-        tuple(video, "results/${video.baseName.replace("_g3000_crf23", "")}_compressed.mp4")
+        tuple(video, "results/${video.baseName.replace("_g3000_crf23", "").replace("%20", "/")}_compressed.mp4")
     }
+    PUBLISH_COMPRESSED_VIDEO(compressed_renamed)
 
     emit:
     pose_v6
