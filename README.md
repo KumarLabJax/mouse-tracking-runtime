@@ -12,7 +12,7 @@ This repository uses both Pytorch and Tensorflow Serving (TFS).
 This repository supports both Docker and Singularity environments. 
 
 The dockerfile is provided at the root of the repository ([Dockerfile](Dockerfile)), and the singularity 
-definition file is in the `vm` folder ([singularity.def](vm/singularity.def)).
+definition file is in the `vm` folder ([singularity.def](vm/runtime.def)).
 
 To learn more about how we support this, please read [vm/README.md](vm/README.md).
 
