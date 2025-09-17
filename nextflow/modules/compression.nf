@@ -19,7 +19,7 @@ process COMPRESS_VIDEO_CRF {
 
     script:
     """
-    ffmpeg -i ${video_file} -c:v libx264 -pix_fmt yuv420p -preset slow -crf ${crf} -g ${keyframe_interval} -f mp4 ${video_file.baseName}_g${keyframe_interval}_crf${crf}.mp4
+    ffmpeg -i ${video_file} -c:v libx264 -pix_fmt yuv420p -preset veryfast -crf ${crf} -g ${keyframe_interval} -f mp4 ${video_file.baseName}_g${keyframe_interval}_crf${crf}.mp4
     """
 }
 
