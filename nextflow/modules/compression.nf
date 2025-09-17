@@ -9,7 +9,10 @@
  * @return file Path to compressed video
  */
 process COMPRESS_VIDEO_CRF {
-    label "compression"
+    label "cpu"
+    // Any environment with ffmpeg installed should work here.
+    label "tracking"
+    label "r_compression"
 
     input:
     tuple path(video_file), val(crf), val(keyframe_interval)
@@ -38,7 +41,10 @@ process COMPRESS_VIDEO_CRF {
  * @note COMPRESS_VIDEO_CRF will typically produce better videos with a low signal-to-noise ratio.
  */
 process COMPRESS_VIDEO_BR {
-    label "compression"
+    label "cpu"
+    // Any environment with ffmpeg installed should work here.
+    label "tracking"
+    label "r_compression"
 
     input:
     tuple path(video_file), val(bitrate), val(keyframe_interval)
@@ -66,6 +72,8 @@ process COMPRESS_VIDEO_BR {
  * @note Difference videos are useful in comparing changes due to compression.
  */
 process COMPUTE_VIDEO_DIFFERENCE {
+    label "cpu"
+    // Any environment with ffmpeg installed should work here.
     label "tracking"
 
     input:
