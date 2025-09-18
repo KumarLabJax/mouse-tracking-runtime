@@ -47,7 +47,7 @@ The Singularity container:
 ### Building Singularity Images
 
 ```bash
-singularity build mouse-tracking-runtime.sif vm/singularity.def
+singularity build mouse-tracking-runtime.sif vm/runtime.def
 ```
 
 ## Framework Compatibility
@@ -75,7 +75,7 @@ docker run --gpus all mouse-tracking-runtime mouse-tracking-runtime --help
 ### Singularity
 ```bash
 # Build and run the Singularity container
-singularity build mouse-tracking-runtime.sif vm/singularity.def
+singularity build mouse-tracking-runtime.sif vm/runtime.def
 singularity run --nv mouse-tracking-runtime.sif mouse-tracking-runtime --help
 ```
 

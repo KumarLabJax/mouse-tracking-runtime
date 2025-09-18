@@ -1,3 +1,6 @@
+# build like:
+#   singularity build RBase.sif vm/RBase.def
+
 Bootstrap: docker
 From:rocker/tidyverse:4.4.2
 
@@ -5,7 +8,7 @@ From:rocker/tidyverse:4.4.2
         mkdir -p ${SINGULARITY_ROOTFS}/mouse-tracking-runtime/support_code/
 
 %files
-        behavior_summaries.R /mouse-tracking-runtime/support_code/.
+        support_code/behavior_summaries.R /mouse-tracking-runtime/support_code/.
 
 %post
         apt-get update
@@ -19,4 +22,3 @@ From:rocker/tidyverse:4.4.2
         apt-get install -y libnlopt-dev 
         apt-get install -y build-essential libcurl4-gnutls-dev libxml2-dev libssl-dev libgit2-dev
         Rscript -e 'install.packages(c("usethis","devtools","optparse"), repos="https://cran.rstudio.com")'
-        
