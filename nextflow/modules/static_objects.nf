@@ -1,3 +1,18 @@
+/**
+ * This module contains process definitions for predicting static objects.
+ */
+
+/**
+ * Predicts arena corners.
+ *
+ * @param tuple
+ *  - video_file Path to the video file.
+ *  - in_pose Path to the input pose file.
+ *
+ * @return tuple files
+ *  - Path to the original video file.
+ *  - Modified pose file with arena corners predicted.
+ */
 process PREDICT_ARENA_CORNERS {
     label "gpu"
     label "tracking"
@@ -16,6 +31,17 @@ process PREDICT_ARENA_CORNERS {
     """
 }
 
+/*
+ * Predicts food hopper position.
+ *
+ * @param tuple
+ *  - video_file Path to the video file.
+ *  - in_pose Path to the input pose file.
+ *
+ * @return tuple files
+ *  - Path to the original video file.
+ *  - Modified pose file with food hopper predicted.
+ */
 process PREDICT_FOOD_HOPPER {
     label "gpu"
     label "tracking"
@@ -34,6 +60,17 @@ process PREDICT_FOOD_HOPPER {
     """
 }
 
+/**
+ * Predicts lixit position.
+ *
+ * @param tuple
+ *  - video_file Path to the video file.
+ *  - in_pose Path to the input pose file.
+ *
+ * @return tuple files
+ *  - Path to the original video file.
+ *  - Modified pose file with lixit predicted.
+ */
 process PREDICT_LIXIT {
     label "gpu"
     label "tracking"

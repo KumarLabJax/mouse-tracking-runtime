@@ -1,3 +1,18 @@
+/**
+ * This module contains process definitions related to JABS classifiers.
+ */
+
+/**
+ * Calculates features for JABS classifiers.
+ *
+ * @param tuple
+ *  - video_file The input video file.
+ *  - in_pose The input pose file.
+ *
+ * @return tuple files
+ *  - Path to the original pose file.
+ *  - Path to the generated feature cache directory.
+ */
 process GENERATE_FEATURE_CACHE {
     // This process will correct pose pathing to a v6 file
     label "jabs_classify"
@@ -23,6 +38,20 @@ process GENERATE_FEATURE_CACHE {
     """
 }  
 
+/**
+ * Predicts behaviors using JABS classifiers.
+ *
+ * @param tuple
+ *  - in_pose The input pose file.
+ *  - feature_cache The directory containing the generated features.
+ * @param classifiers A map of classifiers:
+ *  - <classifier_name>: classifier parameter maps (not used by this process)
+ *
+ * @return tuple files
+ *  - Path to the original pose file.
+ *  - Path to the feature cache directory.
+ *  - Path to the generated behavior file. All behavior predictions are stored in a single file.
+ */
 process PREDICT_CLASSIFIERS {
     label "jabs_classify"
     label "cpu"
@@ -46,6 +75,22 @@ process PREDICT_CLASSIFIERS {
     """
 }
 
+/**
+ * Generates behavior tables from pose file, feature file, and prediction file.
+ *
+ * @param tuple
+ *  - in_pose The input pose file.
+ *  - feature_cache The directory containing the generated features.
+ *  - behavior_files The behavior prediction file.
+ * @param classifiers A map of classifiers:
+ *  - <classifier_name>: classifier parameter maps:
+ *    - stitch_value: the gap size for stitching behavior bouts
+ *    - filter_value: the minimum length for behavior bouts
+ *
+ * @return tuple files
+ *  - Path to the generated behavior bout file.
+ *  - Path to the generated behavior summary file.
+ */
 process GENERATE_BEHAVIOR_TABLES {
     label "jabs_postprocess"
     label "cpu"
@@ -53,18 +98,30 @@ process GENERATE_BEHAVIOR_TABLES {
 
     input:
     tuple path(in_pose), path(feature_cache), path(behavior_files)
-    val classifier
+    val classifiers
 
     output:
     tuple path("${in_pose.baseName}*_bouts.csv"), path("${in_pose.baseName}*_summaries.csv"), emit: files
 
     script:
     """
-    behavior_command="--behavior ${classifier.collect { entry -> "$entry.key --stitch_gap $entry.value.stitch_value --min_bout_length $entry.value.filter_value" }.join(' --behavior ')}"
+    behavior_command="--behavior ${classifiers.collect { entry -> "$entry.key --stitch_gap $entry.value.stitch_value --min_bout_length $entry.value.filter_value" }.join(' --behavior ')}"
     python3 /JABS-postprocess/generate_behavior_tables.py --project_folder . --feature_folder . --out_prefix ${in_pose.baseName} --out_bin_size 5 \${behavior_command}
     """
 }
 
+/**
+ * Generates heuristic classifier predictions.
+ *
+ * @param tuple
+ *  - in_pose The input pose file.
+ *  - feature_cache The directory containing the generated features.
+ * @param heuristic_classifiers A list of heuristic classifier configuration files.
+ *
+ * @return tuple files
+ *  - Path to the generated bout file.
+ *  - Path to the generated summary file.
+ */
 process PREDICT_HEURISTICS {
     label "jabs_postprocess"
     label "cpu"
@@ -87,6 +144,14 @@ process PREDICT_HEURISTICS {
     """
 }
 
+/**
+ * Converts a behavior summary table to features.
+ *
+ * @param in_summary_table The input behavior summary table.
+ * @param bin_size The bin size for feature extraction.
+ *
+ * @return features The generated feature file.
+ */
 process BEHAVIOR_TABLE_TO_FEATURES {
     label "jabs_table_convert"
     label "r_jabs_table_convert"

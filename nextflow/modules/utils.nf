@@ -1,9 +1,15 @@
 /**
+ * This module contains utility processes and functions for the Nextflow pipeline.
+ * It includes processes for file manipulation, data validation, and other utility functions.
+ */
+
+/**
  * Lazy nextflow module for creating files, useful for testing.
  *
  * @param file_name The name of the file to be created
  * @param file_content The content to be written to the file
- * @return A path to the created file
+ *
+ * @return created_file A path to the created file
  */
 process CREATE_FILE {
     label "r_util"
@@ -22,6 +28,15 @@ process CREATE_FILE {
     """
 }
 
+/**
+ * Filters a batch of files based on whether they exist, and optionally filters out already processed files.
+ *
+ * @param input_batch File containing a list of input files to be processed
+ * @param ignore_invalid_inputs If "true", process will not fail if a file does not exist. Will otherwise remove files that do not exist.
+ * @param filter_processed If "true", will filter out files that have already been processed
+ *
+ * @return process_filelist A file containing a filtered list of files to be processed
+ */
 process FILTER_LOCAL_BATCH {
     label "r_util"
 
@@ -38,9 +53,13 @@ process FILTER_LOCAL_BATCH {
     """
     touch files_to_process.txt
     while IFS="" read -r file; do
-        if [[ ! -f "\${file}" && ${ignore_invalid_inputs} != "true" ]]; then
-            echo "File does not exist: \${file}"
-            exit 1
+        if [[ ! -f "\${file}" ]]; then
+            if [[ ${ignore_invalid_inputs} != "true" ]]; then
+                echo "File does not exist: \${file}"
+                exit 1
+            else
+                echo "File does not exist: \${file}, skipping."
+            fi
         else
             echo "\${file} exists, adding to process list."
             echo "\${file}" >> files_to_process.txt
@@ -63,6 +82,15 @@ process FILTER_LOCAL_BATCH {
     """
 }
 
+/**
+ * Generates a dummy pose file for testing purposes.
+ *
+ * @param video_file The video file to create a pose file
+ *
+ * @return tuple files
+ *  - video_file input video file
+ *  - pose_file pose file
+ */
 process VIDEO_TO_POSE {
     label "r_util"
 
@@ -80,6 +108,14 @@ process VIDEO_TO_POSE {
     """
 }
 
+/**
+ * URLifies a file path to avoid potential file collisions in the pipeline.
+ *
+ * @param file_to_urlify The path to the file that needs to be URLified
+ * @param depth The number of directory levels to include in the URLified path
+ *
+ * @return file A path to the URLified file
+ */
 process URLIFY_FILE {
     label "r_util"
 
@@ -98,6 +134,13 @@ process URLIFY_FILE {
     """
 }
 
+/**
+ * Removes URLified fields from a file path.
+ *
+ * @param urlified_file The path to the URLified file that needs to be processed
+ *
+ * @return file A path to the file with URLified fields removed
+ */
 process REMOVE_URLIFY_FIELDS {
     label "r_util"
 
@@ -114,6 +157,15 @@ process REMOVE_URLIFY_FIELDS {
     """
 }
 
+/**
+ * Merges multiple feature files into a single CSV file by rows.
+ *
+ * @param feature_files A list of feature files to be merged
+ * @param out_filename The name of the output file
+ * @param header_size The number of header lines to keep from the first file
+ *
+ * @return merged_features The merged CSV file
+ */
 process MERGE_FEATURE_ROWS {
     label "r_util"
 
@@ -137,6 +189,15 @@ process MERGE_FEATURE_ROWS {
     """
 }
 
+/**
+ * Merges multiple feature files into a single CSV file by columns.
+ *
+ * @param feature_files A list of feature files to be merged
+ * @param col_to_merge_on The column name to merge the files on
+ * @param out_filename The name of the output file
+ *
+ * @return merged_features The merged CSV file
+ */
 process MERGE_FEATURE_COLS {
     // Any environment with pandas installed should work here.
     label "tracking"
@@ -164,6 +225,15 @@ process MERGE_FEATURE_COLS {
     """
 }
 
+/**
+ * Selects specific columns from a CSV file and outputs them to a new CSV file.
+ *
+ * @param qc_file The input CSV file
+ * @param key_1 The first column to select
+ * @param key_2 The second column to select
+ *
+ * @return csv_file A CSV file containing only the selected columns
+ */
 process SELECT_COLUMNS {
     label "r_util"
 
@@ -191,6 +261,15 @@ process SELECT_COLUMNS {
     """
 }
 
+/**
+ * Adds a new column to a CSV file with specified data. Typically used to add metadata columns.
+ *
+ * @param file_to_add_to The CSV file to which the column will be added
+ * @param column_name The name of the new column
+ * @param column_data The data to be added in the new column for all rows
+ *
+ * @return file A CSV file with the new column added
+ */
 process ADD_COLUMN {
     label "r_util"
 
@@ -209,6 +288,14 @@ process ADD_COLUMN {
     """
 }
 
+/**
+ * Deletes a specified row from a CSV file.
+ *
+ * @param file_to_delete_from The CSV file from which the row will be deleted
+ * @param row_to_delete The content of the row to be deleted (exact match)
+ *
+ * @return file A CSV file with the specified row removed
+ */
 process DELETE_ROW {
     label "r_util"
 
@@ -226,6 +313,14 @@ process DELETE_ROW {
     """
 }
 
+/**
+ * Converts a wide-format feature CSV file to a long-format CSV file.
+ *
+ * @param feature_file The input wide-format CSV file
+ * @param id_col The column to use as the identifier in the long format
+ *
+ * @return long_file A long-format CSV file
+ */
 process FEATURE_TO_LONG {
     // Any environment with pandas installed should work here.
     label "tracking"
@@ -249,6 +344,16 @@ process FEATURE_TO_LONG {
     """
 }
 
+/**
+ * Converts a long-format feature CSV file to a wide-format CSV file.
+ *
+ * @param long_file The input long-format CSV file
+ * @param id_col The column to use as the identifier in the wide format
+ * @param feature_col The column containing feature names
+ * @param value_col The column containing feature values
+ *
+ * @return wide_file A wide-format CSV file
+ */
 process LONG_TO_WIDE {
     // Any environment with pandas installed should work here.
     label "tracking"
@@ -274,28 +379,17 @@ process LONG_TO_WIDE {
     """
 }
 
-process SUBSET_PATH_BY_VAR {
-    label "r_util"
-
-    input:
-    path all_files
-    val subset_files
-    val dir
-
-    output:
-    path("${dir}/*"), emit: subset_files
-
-    script:
-    """
-    mkdir ${dir}
-    for file in ${subset_files}
-    do
-        ln -s \$(pwd)/\${file} ${dir}/\$(basename \${file})
-    done
-    sleep 10
-    """
-}
-
+/**
+ * Publishes a result file to a specified directory with potential sub-folders.
+ *
+ * @param tuple
+ *  - result_file The file to be published
+ *  - publish_filename The name under which the file will be published
+ *
+ * @return published_file A path to the published file
+ *
+ * @publish ./ File published to the specified directory
+ */
 process PUBLISH_RESULT_FILE {
     label "r_util"
 
@@ -319,6 +413,14 @@ process PUBLISH_RESULT_FILE {
     """
 }
 
+/**
+ * Obtains workflow version information and writes it to a file.
+ *
+ * @return version The workflow version
+ * @return version_file Path to the version file
+ *
+ * @publish ./ Workflow version information
+ */
 process GET_WORKFLOW_VERSION {
     label "r_util"
 
@@ -338,6 +440,16 @@ process GET_WORKFLOW_VERSION {
     """
 }
 
+/**
+ * Pairs a pose file with a generated video file.
+ *
+ * @param pose_file The pose file for which to create a video
+ * @param n_frames The number of frames the video should have
+ *
+ * @return tuple files
+ *  - video_file The created video file
+ *  - pose_file The input pose file
+ */
 process ADD_DUMMY_VIDEO {
     // Any environment with ffmpeg installed should work here.
     label "tracking"
@@ -361,6 +473,7 @@ process ADD_DUMMY_VIDEO {
  *
  * @param file_path The path to the file that needs validation
  * @param pipeline_type The type of pipeline being run (e.g. 'single-mouse', 'single-mouse-corrected-corners', etc.)
+ *
  * @return A boolean indicating if the file is valid and an error message if it's not
  */
 def validateInputFile(String file_path, String pipeline_type) {
@@ -392,6 +505,7 @@ def validateInputFile(String file_path, String pipeline_type) {
  *
  * @param in_file_list The path to the file that contains the list of intut files
  * @param pipeline_type The type of pipeline being run. See validateInputFile for valid types.
+ *
  * @return A list of valid file paths that match the allowed formats for the specified pipeline type.
  */
 def validateInputFilelist(String in_file_list, String pipeline_type) {

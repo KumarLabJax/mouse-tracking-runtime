@@ -1,3 +1,18 @@
+/**
+ * This module contains process definitions for single mouse pose estimation.
+ */
+
+/**
+ * Predicts single mouse segmentation using a pre-trained model.
+ *
+ * @param tuple
+ *  - video_file The input video file
+ *  - in_pose_file The input pose file
+ *
+ * @return tuple files
+ *  - Path to the original video file.
+ *  - Modified pose file with single mouse segmentation predicted.
+ */
 process PREDICT_SINGLE_MOUSE_SEGMENTATION {
     label "gpu"
     label "tracking"
@@ -16,6 +31,17 @@ process PREDICT_SINGLE_MOUSE_SEGMENTATION {
     """
 }
 
+/**
+ * Predicts single mouse keypoints using a pre-trained model.
+ *
+ * @param tuple
+ *  - video_file The input video file
+ *  - in_pose_file The input pose file
+ *
+ * @return tuple files
+ *  - Path to the original video file.
+ *  - Modified pose file with single mouse keypoints predicted.
+ */
 process PREDICT_SINGLE_MOUSE_KEYPOINTS {
     label "gpu"
     label "tracking"
@@ -34,6 +60,15 @@ process PREDICT_SINGLE_MOUSE_KEYPOINTS {
     """
 }
 
+/**
+ * Performs quality control on single mouse pose files.
+ *
+ * @param in_pose_file The input pose file to be checked
+ * @param clip_duration The duration of the video clip in seconds
+ * @param batch_name The name of the batch being processed
+ *
+ * @return qc_file The generated quality control CSV file
+ */
 process QC_SINGLE_MOUSE {
     label "tracking"
     label "r_single_qc"
@@ -55,6 +90,18 @@ process QC_SINGLE_MOUSE {
     """
 }
 
+/**
+ * Clips a video and its corresponding pose file to a specified duration from the start.
+ *
+ * @param tuple
+ *  - in_video The input video file to be clipped
+ *  - in_pose_file The input pose file to be clipped
+ * @param clip_duration The duration in frames to which the video and pose file should be clipped
+ *
+ * @return tuple files
+ *  - Path to the trimmed video file.
+ *  - Path to the trimmed pose file.
+ */
 process CLIP_VIDEO_AND_POSE {
     label "tracking"
     label "r_clip_video"
