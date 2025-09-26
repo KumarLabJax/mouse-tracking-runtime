@@ -54,6 +54,27 @@ def aggregate_fecal_boli(
     result.to_csv(output, index=False)
 
 
+@app.command()
+def render_fecal_boli_video(
+    in_video: Path = typer.Option(
+        ..., "--in-video", help="Path to the input video file"
+    ),
+    in_pose: Path = typer.Option(
+        ..., "--in-pose", help="Path to the input HDF5 pose file"
+    ),
+    out_video: Path = typer.Option(
+        ..., "--out-video", help="Path to the output video file"
+    ),
+):
+    """
+    Render fecal boli on video frames.
+
+    This command renders fecal boli from the pose file onto the input video.
+    Video playback is 1fps with original frame timestamp overlayed.
+    """
+    fecal_boli.render_fecal_boli_video(in_video, in_pose, out_video)
+
+
 clip_video_app = typer.Typer(help="Produce a video and pose clip aligned to criteria.")
 
 
