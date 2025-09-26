@@ -72,7 +72,7 @@ def render_fecal_boli_video(
     This command renders fecal boli from the pose file onto the input video.
     Video playback is 1fps with original frame timestamp overlayed.
     """
-    fecal_boli.render_fecal_boli_video(in_video, in_pose, out_video)
+    fecal_boli.render_fecal_boli_video(str(in_video), str(in_pose), str(out_video))
 
 
 clip_video_app = typer.Typer(help="Produce a video and pose clip aligned to criteria.")
