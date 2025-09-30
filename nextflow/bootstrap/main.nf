@@ -30,6 +30,24 @@ process CREATE_VERSION_CONFIG {
     """
 }
 
+process INIT_JABS_PROJECTS {
+    label 'jabs_classify'
+    label 'cpu'
+    cpus 8
+
+    input:
+    val(project_folder_name)
+
+    output:
+    val(project_folder_name), emit: initialized_project
+
+    script:
+    def project_path = "${params.classifier_project_folders}/${project_folder_name}"
+    def project_file = "${project_path}/jabs/project.json"
+    """
+    jabs-init "${project_path}" \$(jq -r '[.behavior[] | .window_size] | unique | map("-w \\(.)") | join(" ")' ${project_file})
+    """
+}
 
 process EXPORT_TRAINING_DATA {
     tag "export_${behavior_path}"
@@ -172,13 +190,41 @@ workflow {
     main:
     CREATE_VERSION_CONFIG()
 
+    // Create channel of behaviors with their details
     classifier_ch = Channel.from(params.single_mouse_classifiers.collect { k, v -> [k, v] })
+    
+    // Map to include behavior_path
     behavior_projects_ch = classifier_ch.map { behavior_name, details ->
         def behavior_path = behavior_name.replaceAll(' ', '_').replaceAll('[()]', '')
         tuple(behavior_name, behavior_path, details.project_folder_name)
     }
 
-    exported_h5_ch = EXPORT_TRAINING_DATA(behavior_projects_ch)
+    // Extract unique project folders
+    unique_projects_ch = classifier_ch
+        .map { behavior_name, details -> details.project_folder_name }
+        .unique()
+
+    // Initialize each unique project
+    initialized_projects_ch = INIT_JABS_PROJECTS(unique_projects_ch)
+
+    // Create a value channel from initialized projects for joining
+    initialized_projects_val = initialized_projects_ch.initialized_project
+        .collect()
+        .map { projects -> 
+            projects.collectEntries { [it, true] }
+        }
+
+    // Join behaviors with their initialized projects
+    ready_behaviors_ch = behavior_projects_ch
+        .combine(initialized_projects_val)
+        .map { behavior_name, behavior_path, project_folder_name, project_map ->
+            // Check if this behavior's project has been initialized
+            if (project_map[project_folder_name]) {
+                tuple(behavior_name, behavior_path, project_folder_name)
+            }
+        }
+
+    exported_h5_ch = EXPORT_TRAINING_DATA(ready_behaviors_ch)
 
     trained_classifiers_ch = TRAIN_CLASSIFIER(exported_h5_ch.h5_file_with_hash)
 
@@ -190,4 +236,3 @@ workflow {
 
     GENERATE_PIPELINE_CONFIG(collected_behaviors)
 }
-
