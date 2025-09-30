@@ -45,7 +45,8 @@ process EXPORT_TRAINING_DATA {
     output:
     tuple val(behavior_name), val(behavior_path), val(project_folder_name), path("training.h5"), env('HASH'), emit: h5_file_with_hash
     path "${behavior_path}_*.training.h5"
-    path "${behavior_path}_*.training.h5.manifest.json"
+    path "${behavior_path}_*.training.h5.manifest.json" 
+    path "latest.training.h5"
 
     script:
     def project_path = "${params.classifier_project_folders}/${project_folder_name}"
@@ -119,48 +120,6 @@ EOF
  * Generates a Nextflow configuration file that maps behaviors to their
  * generated classifier artifacts for the main analysis pipeline.
  */
-process GENERATE_PIPELINE_CONFIG_ORIG {
-    tag "generate_config"
-    label 'cpu'
-    publishDir "${params.classifier_base_path}/${params.jabs_version}", mode: 'copy', overwrite: true
-
-    input:
-    val collected_behaviors // list of [behavior_name, behavior_path]
-
-    output:
-    path "generated_classifiers.config"
-
-    script:
-    """
-    #!/usr/bin/env groovy
-    def behaviors = ${collected_behaviors.inspect()}
-    def outFile = new File("generated_classifiers.config")
-
-    outFile.withWriter { writer ->
-        writer.writeLine("params {")
-        writer.writeLine("    single_mouse_classifiers = [")
-        behaviors.each { behavior_tuple ->
-            def behavior_name = behavior_tuple[0]
-            def behavior_path = behavior_tuple[1]
-            def details = params.single_mouse_classifiers[behavior_name]
-            def classifier_path = "${params.classifier_base_path}/${params.jabs_version}/\${behavior_path}/latest.pickle"
-            
-            writer.writeLine("        "\${behavior_name}": [")
-            writer.writeLine("            classifier_path: "\${classifier_path}",")
-            writer.writeLine("            stitch_value: \${details.stitch_value},")
-            writer.writeLine("            filter_value: \${details.filter_value}")
-            writer.writeLine("        ],")
-        }
-        writer.writeLine("    ]")
-        writer.writeLine("}")
-    }
-    """
-}
-
-/**
- * Generates a Nextflow configuration file that maps behaviors to their
- * generated classifier artifacts for the main analysis pipeline.
- */
 process GENERATE_PIPELINE_CONFIG {
     tag "generate_config"
     label 'cpu'
@@ -186,20 +145,20 @@ classifiers = json.loads('${classifiers_json}')
 with open("generated_classifiers.config", "w") as f:
     f.write("params {\\n")
     f.write("    single_mouse_classifiers = [\\n")
-
+    
     # Iterate through behaviors in pairs (behavior_name, behavior_path)
     for i in range(0, len(behaviors), 2):
         behavior_name = behaviors[i]
         behavior_path = behaviors[i + 1]
         details = classifiers[behavior_name]
         classifier_path = "${params.classifier_base_path}/${params.jabs_version}/" + behavior_path + "/latest.pickle"
-
+        
         f.write(f"        '{behavior_name}': [\\n")
         f.write(f"            classifier_path: '{classifier_path}',\\n")
         f.write(f"            stitch_value: {details['stitch_value']},\\n")
         f.write(f"            filter_value: {details['filter_value']}\\n")
         f.write(f"        ],\\n")
-
+    
     f.write("    ]\\n")
     f.write("}\\n")
 """
@@ -231,3 +190,4 @@ workflow {
 
     GENERATE_PIPELINE_CONFIG(collected_behaviors)
 }
+
