@@ -54,9 +54,9 @@ workflow PREPARE_DATA {
 
     // Files should be appropriately URLified to avoid collisions within the pipeline
     if (skip_urlify) {
-        file_processing_channel = file_batch.readLines().flatMap { line -> file(line) }
+        file_processing_channel = file_batch.splitText().map { line -> file(line.trim()) }
     } else {
-        file_processing_channel = URLIFY_FILE(file_batch.readLines().flatMap(), params.path_depth).file
+        file_processing_channel = URLIFY_FILE(file_batch.splitText().map { it.trim() }, params.path_depth).file
     }
 
     emit:
