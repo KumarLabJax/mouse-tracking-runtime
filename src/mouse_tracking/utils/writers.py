@@ -676,4 +676,4 @@ def filter_large_poses(in_pose_f: str | Path, area_threshold: float):
     identity_data[identities_to_unassign] = 0
 
     with h5py.File(in_pose_f, "a") as f:
-        f["poseest/instance_embed_id"] = identity_data
+        f["poseest/instance_embed_id"][:] = identity_data
