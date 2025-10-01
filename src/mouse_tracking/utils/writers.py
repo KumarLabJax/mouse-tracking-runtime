@@ -7,7 +7,7 @@ import numpy as np
 
 from mouse_tracking.core.exceptions import InvalidPoseFileException
 from mouse_tracking.matching import hungarian_match_points_seg
-from mouse_tracking.utils.pose import convert_v2_to_v3
+from mouse_tracking.pose.convert import v2_to_v3
 
 
 def promote_pose_data(pose_file, current_version: int, new_version: int):
@@ -43,7 +43,7 @@ def promote_pose_data(pose_file, current_version: int, new_version: int):
                 config_str = "unknown"
                 model_str = "unknown"
         pose_data, conf_data, instance_count, instance_embedding, instance_track_id = (
-            convert_v2_to_v3(pose_data, conf_data)
+            v2_to_v3(pose_data, conf_data)
         )
         # Overwrite the existing data with a new axis
         write_pose_v2_data(pose_file, pose_data, conf_data, config_str, model_str)
