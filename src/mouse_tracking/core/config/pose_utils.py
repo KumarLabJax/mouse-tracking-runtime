@@ -34,3 +34,6 @@ class PoseUtilsConfig(BaseSettings):
     MIN_GAIT_CONFIDENCE: float = 0.3
     MIN_JABS_CONFIDENCE: float = 0.3
     MIN_JABS_KEYPOINTS: int = 3
+
+    # Large animals are rarely larger than 100px in our OFA
+    OFA_MAX_EXPECTED_AREA_PX = 150 * 150
