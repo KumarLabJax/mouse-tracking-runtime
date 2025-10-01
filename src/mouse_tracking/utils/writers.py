@@ -8,6 +8,7 @@ import numpy as np
 from mouse_tracking.core.exceptions import InvalidPoseFileException
 from mouse_tracking.matching import hungarian_match_points_seg
 from mouse_tracking.pose.convert import v2_to_v3
+from mouse_tracking.pose.inspect import get_pose_bounding_box
 
 
 def promote_pose_data(pose_file, current_version: int, new_version: int):
@@ -588,3 +589,39 @@ def write_pose_clip(
         for key, attrs in all_attrs.items():
             for cur_attr, data in attrs.items():
                 out_f[key].attrs.create(cur_attr, data)
+
+
+def filter_large_poses(in_pose_f: str | Path, area_threshold: float):
+    """Unmarks identity of poses that exceed area threshold.
+
+    Args:
+        in_pose_f: Input pose filename
+        area_threshold: maximum pose bounding box allowed
+
+    Raises:
+        InvalidPoseFileException if the pose file is not >= 4.
+    """
+    with h5py.File(in_pose_f, "r") as f:
+        try:
+            current_version = f["poseest"].attrs["version"][0]
+        except (KeyError, AttributeError, IndexError):
+            InvalidPoseFileException("Pose file does not have a version.")
+        if current_version < 4:
+            raise InvalidPoseFileException(
+                f"Pose file {in_pose_f} is {current_version}. Filtering is only implemented for pose file versions > 4."
+            )
+
+        pose_data = f["poseest/points"][:]
+        pose_confidence = f["poseest/confidence"][:]
+        identity_data = f["poseest/instance_embed_id"][:]
+
+    pose_boxes = get_pose_bounding_box(pose_data, pose_confidence)
+    pose_boxes = pose_boxes.astype(float)
+    pose_box_size = pose_boxes[:, :, 1] - pose_boxes[:, :, 0]
+    pose_box_area = pose_box_size[:, :, 0] * pose_box_size[:, :, 1]
+
+    identities_to_unassign = np.where(pose_box_area > area_threshold)
+    identity_data[identities_to_unassign] = 0
+
+    with h5py.File(in_pose_f, "a") as f:
+        f["poseest/instance_embed_id"] = identity_data

@@ -6,13 +6,16 @@ import typer
 from rich import print
 
 from mouse_tracking import __version__
+from mouse_tracking.core.config.pose_utils import PoseUtilsConfig
 from mouse_tracking.matching.match_predictions import match_predictions
 from mouse_tracking.pose import render
 from mouse_tracking.pose.convert import downgrade_pose_file
 from mouse_tracking.utils import fecal_boli, static_objects
 from mouse_tracking.utils.clip_video import clip_video_auto, clip_video_manual
+from mouse_tracking.utils.writers import filter_large_poses
 
 app = typer.Typer()
+CONFIG = PoseUtilsConfig()
 
 
 def version_callback(value: bool) -> None:
@@ -248,3 +251,22 @@ def stitch_tracklets(
     This command stitches tracklets from the specified source.
     """
     match_predictions(in_pose)
+
+
+@app.command()
+def filter_large_area_pose(
+    in_pose: Path = typer.Argument(..., help="Input HDF5 pose file"),
+    max_area: int = typer.Option(
+        CONFIG.OFA_MAX_EXPECTED_AREA_PX,
+        help="Maximum area a pose can have, using a bounding box on keypoint pose.",
+    ),
+):
+    """
+    Filer pose by area.
+
+    This command unmarks identity of pose with large areas.
+    """
+    filter_large_poses(
+        in_pose,
+        max_area,
+    )
