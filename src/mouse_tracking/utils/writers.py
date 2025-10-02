@@ -666,6 +666,7 @@ def filter_large_poses(in_pose_f: str | Path, area_threshold: float):
         pose_data = f["poseest/points"][:]
         pose_confidence = f["poseest/confidence"][:]
         identity_data = f["poseest/instance_embed_id"][:]
+        pose_masks = f["poseest/id_mask"][:]
 
     pose_boxes = get_pose_bounding_box(pose_data, pose_confidence)
     pose_boxes = pose_boxes.astype(float)
@@ -674,6 +675,8 @@ def filter_large_poses(in_pose_f: str | Path, area_threshold: float):
 
     identities_to_unassign = np.where(pose_box_area > area_threshold)
     identity_data[identities_to_unassign] = 0
+    pose_masks[identities_to_unassign] = 1
 
     with h5py.File(in_pose_f, "a") as f:
         f["poseest/instance_embed_id"][:] = identity_data
+        f["poseest/id_mask"][:] = pose_masks
