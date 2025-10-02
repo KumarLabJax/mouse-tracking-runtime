@@ -1,0 +1,6 @@
+from: rclone/rclone
+bootstrap: docker
+
+%post
+    apk add --no-cache bash
+
