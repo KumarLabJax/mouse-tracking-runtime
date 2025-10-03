@@ -164,6 +164,7 @@ process PREDICT_HEURISTICS {
  */
 process BEHAVIOR_TABLE_TO_FEATURES {
     label "jabs_table_convert"
+    label "cpu"
     label "r_jabs_table_convert"
 
     input:
@@ -193,7 +194,8 @@ process BEHAVIOR_TABLE_TO_FEATURES {
 * @publish ./results/merged_behavior_tables Merge log file
 */
 process AGGREGATE_BOUT_TABLES {
-    label "jabs_table_convert"
+    label "jabs_postprocess"
+    label "cpu"
     label "r_jabs_table_convert"
 
     publishDir "${params.pubdir}/merged_behavior_tables", mode: 'copy'
