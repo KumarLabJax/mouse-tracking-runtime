@@ -19,7 +19,6 @@ dependencies = [
   "h5py>=3.11.0",
   "pydantic-settings>=2.10.1",
   "yacs>=0.1.8",
-  "nvidia-cusparselt-cu12==0.6.3",
 ]
 
 [project.optional-dependencies]
@@ -29,6 +28,7 @@ gpu = [
   "torch==2.6.0",
   "torchvision==0.21.0",
   "torchaudio==2.6.0",
+  "nvidia-cusparselt-cu12==0.6.3",
 ]
 
 # CPU-only convenience for local tests (unchanged idea)
