@@ -178,12 +178,15 @@ process BEHAVIOR_TABLE_TO_FEATURES {
 *
 * @return merged_bout_tables List of paths to merged bout tables, one per behavior.
 * @return merge_log Path to the log file detailing the merge process.
+*
+* @publish ./results/merged_behavior_tables Merged behavior bout tables
+* @publish ./results/merged_behavior_tables Merge log file
 */
 process AGGREGATE_BOUT_TABLES {
     label "jabs_table_convert"
     label "r_jabs_table_convert"
 
-    publishDir "${params.outdir}/merged_behavior_tables", mode: 'copy'
+    publishDir "${params.pubdir}/merged_behavior_tables", mode: 'copy'
 
     input:
     path bout_tables

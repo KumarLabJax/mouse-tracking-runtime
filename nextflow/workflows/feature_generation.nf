@@ -46,6 +46,7 @@ include { EXTRACT_FECAL_BOLI_BINS } from "${projectDir}/nextflow/modules/fecal_b
  *
  * @return path gait_results The channel of generated gait feature files.
  * @return path morphometrics_results The channel of generated morphometric feature files.
+ * @return path merged_bout_tables The channel of merged bout tables from JABS classifiers.
  *
  * @publish ./results/ Gait feature files
  * @publish ./results/ Morphometric feature files
@@ -128,7 +129,7 @@ workflow SINGLE_MOUSE_V6_FEATURES {
         .map { bout_table, summary_table -> bout_table }
         .flatten()
         .collect()
-    merged_bout_tables = AGGREGATE_BOUT_TABLES(all_bout_tables)
+    merged_bout_tables = AGGREGATE_BOUT_TABLES(all_bout_tables).merged_bout_tables
 
     // Combine table data into feature file
     all_summary_tables = heuristic_tables

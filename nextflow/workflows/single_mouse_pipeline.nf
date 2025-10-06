@@ -124,7 +124,7 @@ workflow SPLIT_BY_CORNERS {
 
     // Publish the pose files
     v6_poses_renamed = v6_with_corners.map { video, pose ->
-        tuple(pose, "results/${video.baseName.replace("%20", "/")}_pose_est_v6.h5")
+        tuple(pose, "results/${file(video).baseName.replace("%20", "/")}_pose_est_v6.h5")
     }
     PUBLISH_SM_POSE_V6(v6_poses_renamed)
     // Corners that failed are placed in a separate folder with url-ified names

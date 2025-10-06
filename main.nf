@@ -40,7 +40,7 @@ workflow{
         // Integrate annotations back into pose files
         // This branch requires files to be local and already url-ified
         PREPARE_DATA(params.input_batch, params.location, true)
-        INTEGRATE_CORNER_ANNOTATIONS(PREPATE_DATA.out.file_processing_channel, params.sleap_file)
+        INTEGRATE_CORNER_ANNOTATIONS(PREPARE_DATA.out.file_processing_channel, params.sleap_file)
         ADD_DUMMY_VIDEO(INTEGRATE_CORNER_ANNOTATIONS.out, params.clip_duration)
         paired_video_and_pose = ADD_DUMMY_VIDEO.out[0]
 

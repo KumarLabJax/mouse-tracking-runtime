@@ -1,11 +1,5 @@
-# build like:
-#   singularity build mouse-tracking-runtime.sif singularity.def
-
 Bootstrap: docker
 From: aberger4/mouse-tracking:python3.10-slim
 
 %setup
     mkdir -p ${SINGULARITY_ROOTFS}/workspace/models/
-
-%files
-    ./models /workspace/
