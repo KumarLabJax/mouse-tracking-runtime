@@ -67,10 +67,9 @@ process PREDICT_CLASSIFIERS {
 
     script:
     """
-    for classifier in ${classifiers.keySet().collect { params.exported_classifier_folder + it + params.classifier_artifact_suffix }.join(' ')};
+    for classifier_path in ${classifiers.collect { _behavior, details -> details.classifier_path }.join(' ')};
     do
-        ln -s \${classifier} .
-        jabs-classify classify --classifier \$(basename \${classifier}) --input-pose ${in_pose} --out-dir . --feature-dir .
+        jabs-classify classify --classifier "\${classifier_path}" --input-pose ${in_pose} --out-dir . --feature-dir .
     done
     """
 }
