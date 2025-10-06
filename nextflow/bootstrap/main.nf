@@ -8,6 +8,8 @@ nextflow.enable.dsl=2
 
 /**
  * Creates a version directory and a JSON config file with metadata about the build.
+ *
+ * @return jabs.config.json A JSON configuration file containing the JABS version and creation timestamp
  */
 process CREATE_VERSION_CONFIG {
     tag "config_${params.jabs_version}"
@@ -30,6 +32,14 @@ process CREATE_VERSION_CONFIG {
     """
 }
 
+/**
+ * Calculates the unique window sizes required for a JABS project by parsing the project.json file.
+ * Window sizes are extracted from behavior definitions and formatted as command-line arguments.
+ *
+ * @param project_folder_name The name of the JABS project folder to analyze
+ *
+ * @return project_with_windows A tuple containing the project folder name and formatted window size arguments (e.g., "-w 5 -w 10")
+ */
 process CALCULTE_PROJECT_WINDOW_SIZES {
     label 'cpu'
 
@@ -47,6 +57,15 @@ process CALCULTE_PROJECT_WINDOW_SIZES {
     """
 }
 
+/**
+ * Initializes a JABS project by running the jabs-init command with the specified window sizes.
+ * This process prepares the project for training data export and classifier generation.
+ *
+ * @param project_folder_name The name of the JABS project folder to initialize
+ * @param window_sizes Formatted window size arguments (e.g., "-w 5 -w 10") to use for initialization
+ *
+ * @return initialized_project The project folder name after successful initialization
+ */
 process INIT_JABS_PROJECTS {
     label 'jabs_classify'
     label 'highcpu'
@@ -64,6 +83,17 @@ process INIT_JABS_PROJECTS {
     """
 }
 
+/**
+ * Exports training data for a specific behavior from a JABS project to an HDF5 file.
+ * Creates content-addressed files using SHA256 hashing and generates metadata manifests.
+ *
+ * @param behavior_name The name of the behavior to export training data for
+ * @param behavior_path The filesystem-safe path derived from the behavior name
+ * @param project_folder_name The name of the JABS project folder containing the training data
+ *
+ * @return h5_file_with_hash A tuple containing behavior info, the content-addressed HDF5 file, and its SHA256 hash
+ * @return *.h5.manifest.json A JSON manifest file containing metadata about the training data export
+ */
 process EXPORT_TRAINING_DATA {
     tag "export_${behavior_path}"
     label 'jabs_classify'
@@ -104,6 +134,20 @@ EOF
     """
 }
 
+/**
+ * Trains a JABS classifier from the exported training data HDF5 file.
+ * Creates content-addressed classifier files using SHA256 hashing and generates metadata manifests
+ * that link back to the source training data.
+ *
+ * @param behavior_name The name of the behavior being classified
+ * @param behavior_path The filesystem-safe path derived from the behavior name
+ * @param project_folder_name The name of the source JABS project folder
+ * @param training_h5 The HDF5 file containing training data
+ * @param training_hash The SHA256 hash of the training data file
+ *
+ * @return classifier_file A tuple containing behavior info, the content-addressed classifier pickle file, and its SHA256 hash
+ * @return *.pickle.manifest.json A JSON manifest file containing metadata about the classifier and its training provenance
+ */
 process TRAIN_CLASSIFIER {
     tag "train_${behavior_path}"
     label 'jabs_classify'
@@ -148,6 +192,12 @@ EOF
 /**
  * Generates a Nextflow configuration file that maps behaviors to their
  * generated classifier artifacts for the main analysis pipeline.
+ * The generated config includes classifier paths, stitch values, and filter values
+ * for each behavior, creating a complete single_mouse_classifiers parameter structure.
+ *
+ * @param collected_behaviors A list of tuples containing [behavior_name, behavior_path, classifier_hash] for all successfully trained classifiers
+ *
+ * @return generated_classifiers.config A Nextflow configuration file that can be included in the main pipeline to reference the generated classifiers
  */
 process GENERATE_PIPELINE_CONFIG {
     tag "generate_config"
