@@ -30,22 +30,37 @@ process CREATE_VERSION_CONFIG {
     """
 }
 
+process CALCULTE_PROJECT_WINDOW_SIZES {
+    label 'cpu'
+
+   input:
+    val(project_folder_name)
+
+    output:
+    tuple val(project_folder_name), env('WINDOW_SIZES'), emit: project_with_windows
+
+    script:
+    def project_path = "${params.classifier_project_folders}/${project_folder_name}"
+    def project_file = "${project_path}/jabs/project.json"
+    """
+    export WINDOW_SIZES=\$(jq -r '[.behavior[] | .window_size] | unique | map("-w \\(.)") | join(" ")' ${project_file})
+    """
+}
+
 process INIT_JABS_PROJECTS {
     label 'jabs_classify'
-    label 'cpu'
-    cpus 8
+    label 'highcpu'
 
     input:
-    val(project_folder_name)
+    tuple val(project_folder_name), val(window_sizes)
 
     output:
     val(project_folder_name), emit: initialized_project
 
     script:
     def project_path = "${params.classifier_project_folders}/${project_folder_name}"
-    def project_file = "${project_path}/jabs/project.json"
     """
-    jabs-init "${project_path}" \$(jq -r '[.behavior[] | .window_size] | unique | map("-w \\(.)") | join(" ")' ${project_file})
+    jabs-init "${project_path}" ${window_sizes} -p 16
     """
 }
 
@@ -61,10 +76,8 @@ process EXPORT_TRAINING_DATA {
     tuple val(behavior_name), val(behavior_path), val(project_folder_name)
 
     output:
-    tuple val(behavior_name), val(behavior_path), val(project_folder_name), path("training.h5"), env('HASH'), emit: h5_file_with_hash
-    path "${behavior_path}_*.training.h5"
-    path "${behavior_path}_*.training.h5.manifest.json" 
-    path "latest.training.h5"
+    tuple val(behavior_name), val(behavior_path), val(project_folder_name), path("*.h5"), env('HASH'), emit: h5_file_with_hash
+    path "*.h5.manifest.json"
 
     script:
     def project_path = "${params.classifier_project_folders}/${project_folder_name}"
@@ -76,11 +89,10 @@ process EXPORT_TRAINING_DATA {
     export HASH=\$(sha256sum "training.h5" | awk '{ print \$1 }')
 
     # 3. Create the content-addressed files
-    cp training.h5 "${behavior_path}_\${HASH}.training.h5"
-    ln -s "${behavior_path}_\${HASH}.training.h5" "latest.training.h5"
+    mv training.h5 "\${HASH}.h5"
 
     # 4. Create the manifest file
-    cat > "${behavior_path}_\${HASH}.training.h5.manifest.json" <<EOF
+    cat > "\${HASH}.h5.manifest.json" <<EOF
 {
   "behavior": "${behavior_name}",
   "jabs_version": "${params.jabs_version}",
@@ -104,10 +116,8 @@ process TRAIN_CLASSIFIER {
     tuple val(behavior_name), val(behavior_path), val(project_folder_name), path(training_h5), val(training_hash)
 
     output:
-    tuple val(behavior_name), val(behavior_path), path("classifier.pickle"), emit: classifier_file
-    path "${behavior_path}_*.pickle"
-    path "${behavior_path}_*.pickle.manifest.json"
-    path "latest.pickle"
+    tuple val(behavior_name), val(behavior_path), path("*.pickle"), env('HASH'), emit: classifier_file
+    path "*.pickle.manifest.json"
 
     script:
     """
@@ -115,20 +125,21 @@ process TRAIN_CLASSIFIER {
     jabs-classify train "${training_h5}" "classifier.pickle"
 
     # 2. Calculate hash of the new classifier
-    CLASSIFIER_HASH=\$(sha256sum "classifier.pickle" | awk '{ print \$1 }')
+    export HASH=\$(sha256sum "classifier.pickle" | awk '{ print \$1 }')
 
     # 3. Create content-addressed files
-    cp classifier.pickle "${behavior_path}_\${CLASSIFIER_HASH}.pickle"
-    ln -s "${behavior_path}_\${CLASSIFIER_HASH}.pickle" "latest.pickle"
+    mv classifier.pickle "\${HASH}.pickle"
 
     # 4. Create the classifier manifest file
-    cat > "${behavior_path}_\${CLASSIFIER_HASH}.pickle.manifest.json" <<EOF
+    cat > "\${HASH}.pickle.manifest.json" <<EOF
 {
   "behavior": "${behavior_name}",
   "jabs_version": "${params.jabs_version}",
-  "file_hash_sha256": "\${CLASSIFIER_HASH}",
+  "file_hash_sha256": "\${HASH}",
   "timestamp_utc": "\$(date -u +%Y-%m-%dT%H:%M:%SZ)",
-  "source_training_data_hash": "${training_hash}"
+  "source_training_data_hash": "${training_hash}",
+  "training_file": "${training_h5}",
+  "training_manifest": "${training_h5}.manifest.json",
 }
 EOF
     """
@@ -144,34 +155,35 @@ process GENERATE_PIPELINE_CONFIG {
     publishDir "${params.classifier_base_path}/${params.jabs_version}", mode: 'copy', overwrite: true
 
     input:
-    val collected_behaviors // list of [behavior_name, behavior_path]
+    val collected_behaviors // list of [behavior_name, behavior_path, classifier_hash]
 
     output:
     path "generated_classifiers.config"
 
     script:
-    // Convert collected_behaviors to a format Python can parse
-    def behaviors_json = groovy.json.JsonOutput.toJson(collected_behaviors)
+    def behaviors_json  = groovy.json.JsonOutput.toJson(collected_behaviors)
     def classifiers_json = groovy.json.JsonOutput.toJson(params.single_mouse_classifiers)
     """
 #!/usr/bin/env python3
 import json
+from pathlib import Path
 
-behaviors = json.loads('${behaviors_json}')
-classifiers = json.loads('${classifiers_json}')
+behaviors = json.loads('''${behaviors_json}''')
+
+classifiers = json.loads('''${classifiers_json}''')
 
 with open("generated_classifiers.config", "w") as f:
     f.write("params {\\n")
     f.write("    single_mouse_classifiers = [\\n")
     
-    # Iterate through behaviors in pairs (behavior_name, behavior_path)
-    for i in range(0, len(behaviors), 2):
-        behavior_name = behaviors[i]
-        behavior_path = behaviors[i + 1]
-        details = classifiers[behavior_name]
-        classifier_path = "${params.classifier_base_path}/${params.jabs_version}/" + behavior_path + "/latest.pickle"
+    # Iterate through behaviors in triples (behavior_name, behavior_path, classifier_file)
+    for row in behaviors:
+        b_name, b_path, c_hash = row
+        details = classifiers[b_name]
+    
+        classifier_path = Path("${params.classifier_base_path}/${params.jabs_version}/") / b_path / Path(c_hash + ".pickle")
         
-        f.write(f"        '{behavior_name}': [\\n")
+        f.write(f"        '{b_name}': [\\n")
         f.write(f"            classifier_path: '{classifier_path}',\\n")
         f.write(f"            stitch_value: {details['stitch_value']},\\n")
         f.write(f"            filter_value: {details['filter_value']}\\n")
@@ -204,8 +216,11 @@ workflow {
         .map { behavior_name, details -> details.project_folder_name }
         .unique()
 
+    // Calcualte project windows outside of container so we have access to jq
+    project_with_windows = CALCULTE_PROJECT_WINDOW_SIZES(unique_projects_ch)
+
     // Initialize each unique project
-    initialized_projects_ch = INIT_JABS_PROJECTS(unique_projects_ch)
+    initialized_projects_ch = INIT_JABS_PROJECTS(project_with_windows)
 
     // Create a value channel from initialized projects for joining
     initialized_projects_val = initialized_projects_ch.initialized_project
@@ -230,8 +245,8 @@ workflow {
 
     // Collect only the behavior names that were successfully trained
     trained_classifiers_ch.classifier_file
-        .map { behavior_name, behavior_path, classifier_file -> tuple(behavior_name, behavior_path) }
-        .collect()
+        .map { behavior_name, behavior_path, _classifier_file, hash -> tuple(behavior_name, behavior_path, hash) }
+        .toList()
         .set{ collected_behaviors }
 
     GENERATE_PIPELINE_CONFIG(collected_behaviors)
