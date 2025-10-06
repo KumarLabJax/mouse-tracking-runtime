@@ -4,14 +4,14 @@ nextflow_process {
     tag "remote"
     tag "rclone"
     tag "integration"
-    script "../../modules/remote_io.nf"
+    script "nextflow/modules/remote_io.nf"
     process "GET_DATA_FROM_DROPBOX"
 
     test("Retrieve Example Data from Dropbox") {
 
         setup {
             run ("CREATE_FILE") {
-                script "../../modules/utils.nf"
+                script "nextflow/modules/utils.nf"
                 process {
                     """
                     input[0] = "test_files.txt"
