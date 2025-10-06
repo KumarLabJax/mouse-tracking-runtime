@@ -106,7 +106,12 @@ process GENERATE_BEHAVIOR_TABLES {
     script:
     """
     behavior_command="--behavior ${classifiers.collect { entry -> "$entry.key --stitch_gap $entry.value.stitch_value --min_bout_length $entry.value.filter_value" }.join(' --behavior ')}"
-    python3 /JABS-postprocess/generate_behavior_tables.py --project_folder . --feature_folder . --out_prefix ${in_pose.baseName} --out_bin_size 5 \${behavior_command}
+    jabs-postprocess generate-tables \
+        --project_folder . \
+        --feature_folder . \
+        --out_prefix ${in_pose.baseName} \
+        --out_bin_size 5 \
+        \${behavior_command}
     """
 }
 
@@ -139,7 +144,12 @@ process PREDICT_HEURISTICS {
     """
     for classifier in ${heuristic_classifiers.join(' ')};
     do
-        python3 /JABS-postprocess/heuristic_classify.py --project_folder . --feature_folder . --behavior_config \${classifier} --out_prefix ${in_pose.baseName} --out_bin_size 5
+        jabs-postprocess heuristic-classify \
+            --project-folder . \
+            --feature-folder . \
+            --behavior-config \${classifier} \
+            --out-prefix ${in_pose.baseName} \
+            --out_bin_size 5
     done
     """
 }
@@ -154,6 +164,7 @@ process PREDICT_HEURISTICS {
  */
 process BEHAVIOR_TABLE_TO_FEATURES {
     label "jabs_table_convert"
+    label "cpu"
     label "r_jabs_table_convert"
 
     input:
@@ -183,7 +194,8 @@ process BEHAVIOR_TABLE_TO_FEATURES {
 * @publish ./results/merged_behavior_tables Merge log file
 */
 process AGGREGATE_BOUT_TABLES {
-    label "jabs_table_convert"
+    label "jabs_postprocess"
+    label "cpu"
     label "r_jabs_table_convert"
 
     publishDir "${params.pubdir}/merged_behavior_tables", mode: 'copy'
@@ -211,7 +223,7 @@ process AGGREGATE_BOUT_TABLES {
     echo "Input tables found:" >> merge_log.txt
     ls table_staging/*.csv >> merge_log.txt
     
-    uv run python -m jabs_postprocess.cli.main merge-multiple-tables \\
+    jabs-postprocess merge-multiple-tables \\
         --table-folder table_staging \\
         --table-pattern "*_bouts.csv" \\
         --output-prefix merged \\
@@ -223,3 +235,4 @@ process AGGREGATE_BOUT_TABLES {
     ls merged_*_bouts_merged.csv >> merge_log.txt 2>/dev/null || echo "No merged files generated" >> merge_log.txt
     """
 }
+
