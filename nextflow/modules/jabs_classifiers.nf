@@ -106,10 +106,10 @@ process GENERATE_BEHAVIOR_TABLES {
     """
     behavior_command="--behavior ${classifiers.collect { entry -> "$entry.key --stitch_gap $entry.value.stitch_value --min_bout_length $entry.value.filter_value" }.join(' --behavior ')}"
     jabs-postprocess generate-tables \
-        --project_folder . \
-        --feature_folder . \
-        --out_prefix ${in_pose.baseName} \
-        --out_bin_size 5 \
+        --project-folder . \
+        --feature-folder . \
+        --out-prefix ${in_pose.baseName} \
+        --out-bin-size 5 \
         \${behavior_command}
     """
 }
@@ -148,7 +148,7 @@ process PREDICT_HEURISTICS {
             --feature-folder . \
             --behavior-config \${classifier} \
             --out-prefix ${in_pose.baseName} \
-            --out_bin_size 5
+            --out-bin-size 5
     done
     """
 }
