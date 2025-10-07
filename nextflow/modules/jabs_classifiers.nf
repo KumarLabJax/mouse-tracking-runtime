@@ -67,10 +67,9 @@ process PREDICT_CLASSIFIERS {
 
     script:
     """
-    for classifier in ${classifiers.keySet().collect { params.exported_classifier_folder + it + params.classifier_artifact_suffix }.join(' ')};
+    for classifier_path in ${classifiers.collect { _behavior, details -> details.classifier_path }.join(' ')};
     do
-        ln -s \${classifier} .
-        jabs-classify classify --classifier \$(basename \${classifier}) --input-pose ${in_pose} --out-dir . --feature-dir .
+        jabs-classify classify --classifier "\${classifier_path}" --input-pose ${in_pose} --out-dir . --feature-dir .
     done
     """
 }
@@ -105,12 +104,12 @@ process GENERATE_BEHAVIOR_TABLES {
 
     script:
     """
-    behavior_command="--behavior ${classifiers.collect { entry -> "$entry.key --stitch_gap $entry.value.stitch_value --min_bout_length $entry.value.filter_value" }.join(' --behavior ')}"
+    behavior_command="--behavior ${classifiers.collect { entry -> "$entry.key --stitch-gap $entry.value.stitch_value --min-bout-length $entry.value.filter_value" }.join(' --behavior ')}"
     jabs-postprocess generate-tables \
-        --project_folder . \
-        --feature_folder . \
-        --out_prefix ${in_pose.baseName} \
-        --out_bin_size 5 \
+        --project-folder . \
+        --feature-folder . \
+        --out-prefix ${in_pose.baseName} \
+        --out-bin-size 5 \
         \${behavior_command}
     """
 }
@@ -149,7 +148,7 @@ process PREDICT_HEURISTICS {
             --feature-folder . \
             --behavior-config \${classifier} \
             --out-prefix ${in_pose.baseName} \
-            --out_bin_size 5
+            --out-bin-size 5
     done
     """
 }
