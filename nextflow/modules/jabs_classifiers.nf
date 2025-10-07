@@ -104,7 +104,7 @@ process GENERATE_BEHAVIOR_TABLES {
 
     script:
     """
-    behavior_command="--behavior ${classifiers.collect { entry -> "$entry.key --stitch_gap $entry.value.stitch_value --min_bout_length $entry.value.filter_value" }.join(' --behavior ')}"
+    behavior_command="--behavior ${classifiers.collect { entry -> "$entry.key --stitch-gap $entry.value.stitch_value --min-bout-length $entry.value.filter_value" }.join(' --behavior ')}"
     jabs-postprocess generate-tables \
         --project-folder . \
         --feature-folder . \
