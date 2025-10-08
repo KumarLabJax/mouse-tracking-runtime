@@ -2,6 +2,8 @@ nextflow_workflow {
 
     name "Test single mouse jabs feature table generation"
     tag "integration"
+    tag "feature"
+    tag "jabs"
     script "nextflow/workflows/feature_generation.nf"
     workflow "SINGLE_MOUSE_V6_FEATURES"
 

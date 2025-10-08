@@ -2,6 +2,7 @@ nextflow_workflow {
 
     name "Test single-mouse workflow"
     tag "integration"
+    tag "tracking"
     script "nextflow/workflows/single_mouse_pipeline.nf"
     workflow "SINGLE_MOUSE_TRACKING"
 
