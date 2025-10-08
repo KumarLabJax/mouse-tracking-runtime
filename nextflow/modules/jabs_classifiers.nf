@@ -103,14 +103,22 @@ process GENERATE_BEHAVIOR_TABLES {
     tuple path("${in_pose.baseName}*_bouts.csv"), path("${in_pose.baseName}*_summaries.csv"), emit: files
 
     script:
+    def behaviorJson = groovy.json.JsonOutput.toJson([
+        behaviors: classifiers.collect { entry ->
+            [
+                behavior: entry.key,
+                stitch_gap: entry.value.stitch_value,
+                min_bout_length: entry.value.filter_value
+            ]
+        }
+    ])
     """
-    behavior_command="--behavior ${classifiers.collect { entry -> "$entry.key --stitch-gap $entry.value.stitch_value --min-bout-length $entry.value.filter_value" }.join(' --behavior ')}"
     jabs-postprocess generate-tables \
         --project-folder . \
         --feature-folder . \
         --out-prefix ${in_pose.baseName} \
         --out-bin-size 5 \
-        \${behavior_command}
+        --behavior-config '${behaviorJson}'
     """
 }
 
