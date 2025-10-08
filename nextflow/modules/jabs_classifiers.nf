@@ -113,12 +113,13 @@ process GENERATE_BEHAVIOR_TABLES {
         }
     ])
     """
+    echo '${behaviorJson}' > config.json
     jabs-postprocess generate-tables \
         --project-folder . \
         --feature-folder . \
         --out-prefix ${in_pose.baseName} \
         --out-bin-size 5 \
-        --behavior-config '${behaviorJson}'
+        --behavior-config ./config.json
     """
 }
 
