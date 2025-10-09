@@ -8,7 +8,7 @@ ENV UV_SYSTEM_PYTHON=1 \
     PYTHONUNBUFFERED=1
 
 # Copy metadata first for layer caching
-COPY pyproject.toml uv.lock* README.md ./
+COPY pyproject.toml uv.lock* README.md support_code ./
 
 # Only install runtime dependencies
 RUN uv sync --frozen --no-group dev --no-group test --no-group lint --no-install-project
@@ -17,5 +17,7 @@ RUN uv sync --frozen --no-group dev --no-group test --no-group lint --no-install
 COPY src ./src
 
 RUN uv pip install --system .
+
+COPY support_code ./support_code
 
 CMD ["mouse-tracking-runtime", "--help"]
