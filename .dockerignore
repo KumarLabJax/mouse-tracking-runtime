@@ -5,7 +5,6 @@ docs/
 .nf-test
 mouse-tracking-runtime
 nextflow
-support_code
 vm
 *.h5
 *.sh
