@@ -14,6 +14,19 @@ To run all tests in the tests folder:
 
 `nf-test test tests/ -c nf-test.config`
 
+### Running Integration tests on hpc:
+
+Setup:
+```
+module use --append /projects/kumar-lab/meta/modules
+module load nextflow
+module load nf-test
+```
+
+Running the tests:
+
+`nf-test test tests/ --profile sumner2 --tag feature,tracking --verbose`
+
 ## Tags
 
 Tags can be used to select a subset of tests.
