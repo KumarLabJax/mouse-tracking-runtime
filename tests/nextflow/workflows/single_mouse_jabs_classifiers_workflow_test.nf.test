@@ -1,0 +1,38 @@
+nextflow_workflow {
+
+    name "Test single mouse jabs feature table generation"
+    tag "integration"
+    tag "feature"
+    tag "jabs"
+    script "nextflow/workflows/feature_generation.nf"
+    workflow "SINGLE_MOUSE_V6_FEATURES"
+
+    test("Generate feature tables for single mouse pose v6 files") {
+        setup {
+            run ("ADD_DUMMY_VIDEO") {
+                script "nextflow/modules/utils.nf"
+                process {
+                    """
+                    input[0] = file("$baseDir/tests/assets/test-single-vid_pose_est_v6.h5")
+                    input[1] = 1800
+                    """
+                }
+            }
+        }
+
+        when {
+            workflow {
+                """
+                input[0] = ADD_DUMMY_VIDEO.out[0]
+                """
+            }
+        }
+
+        then {
+            assert workflow.success
+            assert workflow.trace.failed().size() == 0
+        }
+
+    }
+
+}
