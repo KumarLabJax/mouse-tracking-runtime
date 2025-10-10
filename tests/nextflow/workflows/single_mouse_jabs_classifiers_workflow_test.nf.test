@@ -30,6 +30,7 @@ nextflow_workflow {
 
         then {
             assert workflow.success
+            assert workflow.trace.failed().size() == 0
         }
 
     }
