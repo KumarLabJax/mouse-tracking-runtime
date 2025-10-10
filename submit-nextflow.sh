@@ -44,7 +44,7 @@ EOF
 
 # Default values
 PIPELINE="KumarLabJax/mouse-tracking-runtime"
-REVISION=""
+REVISION="v0.2.0"
 WORKFLOW="single-mouse"
 PROFILE="sumner2"
 JOB_NAME="KL_Tracking_Nextflow"
