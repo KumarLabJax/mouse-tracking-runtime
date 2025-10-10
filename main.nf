@@ -50,7 +50,7 @@ workflow{
     if (params.workflow == "single-mouse-v6-features"){
         PREPARE_DATA(params.input_batch, params.location, false)
         // Generate features from pose_v6 files
-        ADD_DUMMY_VIDEO(PREPARE_DATA.out.out_file, params.clip_duration)
+        ADD_DUMMY_VIDEO(PREPARE_DATA.out.file_processing_channel, params.clip_duration)
         paired_video_and_pose = ADD_DUMMY_VIDEO.out[0]
         SINGLE_MOUSE_V6_FEATURES(paired_video_and_pose)
     }
