@@ -115,8 +115,8 @@ class TestGetRotatedPoses:
             # Should not call rotate_pose
             assert mock_rotate.call_count == 0
 
-            # Should return empty array matching poses shape
-            assert rotated_poses.shape == (0,)
+            # Should return properly shaped empty array
+            assert rotated_poses.shape == (0, 12, 2)
             assert np.array_equal(rotated_poses, features.poses)
 
     def test_get_rotated_poses_uses_detection_rotate_pose(self, detection_factory):
