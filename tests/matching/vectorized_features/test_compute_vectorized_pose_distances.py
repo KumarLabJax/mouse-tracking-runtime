@@ -179,10 +179,12 @@ class TestComputeVectorizedPoseDistances:
         features1 = VectorizedDetectionFeatures([])
         features2 = VectorizedDetectionFeatures([])
 
-        # This will likely crash due to empty array indexing - mark as expected behavior
-        # TODO: This reveals a bug in the function with empty features
-        with pytest.raises(IndexError):
-            compute_vectorized_pose_distances(features1, features2)
+        # Should handle empty features gracefully
+        distances = compute_vectorized_pose_distances(features1, features2)
+
+        # Should return empty distance matrix with correct shape
+        assert distances.shape == (0, 0)
+        assert distances.dtype == np.float64
 
     def test_pose_distances_single_detection(self, features_factory):
         """Test pose distance computation with single detection."""
