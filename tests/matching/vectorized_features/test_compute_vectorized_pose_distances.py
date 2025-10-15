@@ -191,7 +191,7 @@ class TestComputeVectorizedPoseDistances:
         distances = compute_vectorized_pose_distances(features1, features2)
 
         # Should return empty distance matrix with correct shape
-        assert distances.shape == (0, 0)
+        assert distances.shape == (n_features1, n_features2)
         assert distances.dtype == np.float64
 
     def test_pose_distances_single_detection(self, features_factory):
