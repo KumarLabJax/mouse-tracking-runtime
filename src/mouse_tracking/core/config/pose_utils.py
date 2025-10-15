@@ -37,10 +37,10 @@ class PoseUtilsConfig(BaseSettings):
 
     # Colors
     MOUSE_COLORS: list[tuple[int, int, int]] = [
-        (228, 26, 28),    # Red
-        (152, 78, 163),   # Purple
-        (255, 255, 51),   # Yellow
-        (166, 86, 40),    # Brown
+        (228, 26, 28),  # Red
+        (152, 78, 163),  # Purple
+        (255, 255, 51),  # Yellow
+        (166, 86, 40),  # Brown
         (247, 129, 191),  # Pink
         (166, 206, 227),  # Light Blue
         (178, 223, 138),  # Light Green
@@ -52,12 +52,12 @@ class PoseUtilsConfig(BaseSettings):
 
     # Static object settings
     STATIC_OBJ_XY: dict[str, bool] = {
-        'lixit': False,
-        'food_hopper': False,
-        'corners': True,
+        "lixit": False,
+        "food_hopper": False,
+        "corners": True,
     }
     STATIC_OBJ_COLORS: dict[str, tuple[int, int, int]] = {
-        'lixit': (55, 126, 184),       # Water spout is Blue
-        'food_hopper': (255, 127, 0),  # Food hopper is Orange
-        'corners': (75, 175, 74),      # Arena corners are Green
+        "lixit": (55, 126, 184),  # Water spout is Blue
+        "food_hopper": (255, 127, 0),  # Food hopper is Orange
+        "corners": (75, 175, 74),  # Arena corners are Green
     }
