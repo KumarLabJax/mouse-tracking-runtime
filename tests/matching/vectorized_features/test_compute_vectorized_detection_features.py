@@ -33,11 +33,9 @@ class TestVectorizedDetectionFeaturesInit:
 
         assert features.n_detections == 0
         assert features.detections == []
-        assert features.poses.shape == (0,)  # Empty array has shape (0,)
+        assert features.poses.shape == (0, 12, 2)  # Properly shaped empty array
         assert features.embeddings.shape == (0, 0)  # Empty embeddings
-        assert (
-            features.valid_pose_masks.shape == ()
-        )  # Empty array results in scalar shape
+        assert features.valid_pose_masks.shape == (0, 12)  # Properly shaped empty mask
         assert features.valid_embed_masks.shape == (0,)
 
     def test_init_mixed_valid_invalid(self, detection_factory):

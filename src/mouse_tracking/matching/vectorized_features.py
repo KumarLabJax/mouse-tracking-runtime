@@ -35,6 +35,10 @@ class VectorizedDetectionFeatures:
 
     def _extract_poses(self, detections: list[Detection]) -> np.ndarray:
         """Extract pose data into a vectorized array."""
+        if len(detections) == 0:
+            # Return properly shaped empty array
+            return np.zeros((0, 12, 2), dtype=np.float64)
+
         poses = []
         for det in detections:
             if det.pose is not None:
