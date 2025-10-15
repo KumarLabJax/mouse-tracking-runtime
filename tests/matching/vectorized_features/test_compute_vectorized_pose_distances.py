@@ -174,16 +174,18 @@ class TestComputeVectorizedPoseDistances:
         assert distances.shape == (3, 2)
         assert not np.any(np.isnan(distances))  # All should be valid
 
-    @pytest.mark.parametrize("n_features1, n_features2", [
-        (0,0),
-        (0, 1),
-        (1, 0)
-    ])
-    def test_pose_distances_empty_features(self, n_features1, n_features2, features_factory):
+    @pytest.mark.parametrize("n_features1, n_features2", [(0, 0), (0, 1), (1, 0)])
+    def test_pose_distances_empty_features(
+        self, n_features1, n_features2, features_factory
+    ):
         """Test pose distance computation with empty features."""
         example_pose_config = [{"has_pose": True, "center": (0, 0)}]
-        features1 = features_factory(n_detections=n_features1, pose_configs=example_pose_config)
-        features2 = features_factory(n_detections=n_features2, pose_configs=example_pose_config)
+        features1 = features_factory(
+            n_detections=n_features1, pose_configs=example_pose_config
+        )
+        features2 = features_factory(
+            n_detections=n_features2, pose_configs=example_pose_config
+        )
 
         # Should handle empty features gracefully
         distances = compute_vectorized_pose_distances(features1, features2)
