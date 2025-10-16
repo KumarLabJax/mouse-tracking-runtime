@@ -13,7 +13,7 @@ from mouse_tracking.utils.hashing import hash_file
 CONFIG = PoseUtilsConfig()
 
 
-def get_pose_bounding_box(
+def get_keypoint_bounding_box(
     pose_data: np.ndarray,
     pose_confidence: np.ndarray,
     include_tail: bool = False,
@@ -43,6 +43,28 @@ def get_pose_bounding_box(
     pose_boxes_br = np.max(masked_pose_data, axis=-2)
     pose_boxes_tl = np.min(masked_pose_data, axis=-2)
     return np.ma.stack([pose_boxes_tl, pose_boxes_br], axis=-2)
+
+
+def get_contour_bounding_box(
+    contour_data: np.ndarray,
+    pad_value: int = -1,
+) -> np.ma.array:
+    """Calculates bounding boxes for segmentation contour data.
+
+    Args:
+        contour_data: segmentation data of shape [frame, n_animal, n_contour, n_points, 2]
+        pad_value: padding value used for making full matrices
+
+    Returns:
+        np.ma.array of shape [frame, n_animal, 2, 2] containing the bounding boxes. Boxes are stored as top-left, bottom-right with the final dimension matching the order of contour data.
+    """
+    masked_contours = np.ma.array(
+        contour_data,
+        mask=contour_data == pad_value,
+    )
+    boxes_br = np.max(np.max(masked_contours, axis=-2), axis=-2)
+    boxes_tl = np.min(np.min(masked_contours, axis=-2), axis=-2)
+    return np.ma.stack([boxes_tl, boxes_br], axis=-2)
 
 
 def inspect_pose_v2(pose_file, pad: int = 150, duration: int = 108000) -> dict:

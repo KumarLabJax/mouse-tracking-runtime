@@ -10,7 +10,10 @@ import numpy as np
 from mouse_tracking.core.exceptions import InvalidPoseFileException
 from mouse_tracking.matching import hungarian_match_points_seg
 from mouse_tracking.pose.convert import multi_to_v2, v2_to_v3
-from mouse_tracking.pose.inspect import get_pose_bounding_box
+from mouse_tracking.pose.inspect import (
+    get_keypoint_bounding_box,
+    get_contour_bounding_box,
+)
 
 
 def promote_pose_data(pose_file, current_version: int, new_version: int):
@@ -643,8 +646,8 @@ def downgrade_pose_file(pose_h5_path, disable_id: bool = False):
             write_pixel_per_cm_attr(out_fname, px_per_cm, source)
 
 
-def filter_large_poses(in_pose_f: str | Path, area_threshold: float):
-    """Unmarks identity of poses that exceed area threshold.
+def filter_large_keypoints(in_pose_f: str | Path, area_threshold: float):
+    """Unmarks identity of keypoints that exceed area threshold.
 
     Args:
         in_pose_f: Input pose filename
@@ -668,7 +671,7 @@ def filter_large_poses(in_pose_f: str | Path, area_threshold: float):
         identity_data = f["poseest/instance_embed_id"][:]
         pose_masks = f["poseest/id_mask"][:]
 
-    pose_boxes = get_pose_bounding_box(pose_data, pose_confidence)
+    pose_boxes = get_keypoint_bounding_box(pose_data, pose_confidence)
     pose_boxes = pose_boxes.astype(float)
     pose_box_size = pose_boxes[:, :, 1] - pose_boxes[:, :, 0]
     pose_box_area = pose_box_size[:, :, 0] * pose_box_size[:, :, 1]
@@ -682,3 +685,38 @@ def filter_large_poses(in_pose_f: str | Path, area_threshold: float):
         f["poseest/instance_embed_id"][:] = identity_data
         f["poseest/id_mask"][:] = pose_masks
         f["poseest/confidence"][:] = pose_confidence
+
+
+def filter_large_contours(in_pose_f: str | Path, area_threshold: float):
+    """Unmarks identity of contour data that exceed area threshold.
+
+    Args:
+        in_pose_f: Input pose filename
+        area_threshold: maximum pose bounding box allowed
+
+    Raises:
+        InvalidPoseFileException f the pose file is not >= 6.
+    """
+    with h5py.File(in_pose_f, "r") as f:
+        try:
+            current_version = f["poseest"].attrs["version"][0]
+        except (KeyError, AttributeError, IndexError):
+            InvalidPoseFileException("Pose file is does not have a version.")
+        if current_version < 6:
+            raise InvalidPoseFileException(
+                f"Pose file {in_pose_f} is {current_version}. Filtering is only implement for pose file version > 6."
+            )
+
+        seg_data = f["poseest/seg_data"][:]
+        seg_ids = f["poseest/longterm_seg_id"][:]
+
+    seg_boxes = get_contour_bounding_box(seg_data)
+    seg_boxes = seg_boxes.astype(float)
+    seg_box_size = seg_boxes[:, :, 1] - seg_boxes[:, :, 0]
+    seg_box_area = seg_box_size[:, :, 0] * seg_box_size[:, :, 1]
+
+    identities_to_unassign = np.where(seg_box_area > area_threshold)
+    seg_ids[identities_to_unassign] = 0
+
+    with h5py.File(in_pose_f, "a") as f:
+        f["poseest/longterm_seg_id"][:] = seg_ids
