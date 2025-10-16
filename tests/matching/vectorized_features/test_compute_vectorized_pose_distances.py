@@ -174,15 +174,25 @@ class TestComputeVectorizedPoseDistances:
         assert distances.shape == (3, 2)
         assert not np.any(np.isnan(distances))  # All should be valid
 
-    def test_pose_distances_empty_features(self):
+    @pytest.mark.parametrize("n_features1, n_features2", [(0, 0), (0, 1), (1, 0)])
+    def test_pose_distances_empty_features(
+        self, n_features1, n_features2, features_factory
+    ):
         """Test pose distance computation with empty features."""
-        features1 = VectorizedDetectionFeatures([])
-        features2 = VectorizedDetectionFeatures([])
+        example_pose_config = [{"has_pose": True, "center": (0, 0)}]
+        features1 = features_factory(
+            n_detections=n_features1, pose_configs=example_pose_config
+        )
+        features2 = features_factory(
+            n_detections=n_features2, pose_configs=example_pose_config
+        )
 
-        # This will likely crash due to empty array indexing - mark as expected behavior
-        # TODO: This reveals a bug in the function with empty features
-        with pytest.raises(IndexError):
-            compute_vectorized_pose_distances(features1, features2)
+        # Should handle empty features gracefully
+        distances = compute_vectorized_pose_distances(features1, features2)
+
+        # Should return empty distance matrix with correct shape
+        assert distances.shape == (n_features1, n_features2)
+        assert distances.dtype == np.float64
 
     def test_pose_distances_single_detection(self, features_factory):
         """Test pose distance computation with single detection."""
