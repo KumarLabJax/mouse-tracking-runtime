@@ -53,6 +53,7 @@ def single_feature(
         )
 
     # TODO implement desired plots of feature data for more in-depth inspection
+    raise NotImplementedError("Feature inspection is not yet implemented.")
 
 
 @app.command()
