@@ -13,12 +13,12 @@ class TestPromotePoseDataV2ToV3:
 
     @patch("mouse_tracking.utils.writers.write_pose_v3_data")
     @patch("mouse_tracking.utils.writers.write_pose_v2_data")
-    @patch("mouse_tracking.utils.writers.convert_v2_to_v3")
+    @patch("mouse_tracking.pose.convert.v2_to_v3")
     @patch("mouse_tracking.utils.writers.h5py.File")
     def test_v2_to_v3_basic_promotion(
         self,
         mock_h5py_file,
-        mock_convert_v2_to_v3,
+        mock_v2_to_v3,
         mock_write_pose_v2_data,
         mock_write_pose_v3_data,
     ):
@@ -52,7 +52,7 @@ class TestPromotePoseDataV2ToV3:
         instance_embedding = np.zeros((10, 1, 12), dtype=np.float32)
         instance_track_id = np.zeros((10, 1), dtype=np.uint32)
 
-        mock_convert_v2_to_v3.return_value = (
+        mock_v2_to_v3.return_value = (
             converted_pose_data,
             converted_conf_data,
             instance_count,
@@ -72,8 +72,8 @@ class TestPromotePoseDataV2ToV3:
         expected_reshaped_conf = np.reshape(original_conf_data, [-1, 1, 12])
 
         # Verify convert_v2_to_v3 was called with reshaped data
-        mock_convert_v2_to_v3.assert_called_once()
-        call_args = mock_convert_v2_to_v3.call_args[0]
+        mock_v2_to_v3.assert_called_once()
+        call_args = mock_v2_to_v3.call_args[0]
         np.testing.assert_array_equal(call_args[0], expected_reshaped_pose)
         np.testing.assert_array_equal(call_args[1], expected_reshaped_conf)
 
@@ -91,12 +91,12 @@ class TestPromotePoseDataV2ToV3:
 
     @patch("mouse_tracking.utils.writers.write_pose_v3_data")
     @patch("mouse_tracking.utils.writers.write_pose_v2_data")
-    @patch("mouse_tracking.utils.writers.convert_v2_to_v3")
+    @patch("mouse_tracking.pose.convert.v2_to_v3")
     @patch("mouse_tracking.utils.writers.h5py.File")
     def test_v2_to_v3_missing_attributes(
         self,
         mock_h5py_file,
-        mock_convert_v2_to_v3,
+        mock_v2_to_v3,
         mock_write_pose_v2_data,
         mock_write_pose_v3_data,
     ):
@@ -125,7 +125,7 @@ class TestPromotePoseDataV2ToV3:
         }[key]
 
         # Mock convert_v2_to_v3 return values
-        mock_convert_v2_to_v3.return_value = (
+        mock_v2_to_v3.return_value = (
             np.random.rand(5, 1, 12, 2),
             np.random.rand(5, 1, 12),
             np.ones(5, dtype=np.uint8),
@@ -143,8 +143,8 @@ class TestPromotePoseDataV2ToV3:
         # Use assert_called_with to verify the exact arguments
         mock_write_pose_v2_data.assert_called_with(
             pose_file,
-            mock_convert_v2_to_v3.return_value[0],  # pose_data
-            mock_convert_v2_to_v3.return_value[1],  # conf_data
+            mock_v2_to_v3.return_value[0],  # pose_data
+            mock_v2_to_v3.return_value[1],  # conf_data
             "unknown",  # config_str
             "unknown",  # model_str
         )
@@ -152,12 +152,12 @@ class TestPromotePoseDataV2ToV3:
     @patch("mouse_tracking.utils.writers.write_pose_v4_data")
     @patch("mouse_tracking.utils.writers.write_pose_v3_data")
     @patch("mouse_tracking.utils.writers.write_pose_v2_data")
-    @patch("mouse_tracking.utils.writers.convert_v2_to_v3")
+    @patch("mouse_tracking.pose.convert.v2_to_v3")
     @patch("mouse_tracking.utils.writers.h5py.File")
     def test_v2_to_v4_skips_v3_promotion(
         self,
         mock_h5py_file,
-        mock_convert_v2_to_v3,
+        mock_v2_to_v3,
         mock_write_pose_v2_data,
         mock_write_pose_v3_data,
         mock_write_pose_v4_data,
@@ -211,7 +211,7 @@ class TestPromotePoseDataV2ToV3:
 
         mock_h5py_file.side_effect = mock_file_side_effect
 
-        mock_convert_v2_to_v3.return_value = (
+        mock_v2_to_v3.return_value = (
             np.random.rand(3, 1, 12, 2),
             np.random.rand(3, 1, 12),
             np.ones(3, dtype=np.uint8),
@@ -224,7 +224,7 @@ class TestPromotePoseDataV2ToV3:
 
         # Assert
         # Should call v2 to v3 conversion functions and then v4 functions
-        mock_convert_v2_to_v3.assert_called_once()
+        mock_v2_to_v3.assert_called_once()
         mock_write_pose_v2_data.assert_called_once()
         mock_write_pose_v3_data.assert_called_once()
         mock_write_pose_v4_data.assert_called_once()
@@ -576,7 +576,7 @@ class TestPromotePoseDataEdgeCases:
                 side_effect=mock_file_side_effect,
             ),
             patch(
-                "mouse_tracking.utils.writers.convert_v2_to_v3",
+                "mouse_tracking.pose.convert.v2_to_v3",
                 return_value=(
                     np.random.rand(3, 1, 12, 2),
                     np.random.rand(3, 1, 12),
@@ -608,12 +608,12 @@ class TestPromotePoseDataIntegration:
     @patch("mouse_tracking.utils.writers.write_pose_v4_data")
     @patch("mouse_tracking.utils.writers.write_pose_v3_data")
     @patch("mouse_tracking.utils.writers.write_pose_v2_data")
-    @patch("mouse_tracking.utils.writers.convert_v2_to_v3")
+    @patch("mouse_tracking.pose.convert.v2_to_v3")
     @patch("mouse_tracking.utils.writers.h5py.File")
     def test_full_v2_to_v6_promotion(
         self,
         mock_h5py_file,
-        mock_convert_v2_to_v3,
+        mock_v2_to_v3,
         mock_write_pose_v2_data,
         mock_write_pose_v3_data,
         mock_write_pose_v4_data,
@@ -665,7 +665,7 @@ class TestPromotePoseDataIntegration:
         mock_h5py_file.side_effect = mock_file_side_effect
 
         # Mock convert function
-        mock_convert_v2_to_v3.return_value = (
+        mock_v2_to_v3.return_value = (
             np.random.rand(5, 1, 12, 2),
             np.random.rand(5, 1, 12),
             np.ones(5, dtype=np.uint8),

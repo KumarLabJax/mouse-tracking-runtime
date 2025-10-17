@@ -1,7 +1,7 @@
 import numpy as np
 import pytest
 
-from mouse_tracking.utils.pose import safe_find_first
+from mouse_tracking.utils.arrays import safe_find_first
 
 
 class TestSafeFindFirstBasicFunctionality:
