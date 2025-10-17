@@ -11,8 +11,8 @@ from mouse_tracking.core.exceptions import InvalidPoseFileException
 from mouse_tracking.matching import hungarian_match_points_seg
 from mouse_tracking.pose.convert import multi_to_v2, v2_to_v3
 from mouse_tracking.pose.inspect import (
-    get_keypoint_bounding_box,
     get_contour_bounding_box,
+    get_keypoint_bounding_box,
 )
 
 
