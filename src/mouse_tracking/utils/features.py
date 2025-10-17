@@ -58,7 +58,7 @@ class JABSFeature:
         feature_key: str,
         window_size: int,
         window_op: str,
-        feature_module: str = None,
+        feature_module: str | None = None,
     ):
         """Retrieves the stored feature vector from a window feature.
 
@@ -125,7 +125,7 @@ class JABSFeature:
             available_features = list(f["features/per_frame"].keys())
 
         base_features = pd.DataFrame(
-            [["features/per_frame/" + x] + x.split(" ", 1) for x in available_features],
+            [["features/per_frame/" + x, *x.split(" ", 1)] for x in available_features],
             columns=["key", "module", "feature"],
         )
 
@@ -141,13 +141,15 @@ class JABSFeature:
             for cur_window in self._window_sizes:
                 next_window_keys = pd.DataFrame(
                     [
-                        [f"features/window_features_{cur_window}/{x}"]
-                        + x.split(" ", 1)
-                        + [cur_window]
+                        [
+                            f"features/window_features_{cur_window}/{x}",
+                            *x.split(" ", 1),
+                            cur_window,
+                        ]
                         for x in window_keys
                     ],
                     columns=["key", "module", "feature", "window_size"],
                 )
                 discovered_window_keys.append(next_window_keys)
 
-        self._feature_keys = pd.concat([base_features] + discovered_window_keys)
+        self._feature_keys = pd.concat([base_features, *discovered_window_keys])

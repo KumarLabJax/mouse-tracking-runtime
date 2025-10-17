@@ -97,7 +97,7 @@ def inspect_pose_v2(pose_file, pad: int = 150, duration: int = 108000) -> dict:
         pose_quality > CONFIG.MIN_HIGH_CONFIDENCE, axis=2
     ).squeeze(1)
 
-    pose_boxes = get_pose_bounding_box(pose_data, pose_quality, True)
+    pose_boxes = get_keypoint_bounding_box(pose_data, pose_quality, True)
     # Cast to float because uint16 subtraction and multiplication is not what we want
     pose_boxes = pose_boxes.astype(float)
     pose_box_size = pose_boxes[:, :, 1] - pose_boxes[:, :, 0]
@@ -186,7 +186,7 @@ def inspect_pose_v6(pose_file, pad: int = 150, duration: int = 108000) -> dict:
         axis=2,
     ).squeeze(1)
 
-    pose_boxes = get_pose_bounding_box(pose_data, pose_quality, True)
+    pose_boxes = get_keypoint_bounding_box(pose_data, pose_quality, True)
     # Cast to float because uint16 subtraction and multiplication is not what we want
     pose_boxes = pose_boxes.astype(float)
     pose_box_size = pose_boxes[:, :, 1] - pose_boxes[:, :, 0]
