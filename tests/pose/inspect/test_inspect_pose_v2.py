@@ -32,6 +32,7 @@ class TestInspectPoseV2BasicFunctionality:
         # Mock CONFIG constants
         mock_config.MIN_HIGH_CONFIDENCE = 0.75
         mock_config.MIN_JABS_CONFIDENCE = 0.3
+        mock_config.OFA_MAX_EXPECTED_AREA_PX = 22500  # 150 * 150
 
         # Mock HDF5 file structure
         mock_file = MagicMock()
@@ -45,6 +46,9 @@ class TestInspectPoseV2BasicFunctionality:
         pose_quality[:100, :, :] = 0  # No confidence before frame 100
         pose_quality[100:110000, :, :] = 0.8  # High confidence after frame 100
 
+        # Create pose data with shape [frames, instances, keypoints, 2]
+        pose_data = np.random.rand(num_frames, 1, 12, 2).astype(np.uint16) * 100
+
         # Mock dataset access
         def mock_getitem(key):
             if key == "poseest":
@@ -53,6 +57,8 @@ class TestInspectPoseV2BasicFunctionality:
                 return mock_poseest
             elif key == "poseest/confidence":
                 return pose_quality
+            elif key == "poseest/points":
+                return pose_data
             else:
                 raise KeyError(f"Key {key} not found")
 
@@ -70,6 +76,7 @@ class TestInspectPoseV2BasicFunctionality:
         assert "pose_counts" in result
         assert "missing_poses" in result
         assert "missing_keypoint_frames" in result
+        assert "large_poses" in result
 
         assert result["first_frame_pose"] == 100
         assert result["first_frame_full_high_conf"] == 100
@@ -93,6 +100,7 @@ class TestInspectPoseV2BasicFunctionality:
         # Mock CONFIG constants
         mock_config.MIN_HIGH_CONFIDENCE = 0.75
         mock_config.MIN_JABS_CONFIDENCE = 0.3
+        mock_config.OFA_MAX_EXPECTED_AREA_PX = 22500  # 150 * 150
 
         mock_file = MagicMock()
         mock_h5py_file.return_value.__enter__.return_value = mock_file
@@ -106,6 +114,9 @@ class TestInspectPoseV2BasicFunctionality:
         pose_quality[60:240, :, :8] = 0.4
         pose_quality[80:220, :, :] = 0.8
 
+        # Create pose data with shape [frames, instances, keypoints, 2]
+        pose_data = np.random.rand(total_frames, 1, 12, 2).astype(np.uint16) * 100
+
         def mock_getitem(key):
             if key == "poseest":
                 mock_poseest = MagicMock()
@@ -113,6 +124,8 @@ class TestInspectPoseV2BasicFunctionality:
                 return mock_poseest
             elif key == "poseest/confidence":
                 return pose_quality
+            elif key == "poseest/points":
+                return pose_data
 
         mock_file.__getitem__.side_effect = mock_getitem
 
@@ -249,6 +262,7 @@ class TestInspectPoseV2DataProcessing:
         # Mock CONFIG constants
         mock_config.MIN_HIGH_CONFIDENCE = 0.75
         mock_config.MIN_JABS_CONFIDENCE = 0.3
+        mock_config.OFA_MAX_EXPECTED_AREA_PX = 22500  # 150 * 150
 
         mock_file = MagicMock()
         mock_h5py_file.return_value.__enter__.return_value = mock_file
@@ -257,9 +271,13 @@ class TestInspectPoseV2DataProcessing:
         # Frame 0: No keypoints above threshold
         # Frame 1: Some keypoints above JABS threshold but not high confidence
         # Frame 2: All keypoints above high confidence threshold
-        pose_quality = np.zeros((100, 1, 12))
+        num_frames = 100
+        pose_quality = np.zeros((num_frames, 1, 12))
         pose_quality[1, :, :5] = 0.4  # 5 keypoints above 0.3
         pose_quality[2:, :, :] = 0.8  # All keypoints above 0.75
+
+        # Create pose data with shape [frames, instances, keypoints, 2]
+        pose_data = np.random.rand(num_frames, 1, 12, 2).astype(np.uint16) * 100
 
         def mock_getitem(key):
             if key == "poseest":
@@ -268,6 +286,8 @@ class TestInspectPoseV2DataProcessing:
                 return mock_poseest
             elif key == "poseest/confidence":
                 return pose_quality
+            elif key == "poseest/points":
+                return pose_data
 
         mock_file.__getitem__.side_effect = mock_getitem
 
@@ -303,6 +323,7 @@ class TestInspectPoseV2DataProcessing:
         # Mock CONFIG constants
         mock_config.MIN_HIGH_CONFIDENCE = 0.75
         mock_config.MIN_JABS_CONFIDENCE = 0.3
+        mock_config.OFA_MAX_EXPECTED_AREA_PX = 22500  # 150 * 150
 
         mock_file = MagicMock()
         mock_h5py_file.return_value.__enter__.return_value = mock_file
@@ -314,6 +335,9 @@ class TestInspectPoseV2DataProcessing:
             0.4  # Poses in frames 60-239, 8 keypoints > threshold
         )
 
+        # Create pose data with shape [frames, instances, keypoints, 2]
+        pose_data = np.random.rand(total_frames, 1, 12, 2).astype(np.uint16) * 100
+
         def mock_getitem(key):
             if key == "poseest":
                 mock_poseest = MagicMock()
@@ -321,6 +345,8 @@ class TestInspectPoseV2DataProcessing:
                 return mock_poseest
             elif key == "poseest/confidence":
                 return pose_quality
+            elif key == "poseest/points":
+                return pose_data
 
         mock_file.__getitem__.side_effect = mock_getitem
 
@@ -355,16 +381,21 @@ class TestInspectPoseV2DataProcessing:
 
         mock_config.MIN_HIGH_CONFIDENCE = 0.75
         mock_config.MIN_JABS_CONFIDENCE = 0.3
+        mock_config.OFA_MAX_EXPECTED_AREA_PX = 22500  # 150 * 150
 
         mock_file = MagicMock()
         mock_h5py_file.return_value.__enter__.return_value = mock_file
 
         # Create specific test data
-        pose_quality = np.zeros((100, 1, 12))
+        num_frames = 100
+        pose_quality = np.zeros((num_frames, 1, 12))
         # Frames 10-50: 5 keypoints above threshold
         # Frames 60-80: 3 keypoints above threshold
         pose_quality[10:50, :, :5] = 0.4
         pose_quality[60:80, :, :3] = 0.5
+
+        # Create pose data with shape [frames, instances, keypoints, 2]
+        pose_data = np.random.rand(num_frames, 1, 12, 2).astype(np.uint16) * 100
 
         def mock_getitem(key):
             if key == "poseest":
@@ -373,6 +404,8 @@ class TestInspectPoseV2DataProcessing:
                 return mock_poseest
             elif key == "poseest/confidence":
                 return pose_quality
+            elif key == "poseest/points":
+                return pose_data
 
         mock_file.__getitem__.side_effect = mock_getitem
         mock_safe_find_first.return_value = 0
@@ -402,12 +435,17 @@ class TestInspectPoseV2EdgeCases:
 
         mock_config.MIN_HIGH_CONFIDENCE = 0.75
         mock_config.MIN_JABS_CONFIDENCE = 0.3
+        mock_config.OFA_MAX_EXPECTED_AREA_PX = 22500  # 150 * 150
 
         mock_file = MagicMock()
         mock_h5py_file.return_value.__enter__.return_value = mock_file
 
         # Empty arrays
-        pose_quality = np.array([]).reshape(0, 1, 12)
+        num_frames = 0
+        pose_quality = np.array([]).reshape(num_frames, 1, 12)
+
+        # Create pose data with shape [frames, instances, keypoints, 2]
+        pose_data = np.array([]).reshape(num_frames, 1, 12, 2).astype(np.uint16)
 
         def mock_getitem(key):
             if key == "poseest":
@@ -416,6 +454,8 @@ class TestInspectPoseV2EdgeCases:
                 return mock_poseest
             elif key == "poseest/confidence":
                 return pose_quality
+            elif key == "poseest/points":
+                return pose_data
 
         mock_file.__getitem__.side_effect = mock_getitem
 
@@ -443,12 +483,17 @@ class TestInspectPoseV2EdgeCases:
 
         mock_config.MIN_HIGH_CONFIDENCE = 0.75
         mock_config.MIN_JABS_CONFIDENCE = 0.3
+        mock_config.OFA_MAX_EXPECTED_AREA_PX = 22500  # 150 * 150
 
         mock_file = MagicMock()
         mock_h5py_file.return_value.__enter__.return_value = mock_file
 
         # All confidence values are zero - use enough frames for default pad+duration
-        pose_quality = np.zeros((110000, 1, 12))  # All zero confidence
+        num_frames = 110000
+        pose_quality = np.zeros((num_frames, 1, 12))  # All zero confidence
+
+        # Create pose data with shape [frames, instances, keypoints, 2]
+        pose_data = np.random.rand(num_frames, 1, 12, 2).astype(np.uint16) * 100
 
         def mock_getitem(key):
             if key == "poseest":
@@ -457,6 +502,8 @@ class TestInspectPoseV2EdgeCases:
                 return mock_poseest
             elif key == "poseest/confidence":
                 return pose_quality
+            elif key == "poseest/points":
+                return pose_data
 
         mock_file.__getitem__.side_effect = mock_getitem
 
@@ -488,6 +535,7 @@ class TestInspectPoseV2EdgeCases:
 
         mock_config.MIN_HIGH_CONFIDENCE = 0.75
         mock_config.MIN_JABS_CONFIDENCE = 0.3
+        mock_config.OFA_MAX_EXPECTED_AREA_PX = 22500  # 150 * 150
 
         mock_file = MagicMock()
         mock_h5py_file.return_value.__enter__.return_value = mock_file
@@ -496,6 +544,9 @@ class TestInspectPoseV2EdgeCases:
         total_frames = 60000
         pose_quality = np.full((total_frames, 1, 12), 0.8)  # All high confidence
 
+        # Create pose data with shape [frames, instances, keypoints, 2]
+        pose_data = np.random.rand(total_frames, 1, 12, 2).astype(np.uint16) * 100
+
         def mock_getitem(key):
             if key == "poseest":
                 mock_poseest = MagicMock()
@@ -503,6 +554,8 @@ class TestInspectPoseV2EdgeCases:
                 return mock_poseest
             elif key == "poseest/confidence":
                 return pose_quality
+            elif key == "poseest/points":
+                return pose_data
 
         mock_file.__getitem__.side_effect = mock_getitem
 
@@ -551,13 +604,19 @@ class TestInspectPoseV2EdgeCases:
 
         mock_config.MIN_HIGH_CONFIDENCE = 0.75
         mock_config.MIN_JABS_CONFIDENCE = threshold
+        mock_config.OFA_MAX_EXPECTED_AREA_PX = 22500  # 150 * 150
 
         mock_file = MagicMock()
         mock_h5py_file.return_value.__enter__.return_value = mock_file
 
-        # Single frame with one keypoint at specific confidence
-        pose_quality = np.zeros((1, 1, 12))
+        # Use 10 frames to avoid squeeze creating a scalar (need at least 2 frames)
+        # Only first frame has keypoint at specific confidence
+        num_frames = 10
+        pose_quality = np.zeros((num_frames, 1, 12))
         pose_quality[0, 0, 0] = confidence_value
+
+        # Create pose data with shape [frames, instances, keypoints, 2]
+        pose_data = np.random.rand(num_frames, 1, 12, 2).astype(np.uint16) * 100
 
         def mock_getitem(key):
             if key == "poseest":
@@ -566,12 +625,14 @@ class TestInspectPoseV2EdgeCases:
                 return mock_poseest
             elif key == "poseest/confidence":
                 return pose_quality
+            elif key == "poseest/points":
+                return pose_data
 
         mock_file.__getitem__.side_effect = mock_getitem
         mock_safe_find_first.return_value = 0 if expected_keypoints > 0 else -1
 
         # Act
-        result = inspect_pose_v2(pose_file_path, pad=0, duration=1)
+        result = inspect_pose_v2(pose_file_path, pad=0, duration=10)
 
         # Assert
         expected_pose_counts = expected_keypoints
@@ -594,12 +655,17 @@ class TestInspectPoseV2MockingVerification:
         # Mock CONFIG
         mock_config.MIN_HIGH_CONFIDENCE = 0.75
         mock_config.MIN_JABS_CONFIDENCE = 0.3
+        mock_config.OFA_MAX_EXPECTED_AREA_PX = 22500  # 150 * 150
 
         # Mock HDF5 file
         mock_file = MagicMock()
         mock_h5py_file.return_value.__enter__.return_value = mock_file
 
-        pose_quality = np.full((100, 1, 12), 0.8)
+        num_frames = 100
+        pose_quality = np.full((num_frames, 1, 12), 0.8)
+
+        # Create pose data with shape [frames, instances, keypoints, 2]
+        pose_data = np.random.rand(num_frames, 1, 12, 2).astype(np.uint16) * 100
 
         def mock_getitem(key):
             if key == "poseest":
@@ -608,6 +674,8 @@ class TestInspectPoseV2MockingVerification:
                 return mock_poseest
             elif key == "poseest/confidence":
                 return pose_quality
+            elif key == "poseest/points":
+                return pose_data
 
         mock_file.__getitem__.side_effect = mock_getitem
 
@@ -627,6 +695,7 @@ class TestInspectPoseV2MockingVerification:
             "pose_counts",
             "missing_poses",
             "missing_keypoint_frames",
+            "large_poses",
         }
         assert set(result.keys()) == expected_keys
 
@@ -642,12 +711,17 @@ class TestInspectPoseV2MockingVerification:
 
         mock_config.MIN_HIGH_CONFIDENCE = 0.75
         mock_config.MIN_JABS_CONFIDENCE = 0.3
+        mock_config.OFA_MAX_EXPECTED_AREA_PX = 22500  # 150 * 150
 
         mock_file = MagicMock()
         mock_h5py_file.return_value.__enter__.return_value = mock_file
 
         # v2 shape: [frames, instances, keypoints] same as v6, typically 1 instance
-        pose_quality = np.random.rand(1000, 1, 12)  # 3D with single instance dimension
+        num_frames = 1000
+        pose_quality = np.random.rand(num_frames, 1, 12)  # 3D with single instance dimension
+
+        # Create pose data with shape [frames, instances, keypoints, 2]
+        pose_data = np.random.rand(num_frames, 1, 12, 2).astype(np.uint16) * 100
 
         def mock_getitem(key):
             if key == "poseest":
@@ -656,6 +730,8 @@ class TestInspectPoseV2MockingVerification:
                 return mock_poseest
             elif key == "poseest/confidence":
                 return pose_quality
+            elif key == "poseest/points":
+                return pose_data
 
         mock_file.__getitem__.side_effect = mock_getitem
         mock_safe_find_first.return_value = 0
