@@ -1,0 +1,25 @@
+nextflow_workflow {
+
+    name "Test multi-mouse tracking workflow"
+    tag "integration"
+    tag "tracking"
+    script "nextflow/workflows/multi_mouse_pipeline.nf"
+    workflow "MULTI_MOUSE_TRACKING"
+
+    test("Predict multi mouse pose on example video") {
+        when {
+            workflow {
+                """
+                input[0] = Channel.of(file("$baseDir/tests/assets/test-multi-vid.mp4"))
+                input[1] = 4
+                """
+            }
+        }
+
+        then {
+            assert workflow.success
+        }
+
+    }
+
+}

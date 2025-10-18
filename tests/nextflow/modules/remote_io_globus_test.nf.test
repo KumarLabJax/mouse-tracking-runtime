@@ -4,14 +4,14 @@ nextflow_process {
     tag "remote"
     tag "globus"
     tag "integration"
-    script "../../modules/remote_io.nf"
+    script "nextflow/modules/remote_io.nf"
     process "TRANSFER_GLOBUS"
 
     test("Transfer Files via Globus from remote to compute") {
 
         setup {
             run ("CREATE_FILE") {
-                script "../../modules/utils.nf"
+                script "nextflow/modules/utils.nf"
                 process {
                     """
                     input[0] = "files_to_transfer.txt"
@@ -45,7 +45,7 @@ nextflow_process {
     test("Fail globus transfer for files that don't exist") {
         setup {
             run ("CREATE_FILE") {
-                script "../../modules/utils.nf"
+                script "nextflow/modules/utils.nf"
                 process {
                     """
                     input[0] = "files_to_transfer.txt"
