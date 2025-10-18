@@ -38,6 +38,9 @@ class TestInspectPoseV6BasicFunctionality:
         mock_config.BASE_TAIL_INDEX = 9
         mock_config.LEFT_REAR_PAW_INDEX = 7
         mock_config.RIGHT_REAR_PAW_INDEX = 8
+        mock_config.OFA_MAX_EXPECTED_AREA_PX = 22500  # 150 * 150
+        mock_config.MID_TAIL_INDEX = 10
+        mock_config.TIP_TAIL_INDEX = 11
 
         # Mock HDF5 file structure
         mock_file = MagicMock()
@@ -62,6 +65,9 @@ class TestInspectPoseV6BasicFunctionality:
         seg_ids = np.zeros(num_frames, dtype=np.uint32)
         seg_ids[150:105000] = 1  # Segmentation starts at frame 150
 
+        # Create pose data with shape [frames, instances, keypoints, 2]
+        pose_data = np.random.rand(num_frames, 1, 12, 2).astype(np.uint16) * 100
+
         # Mock dataset access
         def mock_getitem(key):
             if key == "poseest":
@@ -76,6 +82,8 @@ class TestInspectPoseV6BasicFunctionality:
                 return pose_tracks
             elif key == "poseest/longterm_seg_id":
                 return seg_ids
+            elif key == "poseest/points":
+                return pose_data
             else:
                 raise KeyError(f"Key {key} not found")
 
@@ -141,6 +149,9 @@ class TestInspectPoseV6BasicFunctionality:
         mock_config.BASE_TAIL_INDEX = 9
         mock_config.LEFT_REAR_PAW_INDEX = 7
         mock_config.RIGHT_REAR_PAW_INDEX = 8
+        mock_config.OFA_MAX_EXPECTED_AREA_PX = 22500  # 150 * 150
+        mock_config.MID_TAIL_INDEX = 10
+        mock_config.TIP_TAIL_INDEX = 11
 
         # Mock HDF5 file structure
         mock_file = MagicMock()
@@ -151,6 +162,9 @@ class TestInspectPoseV6BasicFunctionality:
         pose_quality = np.full((1000, 1, 12), 0.8)
         pose_tracks = np.ones((1000, 1), dtype=np.uint32)
         seg_ids = np.ones(1000, dtype=np.uint32)
+
+        # Create pose data with shape [frames, instances, keypoints, 2]
+        pose_data = np.random.rand(1000, 1, 12, 2).astype(np.uint16) * 100
 
         def mock_getitem(key):
             if key == "poseest":
@@ -165,6 +179,8 @@ class TestInspectPoseV6BasicFunctionality:
                 return pose_tracks
             elif key == "poseest/longterm_seg_id":
                 return seg_ids
+            elif key == "poseest/points":
+                return pose_data
 
         mock_file.__getitem__.side_effect = mock_getitem
         mock_file.__contains__.return_value = False  # No corners
@@ -273,6 +289,9 @@ class TestInspectPoseV6DataProcessing:
         mock_config.BASE_TAIL_INDEX = 9
         mock_config.LEFT_REAR_PAW_INDEX = 7
         mock_config.RIGHT_REAR_PAW_INDEX = 8
+        mock_config.OFA_MAX_EXPECTED_AREA_PX = 22500  # 150 * 150
+        mock_config.MID_TAIL_INDEX = 10
+        mock_config.TIP_TAIL_INDEX = 11
 
         mock_file = MagicMock()
         mock_h5py_file.return_value.__enter__.return_value = mock_file
@@ -290,6 +309,9 @@ class TestInspectPoseV6DataProcessing:
         pose_tracks = np.ones((100, 1), dtype=np.uint32)
         seg_ids = np.ones(100, dtype=np.uint32)
 
+        # Create pose data with shape [frames, instances, keypoints, 2]
+        pose_data = np.random.rand(100, 1, 12, 2).astype(np.uint16) * 100
+
         def mock_getitem(key):
             if key == "poseest":
                 mock_poseest = MagicMock()
@@ -303,6 +325,8 @@ class TestInspectPoseV6DataProcessing:
                 return pose_tracks
             elif key == "poseest/longterm_seg_id":
                 return seg_ids
+            elif key == "poseest/points":
+                return pose_data
 
         mock_file.__getitem__.side_effect = mock_getitem
         mock_file.__contains__.return_value = True
@@ -352,6 +376,9 @@ class TestInspectPoseV6DataProcessing:
         mock_config.BASE_TAIL_INDEX = 9
         mock_config.LEFT_REAR_PAW_INDEX = 7
         mock_config.RIGHT_REAR_PAW_INDEX = 8
+        mock_config.OFA_MAX_EXPECTED_AREA_PX = 22500  # 150 * 150
+        mock_config.MID_TAIL_INDEX = 10
+        mock_config.TIP_TAIL_INDEX = 11
 
         mock_file = MagicMock()
         mock_h5py_file.return_value.__enter__.return_value = mock_file
@@ -367,6 +394,9 @@ class TestInspectPoseV6DataProcessing:
         seg_ids = np.zeros(total_frames, dtype=np.uint32)
         seg_ids[70:230] = 1  # Segmentation in frames 70-229 (160 frames)
 
+        # Create pose data with shape [frames, instances, keypoints, 2]
+        pose_data = np.random.rand(total_frames, 1, 12, 2).astype(np.uint16) * 100
+
         def mock_getitem(key):
             if key == "poseest":
                 mock_poseest = MagicMock()
@@ -380,6 +410,8 @@ class TestInspectPoseV6DataProcessing:
                 return pose_tracks
             elif key == "poseest/longterm_seg_id":
                 return seg_ids
+            elif key == "poseest/points":
+                return pose_data
 
         mock_file.__getitem__.side_effect = mock_getitem
         mock_file.__contains__.return_value = False
@@ -423,6 +455,9 @@ class TestInspectPoseV6DataProcessing:
         mock_config.BASE_TAIL_INDEX = 9
         mock_config.LEFT_REAR_PAW_INDEX = 7
         mock_config.RIGHT_REAR_PAW_INDEX = 8
+        mock_config.OFA_MAX_EXPECTED_AREA_PX = 22500  # 150 * 150
+        mock_config.MID_TAIL_INDEX = 10
+        mock_config.TIP_TAIL_INDEX = 11
 
         mock_file = MagicMock()
         mock_h5py_file.return_value.__enter__.return_value = mock_file
@@ -442,6 +477,9 @@ class TestInspectPoseV6DataProcessing:
         pose_quality = np.full((total_frames, 1, 12), 0.8)
         seg_ids = np.ones(total_frames, dtype=np.uint32)
 
+        # Create pose data with shape [frames, instances, keypoints, 2]
+        pose_data = np.random.rand(total_frames, 1, 12, 2).astype(np.uint16) * 100
+
         def mock_getitem(key):
             if key == "poseest":
                 mock_poseest = MagicMock()
@@ -455,6 +493,8 @@ class TestInspectPoseV6DataProcessing:
                 return pose_tracks
             elif key == "poseest/longterm_seg_id":
                 return seg_ids
+            elif key == "poseest/points":
+                return pose_data
 
         mock_file.__getitem__.side_effect = mock_getitem
         mock_file.__contains__.return_value = True
@@ -516,6 +556,9 @@ class TestInspectPoseV6VideoNameParsing:
         mock_config.BASE_TAIL_INDEX = 9
         mock_config.LEFT_REAR_PAW_INDEX = 7
         mock_config.RIGHT_REAR_PAW_INDEX = 8
+        mock_config.OFA_MAX_EXPECTED_AREA_PX = 22500  # 150 * 150
+        mock_config.MID_TAIL_INDEX = 10
+        mock_config.TIP_TAIL_INDEX = 11
 
         mock_file = MagicMock()
         mock_h5py_file.return_value.__enter__.return_value = mock_file
@@ -525,6 +568,9 @@ class TestInspectPoseV6VideoNameParsing:
         pose_quality = np.full((100, 1, 12), 0.8)
         pose_tracks = np.ones((100, 1), dtype=np.uint32)
         seg_ids = np.ones(100, dtype=np.uint32)
+
+        # Create pose data with shape [frames, instances, keypoints, 2]
+        pose_data = np.random.rand(100, 1, 12, 2).astype(np.uint16) * 100
 
         def mock_getitem(key):
             if key == "poseest":
@@ -539,6 +585,8 @@ class TestInspectPoseV6VideoNameParsing:
                 return pose_tracks
             elif key == "poseest/longterm_seg_id":
                 return seg_ids
+            elif key == "poseest/points":
+                return pose_data
 
         mock_file.__getitem__.side_effect = mock_getitem
         mock_file.__contains__.return_value = True
@@ -629,6 +677,9 @@ class TestInspectPoseV6EdgeCases:
         mock_config.BASE_TAIL_INDEX = 9
         mock_config.LEFT_REAR_PAW_INDEX = 7
         mock_config.RIGHT_REAR_PAW_INDEX = 8
+        mock_config.OFA_MAX_EXPECTED_AREA_PX = 22500  # 150 * 150
+        mock_config.MID_TAIL_INDEX = 10
+        mock_config.TIP_TAIL_INDEX = 11
 
         mock_file = MagicMock()
         mock_h5py_file.return_value.__enter__.return_value = mock_file
@@ -638,6 +689,9 @@ class TestInspectPoseV6EdgeCases:
         pose_quality = np.zeros((110000, 1, 12))  # All zero confidence
         pose_tracks = np.ones((110000, 1), dtype=np.uint32)
         seg_ids = np.ones(110000, dtype=np.uint32)
+
+        # Create pose data with shape [frames, instances, keypoints, 2]
+        pose_data = np.random.rand(110000, 1, 12, 2).astype(np.uint16) * 100
 
         def mock_getitem(key):
             if key == "poseest":
@@ -652,6 +706,8 @@ class TestInspectPoseV6EdgeCases:
                 return pose_tracks
             elif key == "poseest/longterm_seg_id":
                 return seg_ids
+            elif key == "poseest/points":
+                return pose_data
 
         mock_file.__getitem__.side_effect = mock_getitem
         mock_file.__contains__.return_value = True
@@ -692,6 +748,9 @@ class TestInspectPoseV6EdgeCases:
         mock_config.BASE_TAIL_INDEX = 9
         mock_config.LEFT_REAR_PAW_INDEX = 7
         mock_config.RIGHT_REAR_PAW_INDEX = 8
+        mock_config.OFA_MAX_EXPECTED_AREA_PX = 22500  # 150 * 150
+        mock_config.MID_TAIL_INDEX = 10
+        mock_config.TIP_TAIL_INDEX = 11
 
         mock_file = MagicMock()
         mock_h5py_file.return_value.__enter__.return_value = mock_file
@@ -702,6 +761,9 @@ class TestInspectPoseV6EdgeCases:
         pose_quality = np.full((total_frames, 1, 12), 0.8)
         pose_tracks = np.ones((total_frames, 1), dtype=np.uint32)
         seg_ids = np.ones(total_frames, dtype=np.uint32)
+
+        # Create pose data with shape [frames, instances, keypoints, 2]
+        pose_data = np.random.rand(total_frames, 1, 12, 2).astype(np.uint16) * 100
 
         def mock_getitem(key):
             if key == "poseest":
@@ -716,6 +778,8 @@ class TestInspectPoseV6EdgeCases:
                 return pose_tracks
             elif key == "poseest/longterm_seg_id":
                 return seg_ids
+            elif key == "poseest/points":
+                return pose_data
 
         mock_file.__getitem__.side_effect = mock_getitem
         mock_file.__contains__.return_value = True
@@ -766,6 +830,9 @@ class TestInspectPoseV6MockingVerification:
         mock_config.BASE_TAIL_INDEX = 9
         mock_config.LEFT_REAR_PAW_INDEX = 7
         mock_config.RIGHT_REAR_PAW_INDEX = 8
+        mock_config.OFA_MAX_EXPECTED_AREA_PX = 22500  # 150 * 150
+        mock_config.MID_TAIL_INDEX = 10
+        mock_config.TIP_TAIL_INDEX = 11
 
         # Mock Path operations
         mock_path_instance = MagicMock()
@@ -786,6 +853,9 @@ class TestInspectPoseV6MockingVerification:
         pose_tracks = np.ones((100, 1), dtype=np.uint32)
         seg_ids = np.ones(100, dtype=np.uint32)
 
+        # Create pose data with shape [frames, instances, keypoints, 2]
+        pose_data = np.random.rand(100, 1, 12, 2).astype(np.uint16) * 100
+
         def mock_getitem(key):
             if key == "poseest":
                 mock_poseest = MagicMock()
@@ -799,6 +869,8 @@ class TestInspectPoseV6MockingVerification:
                 return pose_tracks
             elif key == "poseest/longterm_seg_id":
                 return seg_ids
+            elif key == "poseest/points":
+                return pose_data
 
         mock_file.__getitem__.side_effect = mock_getitem
         mock_file.__contains__.return_value = True
@@ -833,6 +905,7 @@ class TestInspectPoseV6MockingVerification:
             "pose_counts",
             "seg_counts",
             "missing_poses",
+            "large_poses",
             "missing_segs",
             "pose_tracklets",
             "missing_keypoint_frames",

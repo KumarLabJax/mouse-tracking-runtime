@@ -58,7 +58,7 @@ def test_qa_commands_registered(command_name, expected_docstring):
 def test_all_expected_qa_commands_present():
     """Test that all expected QA commands are present."""
     # Arrange
-    expected_commands = {"single_pose", "multi_pose"}
+    expected_commands = {"single_pose", "multi_pose", "single_feature"}
 
     # Act
     registered_commands = app.registered_commands

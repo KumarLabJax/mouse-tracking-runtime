@@ -6,13 +6,19 @@ import typer
 from rich import print
 
 from mouse_tracking import __version__
+from mouse_tracking.core.config.pose_utils import PoseUtilsConfig
 from mouse_tracking.matching.match_predictions import match_predictions
 from mouse_tracking.pose import render
-from mouse_tracking.pose.convert import downgrade_pose_file
 from mouse_tracking.utils import fecal_boli, static_objects
 from mouse_tracking.utils.clip_video import clip_video_auto, clip_video_manual
+from mouse_tracking.utils.writers import (
+    downgrade_pose_file,
+    filter_large_contours,
+    filter_large_keypoints,
+)
 
 app = typer.Typer()
+CONFIG = PoseUtilsConfig()
 
 
 def version_callback(value: bool) -> None:
@@ -52,6 +58,27 @@ def aggregate_fecal_boli(
         str(folder), depth=folder_depth, num_bins=num_bins
     )
     result.to_csv(output, index=False)
+
+
+@app.command()
+def render_fecal_boli_video(
+    in_video: Path = typer.Option(
+        ..., "--in-video", help="Path to the input video file"
+    ),
+    in_pose: Path = typer.Option(
+        ..., "--in-pose", help="Path to the input HDF5 pose file"
+    ),
+    out_video: Path = typer.Option(
+        ..., "--out-video", help="Path to the output video file"
+    ),
+):
+    """
+    Render fecal boli on video frames.
+
+    This command renders fecal boli from the pose file onto the input video.
+    Video playback is 1fps with original frame timestamp overlayed.
+    """
+    fecal_boli.render_fecal_boli_video(str(in_video), str(in_pose), str(out_video))
 
 
 clip_video_app = typer.Typer(help="Produce a video and pose clip aligned to criteria.")
@@ -227,3 +254,26 @@ def stitch_tracklets(
     This command stitches tracklets from the specified source.
     """
     match_predictions(in_pose)
+
+
+@app.command()
+def filter_large_area_pose(
+    in_pose: Path = typer.Argument(..., help="Input HDF5 pose file"),
+    max_area: int = typer.Option(
+        CONFIG.OFA_MAX_EXPECTED_AREA_PX,
+        help="Maximum area a pose can have, using a bounding box on keypoint pose.",
+    ),
+):
+    """
+    Filer pose by area.
+
+    This command unmarks identity of pose (both keypoint and segmentation) with large areas.
+    """
+    filter_large_keypoints(
+        in_pose,
+        max_area,
+    )
+    filter_large_contours(
+        in_pose,
+        max_area,
+    )

@@ -17,7 +17,7 @@ process PREDICT_SINGLE_MOUSE_SEGMENTATION {
     label "gpu"
     label "tracking"
     label "r_single_seg"
-    
+
     input:
     tuple path(video_file), path(in_pose_file)
 
@@ -87,6 +87,35 @@ process QC_SINGLE_MOUSE {
     do
         mouse-tracking qa single-pose "\${pose_file}" --output "${batch_name}_qc.csv" --duration "${clip_duration}"
     done
+    """
+}
+
+/**
+ * Modifies a pose file to filter out large poses.
+ *
+ * @param tuple
+ *  - in_video The input video file
+ *  - in_pose_file The input pose file to modify
+ *
+ * @return tuple files
+ *  - Path to the video file.
+ *  - Path to the filtered pose file.
+ */
+process FILTER_LARGE_POSES {
+    label "tracking"
+    
+    input:
+    tuple path(in_video), path(in_pose_file)
+
+    output:
+    tuple path("${in_video.baseName}_filtered.${in_video.extension}"), path("${in_video.baseName}_filtered.h5"), emit: files
+
+    script:
+    """
+    cp ${in_pose_file} ${in_video.baseName}_filtered.h5
+    ln -s ${in_video} ${in_video.baseName}_filtered.${in_video.extension}
+
+    mouse-tracking utils filter-large-area-pose ${in_video.baseName}_filtered.h5
     """
 }
 

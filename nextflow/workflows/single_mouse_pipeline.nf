@@ -2,7 +2,10 @@
  * This module contains the single mouse tracking pipeline.
  * It processes video input to track a single mouse.
  */
-include { PREDICT_SINGLE_MOUSE_SEGMENTATION; PREDICT_SINGLE_MOUSE_KEYPOINTS; CLIP_VIDEO_AND_POSE } from "${projectDir}/nextflow/modules/single_mouse"
+include { PREDICT_SINGLE_MOUSE_SEGMENTATION;
+          PREDICT_SINGLE_MOUSE_KEYPOINTS;
+          CLIP_VIDEO_AND_POSE;
+          FILTER_LARGE_POSES; } from "${projectDir}/nextflow/modules/single_mouse"
 include { PREDICT_ARENA_CORNERS } from "${projectDir}/nextflow/modules/static_objects"
 include { PREDICT_FECAL_BOLI } from "${projectDir}/nextflow/modules/fecal_boli"
 include { QC_SINGLE_MOUSE } from "${projectDir}/nextflow/modules/single_mouse"
@@ -40,14 +43,15 @@ workflow SINGLE_MOUSE_TRACKING {
     main:
     // Generate pose files
     pose_init = VIDEO_TO_POSE(input_video).files
-    // Pose v2 is output from this step
+    // Pose v2 is output from keypoint prediction step
     pose_v2_data = PREDICT_SINGLE_MOUSE_KEYPOINTS(pose_init).files
     if (params.align_videos) {
         pose_v2_data = CLIP_VIDEO_AND_POSE(pose_v2_data, params.clip_duration).files
     }
+    // Valid Pose v6 is produced when segmentation is added.
     pose_and_seg_data = PREDICT_SINGLE_MOUSE_SEGMENTATION(pose_v2_data).files
-    // Completed Pose v6 is output from this step
-    pose_with_corners = PREDICT_ARENA_CORNERS(pose_and_seg_data).files
+    filtered_pose_v6 = FILTER_LARGE_POSES(pose_and_seg_data).files
+    pose_with_corners = PREDICT_ARENA_CORNERS(filtered_pose_v6).files
     pose_v6_data = PREDICT_FECAL_BOLI(pose_with_corners).files
 
     // Publish the pose v2 results

@@ -20,6 +20,9 @@ def plot_keypoints(
     kp: np.ndarray,
     img: np.ndarray,
     color: tuple = (0, 0, 255),
+    alpha: float = 1.0,
+    thickness: int = 1,
+    radius: int = 2,
     is_yx: bool = False,
     include_lines: bool = False,
 ) -> np.ndarray:
@@ -29,6 +32,9 @@ def plot_keypoints(
             kp: keypoints of shape [n_keypoints, 2]
             img: image to render the keypoint on
             color: BGR tuple to render the keypoint
+            alpha: blending factor for the overlay
+            thickness: thickness of the black border
+            radius: radius of the keypoint circle
             is_yx: are the keypoints formatted y, x instead of x, y?
             include_lines: also render lines between keypoints?
 
@@ -39,18 +45,32 @@ def plot_keypoints(
     kps_ordered = np.flip(kp, axis=-1) if is_yx else kp
     if include_lines and kps_ordered.ndim == 2 and kps_ordered.shape[0] >= 1:
         img_copy = cv2.drawContours(
-            img_copy, [kps_ordered.astype(np.int32)], 0, (0, 0, 0), 2, cv2.LINE_AA
+            img_copy,
+            [kps_ordered.astype(np.int32)],
+            0,
+            (0, 0, 0),
+            1 + thickness,
+            cv2.LINE_AA,
         )
         img_copy = cv2.drawContours(
             img_copy, [kps_ordered.astype(np.int32)], 0, color, 1, cv2.LINE_AA
         )
     for _i, kp_data in enumerate(kps_ordered):
         _ = cv2.circle(
-            img_copy, (int(kp_data[0]), int(kp_data[1])), 3, (0, 0, 0), -1, cv2.LINE_AA
+            img_copy,
+            (int(kp_data[0]), int(kp_data[1])),
+            radius + thickness,
+            (0, 0, 0),
+            -1,
+            cv2.LINE_AA,
         )
         _ = cv2.circle(
-            img_copy, (int(kp_data[0]), int(kp_data[1])), 2, color, -1, cv2.LINE_AA
+            img_copy, (int(kp_data[0]), int(kp_data[1])), radius, color, -1, cv2.LINE_AA
         )
+
+    if alpha != 1.0:
+        img_copy = cv2.addWeighted(img_copy, alpha, img.copy(), 1 - alpha, 0)
+
     return img_copy
 
 

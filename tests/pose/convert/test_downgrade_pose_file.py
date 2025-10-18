@@ -11,7 +11,7 @@ import numpy as np
 import pytest
 
 from mouse_tracking.core.exceptions import InvalidPoseFileException
-from mouse_tracking.pose.convert import downgrade_pose_file
+from mouse_tracking.utils.writers import downgrade_pose_file
 
 
 def _create_mock_h5_file_context(data_dict, attrs_dict):
@@ -55,7 +55,7 @@ class TestDowngradePoseFileErrorHandling:
     def test_missing_file_raises_file_not_found_error(self):
         """Test that missing input file raises FileNotFoundError."""
         with (
-            patch("mouse_tracking.pose.convert.os.path.isfile", return_value=False),
+            patch("mouse_tracking.utils.writers.os.path.isfile", return_value=False),
             pytest.raises(
                 FileNotFoundError, match="ERROR: missing file: nonexistent.h5"
             ),
@@ -70,8 +70,8 @@ class TestDowngradePoseFileErrorHandling:
         )
 
         with (
-            patch("mouse_tracking.pose.convert.os.path.isfile", return_value=True),
-            patch("mouse_tracking.pose.convert.h5py.File", return_value=mock_h5),
+            patch("mouse_tracking.utils.writers.os.path.isfile", return_value=True),
+            patch("mouse_tracking.utils.writers.h5py.File", return_value=mock_h5),
             pytest.raises(
                 InvalidPoseFileException,
                 match="Pose file test.h5 did not have a valid version",
@@ -79,7 +79,7 @@ class TestDowngradePoseFileErrorHandling:
         ):
             downgrade_pose_file("test.h5")
 
-    @patch("mouse_tracking.pose.convert.exit")
+    @patch("mouse_tracking.utils.writers.exit")
     def test_v2_file_prints_message_and_exits(self, mock_exit):
         """Test that v2 files print message and exit gracefully."""
         # Make exit raise SystemExit to actually terminate execution
@@ -91,8 +91,8 @@ class TestDowngradePoseFileErrorHandling:
         )
 
         with (
-            patch("mouse_tracking.pose.convert.os.path.isfile", return_value=True),
-            patch("mouse_tracking.pose.convert.h5py.File", return_value=mock_h5),
+            patch("mouse_tracking.utils.writers.os.path.isfile", return_value=True),
+            patch("mouse_tracking.utils.writers.h5py.File", return_value=mock_h5),
             patch("builtins.print") as mock_print,
         ):
             with pytest.raises(SystemExit) as exc_info:
@@ -108,9 +108,9 @@ class TestDowngradePoseFileErrorHandling:
 class TestDowngradePoseFileV3Processing:
     """Test successful processing of v3 pose files."""
 
-    @patch("mouse_tracking.pose.convert.write_pixel_per_cm_attr")
-    @patch("mouse_tracking.pose.convert.write_pose_v2_data")
-    @patch("mouse_tracking.pose.convert.multi_to_v2")
+    @patch("mouse_tracking.utils.writers.write_pixel_per_cm_attr")
+    @patch("mouse_tracking.utils.writers.write_pose_v2_data")
+    @patch("mouse_tracking.utils.writers.multi_to_v2")
     def test_v3_file_basic_processing(
         self, mock_multi_to_v2, mock_write_v2, mock_write_pixel
     ):
@@ -139,8 +139,8 @@ class TestDowngradePoseFileV3Processing:
         ]
 
         with (
-            patch("mouse_tracking.pose.convert.os.path.isfile", return_value=True),
-            patch("mouse_tracking.pose.convert.h5py.File", return_value=mock_h5),
+            patch("mouse_tracking.utils.writers.os.path.isfile", return_value=True),
+            patch("mouse_tracking.utils.writers.h5py.File", return_value=mock_h5),
         ):
             downgrade_pose_file("test_pose_est_v3.h5")
 
@@ -173,9 +173,9 @@ class TestDowngradePoseFileV3Processing:
             # Verify pixel scaling was not written (no pixel data)
             mock_write_pixel.assert_not_called()
 
-    @patch("mouse_tracking.pose.convert.write_pixel_per_cm_attr")
-    @patch("mouse_tracking.pose.convert.write_pose_v2_data")
-    @patch("mouse_tracking.pose.convert.multi_to_v2")
+    @patch("mouse_tracking.utils.writers.write_pixel_per_cm_attr")
+    @patch("mouse_tracking.utils.writers.write_pose_v2_data")
+    @patch("mouse_tracking.utils.writers.multi_to_v2")
     def test_v3_file_with_pixel_scaling(
         self, mock_multi_to_v2, mock_write_v2, mock_write_pixel
     ):
@@ -205,8 +205,8 @@ class TestDowngradePoseFileV3Processing:
         ]
 
         with (
-            patch("mouse_tracking.pose.convert.os.path.isfile", return_value=True),
-            patch("mouse_tracking.pose.convert.h5py.File", return_value=mock_h5),
+            patch("mouse_tracking.utils.writers.os.path.isfile", return_value=True),
+            patch("mouse_tracking.utils.writers.h5py.File", return_value=mock_h5),
         ):
             downgrade_pose_file("experiment_pose_est_v3.h5")
 
@@ -215,8 +215,8 @@ class TestDowngradePoseFileV3Processing:
                 "experiment_animal_1_pose_est_v2.h5", 0.1, "manual"
             )
 
-    @patch("mouse_tracking.pose.convert.write_pose_v2_data")
-    @patch("mouse_tracking.pose.convert.multi_to_v2")
+    @patch("mouse_tracking.utils.writers.write_pose_v2_data")
+    @patch("mouse_tracking.utils.writers.multi_to_v2")
     def test_v3_file_missing_config_model_attributes(
         self, mock_multi_to_v2, mock_write_v2
     ):
@@ -242,8 +242,8 @@ class TestDowngradePoseFileV3Processing:
         ]
 
         with (
-            patch("mouse_tracking.pose.convert.os.path.isfile", return_value=True),
-            patch("mouse_tracking.pose.convert.h5py.File", return_value=mock_h5),
+            patch("mouse_tracking.utils.writers.os.path.isfile", return_value=True),
+            patch("mouse_tracking.utils.writers.h5py.File", return_value=mock_h5),
         ):
             downgrade_pose_file("test_pose_est_v3.h5")
 
@@ -260,8 +260,8 @@ class TestDowngradePoseFileV3Processing:
 class TestDowngradePoseFileV4Processing:
     """Test successful processing of v4+ pose files."""
 
-    @patch("mouse_tracking.pose.convert.write_pose_v2_data")
-    @patch("mouse_tracking.pose.convert.multi_to_v2")
+    @patch("mouse_tracking.utils.writers.write_pose_v2_data")
+    @patch("mouse_tracking.utils.writers.multi_to_v2")
     def test_v4_file_uses_embed_id_by_default(self, mock_multi_to_v2, mock_write_v2):
         """Test that v4+ files use instance_embed_id by default."""
         pose_data = np.random.rand(8, 3, 12, 2).astype(np.float32)
@@ -289,8 +289,8 @@ class TestDowngradePoseFileV4Processing:
         ]
 
         with (
-            patch("mouse_tracking.pose.convert.os.path.isfile", return_value=True),
-            patch("mouse_tracking.pose.convert.h5py.File", return_value=mock_h5),
+            patch("mouse_tracking.utils.writers.os.path.isfile", return_value=True),
+            patch("mouse_tracking.utils.writers.h5py.File", return_value=mock_h5),
         ):
             downgrade_pose_file("data_pose_est_v4.h5")
 
@@ -298,8 +298,8 @@ class TestDowngradePoseFileV4Processing:
             args = mock_multi_to_v2.call_args[0]
             np.testing.assert_array_equal(args[2], embed_id)
 
-    @patch("mouse_tracking.pose.convert.write_pose_v2_data")
-    @patch("mouse_tracking.pose.convert.multi_to_v2")
+    @patch("mouse_tracking.utils.writers.write_pose_v2_data")
+    @patch("mouse_tracking.utils.writers.multi_to_v2")
     def test_v4_file_uses_track_id_when_disabled(self, mock_multi_to_v2, mock_write_v2):
         """Test that v4+ files use instance_track_id when disable_id=True."""
         pose_data = np.random.rand(5, 2, 12, 2).astype(np.float32)
@@ -326,8 +326,8 @@ class TestDowngradePoseFileV4Processing:
         ]
 
         with (
-            patch("mouse_tracking.pose.convert.os.path.isfile", return_value=True),
-            patch("mouse_tracking.pose.convert.h5py.File", return_value=mock_h5),
+            patch("mouse_tracking.utils.writers.os.path.isfile", return_value=True),
+            patch("mouse_tracking.utils.writers.h5py.File", return_value=mock_h5),
         ):
             downgrade_pose_file("data_pose_est_v5.h5", disable_id=True)
 
@@ -339,8 +339,8 @@ class TestDowngradePoseFileV4Processing:
 class TestDowngradePoseFileFilenameHandling:
     """Test filename pattern replacement functionality."""
 
-    @patch("mouse_tracking.pose.convert.write_pose_v2_data")
-    @patch("mouse_tracking.pose.convert.multi_to_v2")
+    @patch("mouse_tracking.utils.writers.write_pose_v2_data")
+    @patch("mouse_tracking.utils.writers.multi_to_v2")
     def test_various_filename_patterns(self, mock_multi_to_v2, mock_write_v2):
         """Test that different version filename patterns are handled correctly."""
         test_cases = [
@@ -356,9 +356,9 @@ class TestDowngradePoseFileFilenameHandling:
         for input_file, expected_output in test_cases:
             with (
                 self._setup_basic_v3_mock(mock_multi_to_v2),
-                patch("mouse_tracking.pose.convert.os.path.isfile", return_value=True),
+                patch("mouse_tracking.utils.writers.os.path.isfile", return_value=True),
                 patch(
-                    "mouse_tracking.pose.convert.h5py.File",
+                    "mouse_tracking.utils.writers.h5py.File",
                     return_value=self.mock_h5,
                 ),
             ):
@@ -401,8 +401,8 @@ class TestDowngradePoseFileFilenameHandling:
 class TestDowngradePoseFileEdgeCases:
     """Test edge cases and unusual scenarios."""
 
-    @patch("mouse_tracking.pose.convert.write_pose_v2_data")
-    @patch("mouse_tracking.pose.convert.multi_to_v2")
+    @patch("mouse_tracking.utils.writers.write_pose_v2_data")
+    @patch("mouse_tracking.utils.writers.multi_to_v2")
     def test_empty_multi_to_v2_result(self, mock_multi_to_v2, mock_write_v2):
         """Test behavior when multi_to_v2 returns no animals."""
         pose_data = np.zeros((5, 2, 12, 2), dtype=np.float32)
@@ -424,16 +424,16 @@ class TestDowngradePoseFileEdgeCases:
         mock_multi_to_v2.return_value = []  # No animals found
 
         with (
-            patch("mouse_tracking.pose.convert.os.path.isfile", return_value=True),
-            patch("mouse_tracking.pose.convert.h5py.File", return_value=mock_h5),
+            patch("mouse_tracking.utils.writers.os.path.isfile", return_value=True),
+            patch("mouse_tracking.utils.writers.h5py.File", return_value=mock_h5),
         ):
             downgrade_pose_file("empty_pose_est_v3.h5")
 
             # Verify no files were written
             mock_write_v2.assert_not_called()
 
-    @patch("mouse_tracking.pose.convert.write_pose_v2_data")
-    @patch("mouse_tracking.pose.convert.multi_to_v2")
+    @patch("mouse_tracking.utils.writers.write_pose_v2_data")
+    @patch("mouse_tracking.utils.writers.multi_to_v2")
     def test_single_animal_result(self, mock_multi_to_v2, mock_write_v2):
         """Test processing with only one animal in the data."""
         pose_data = np.random.rand(10, 1, 12, 2).astype(np.float32)
@@ -457,8 +457,8 @@ class TestDowngradePoseFileEdgeCases:
         ]
 
         with (
-            patch("mouse_tracking.pose.convert.os.path.isfile", return_value=True),
-            patch("mouse_tracking.pose.convert.h5py.File", return_value=mock_h5),
+            patch("mouse_tracking.utils.writers.os.path.isfile", return_value=True),
+            patch("mouse_tracking.utils.writers.h5py.File", return_value=mock_h5),
         ):
             downgrade_pose_file("single_pose_est_v3.h5")
 
@@ -471,8 +471,8 @@ class TestDowngradePoseFileEdgeCases:
                 "single_model",
             )
 
-    @patch("mouse_tracking.pose.convert.write_pose_v2_data")
-    @patch("mouse_tracking.pose.convert.multi_to_v2")
+    @patch("mouse_tracking.utils.writers.write_pose_v2_data")
+    @patch("mouse_tracking.utils.writers.multi_to_v2")
     def test_large_animal_ids(self, mock_multi_to_v2, mock_write_v2):
         """Test processing with large animal ID numbers."""
         pose_data = np.random.rand(3, 2, 12, 2).astype(np.float32)
@@ -497,8 +497,8 @@ class TestDowngradePoseFileEdgeCases:
         ]
 
         with (
-            patch("mouse_tracking.pose.convert.os.path.isfile", return_value=True),
-            patch("mouse_tracking.pose.convert.h5py.File", return_value=mock_h5),
+            patch("mouse_tracking.utils.writers.os.path.isfile", return_value=True),
+            patch("mouse_tracking.utils.writers.h5py.File", return_value=mock_h5),
         ):
             downgrade_pose_file("large_ids_pose_est_v3.h5")
 
@@ -525,9 +525,9 @@ class TestDowngradePoseFileEdgeCases:
 class TestDowngradePoseFileIntegration:
     """Test integration scenarios that combine multiple aspects."""
 
-    @patch("mouse_tracking.pose.convert.write_pixel_per_cm_attr")
-    @patch("mouse_tracking.pose.convert.write_pose_v2_data")
-    @patch("mouse_tracking.pose.convert.multi_to_v2")
+    @patch("mouse_tracking.utils.writers.write_pixel_per_cm_attr")
+    @patch("mouse_tracking.utils.writers.write_pose_v2_data")
+    @patch("mouse_tracking.utils.writers.multi_to_v2")
     def test_realistic_multi_animal_v4_scenario(
         self, mock_multi_to_v2, mock_write_v2, mock_write_pixel
     ):
@@ -567,8 +567,8 @@ class TestDowngradePoseFileIntegration:
         ]
 
         with (
-            patch("mouse_tracking.pose.convert.os.path.isfile", return_value=True),
-            patch("mouse_tracking.pose.convert.h5py.File", return_value=mock_h5),
+            patch("mouse_tracking.utils.writers.os.path.isfile", return_value=True),
+            patch("mouse_tracking.utils.writers.h5py.File", return_value=mock_h5),
         ):
             downgrade_pose_file("experiment_20241201_cage1_pose_est_v4.h5")
 
@@ -599,8 +599,8 @@ class TestDowngradePoseFileIntegration:
             args = mock_multi_to_v2.call_args[0]
             np.testing.assert_array_equal(args[2], embed_id)
 
-    @patch("mouse_tracking.pose.convert.write_pose_v2_data")
-    @patch("mouse_tracking.pose.convert.multi_to_v2")
+    @patch("mouse_tracking.utils.writers.write_pose_v2_data")
+    @patch("mouse_tracking.utils.writers.multi_to_v2")
     def test_v6_file_with_missing_optional_attributes(
         self, mock_multi_to_v2, mock_write_v2
     ):
@@ -641,8 +641,8 @@ class TestDowngradePoseFileIntegration:
         ]
 
         with (
-            patch("mouse_tracking.pose.convert.os.path.isfile", return_value=True),
-            patch("mouse_tracking.pose.convert.h5py.File", return_value=mock_h5),
+            patch("mouse_tracking.utils.writers.os.path.isfile", return_value=True),
+            patch("mouse_tracking.utils.writers.h5py.File", return_value=mock_h5),
         ):
             downgrade_pose_file("advanced_pose_est_v6.h5")
 

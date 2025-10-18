@@ -3,8 +3,13 @@
 import glob
 
 import h5py
+import imageio
 import numpy as np
 import pandas as pd
+
+from mouse_tracking.utils.rendering import plot_frame_info
+from mouse_tracking.utils.static_objects import plot_keypoints
+from mouse_tracking.utils.timers import print_time
 
 
 def aggregate_folder_data(folder: str, depth: int = 2, num_bins: int = -1):
@@ -55,3 +60,56 @@ def aggregate_folder_data(folder: str, depth: int = 2, num_bins: int = -1):
 
     all_data = pd.concat(read_data).reset_index(drop=False)
     return all_data
+
+
+def render_fecal_boli_video(in_video: str, in_pose: str, out_video: str):
+    """
+    Renders fecal boli on a frame.
+
+    Args:
+            in_video: The input video file
+            in_pose: The input pose file
+            out_video: The output video file
+    """
+    # Open the input video
+    vid_writer = imageio.get_writer(out_video, fps=1)
+
+    # Load the pose data
+    with h5py.File(in_pose, "r") as f:
+        fecal_boli = f["dynamic_objects/fecal_boli/points"][...]
+        fecal_boli_counts = f["dynamic_objects/fecal_boli/counts"][...]
+        fecal_boli_frames = f["dynamic_objects/fecal_boli/sample_indices"][...]
+
+    video_reader = imageio.get_reader(in_video)
+    video_done = False
+    prediction_idx = 0
+
+    while not video_done:
+        try:
+            prediction_frame = fecal_boli_frames[prediction_idx]
+            input_frame = video_reader.get_data(prediction_frame)
+        except StopIteration:
+            video_done = True
+            break
+
+        fecal_boli_count_in_frame = fecal_boli_counts[prediction_idx]
+        fecal_boli_data = fecal_boli[prediction_idx, : int(fecal_boli_count_in_frame)]
+        if fecal_boli_count_in_frame > 0:
+            rendered_frame = plot_keypoints(
+                fecal_boli_data, input_frame, is_yx=True, radius=5, alpha=0.5
+            )
+        else:
+            rendered_frame = input_frame
+
+        rendered_frame = plot_frame_info(
+            rendered_frame, f"Video Timestamp: {print_time(prediction_frame)}"
+        )
+
+        # Write the frame to the output video
+        vid_writer.append_data(rendered_frame)
+        prediction_idx += 1
+        if prediction_idx >= len(fecal_boli_frames):
+            video_done = True
+            break
+
+    vid_writer.close()
