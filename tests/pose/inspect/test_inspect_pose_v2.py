@@ -718,7 +718,9 @@ class TestInspectPoseV2MockingVerification:
 
         # v2 shape: [frames, instances, keypoints] same as v6, typically 1 instance
         num_frames = 1000
-        pose_quality = np.random.rand(num_frames, 1, 12)  # 3D with single instance dimension
+        pose_quality = np.random.rand(
+            num_frames, 1, 12
+        )  # 3D with single instance dimension
 
         # Create pose data with shape [frames, instances, keypoints, 2]
         pose_data = np.random.rand(num_frames, 1, 12, 2).astype(np.uint16) * 100
