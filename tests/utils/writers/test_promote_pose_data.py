@@ -13,7 +13,7 @@ class TestPromotePoseDataV2ToV3:
 
     @patch("mouse_tracking.utils.writers.write_pose_v3_data")
     @patch("mouse_tracking.utils.writers.write_pose_v2_data")
-    @patch("mouse_tracking.pose.convert.v2_to_v3")
+    @patch("mouse_tracking.utils.writers.v2_to_v3")
     @patch("mouse_tracking.utils.writers.h5py.File")
     def test_v2_to_v3_basic_promotion(
         self,
@@ -91,7 +91,7 @@ class TestPromotePoseDataV2ToV3:
 
     @patch("mouse_tracking.utils.writers.write_pose_v3_data")
     @patch("mouse_tracking.utils.writers.write_pose_v2_data")
-    @patch("mouse_tracking.pose.convert.v2_to_v3")
+    @patch("mouse_tracking.utils.writers.v2_to_v3")
     @patch("mouse_tracking.utils.writers.h5py.File")
     def test_v2_to_v3_missing_attributes(
         self,
@@ -152,7 +152,7 @@ class TestPromotePoseDataV2ToV3:
     @patch("mouse_tracking.utils.writers.write_pose_v4_data")
     @patch("mouse_tracking.utils.writers.write_pose_v3_data")
     @patch("mouse_tracking.utils.writers.write_pose_v2_data")
-    @patch("mouse_tracking.pose.convert.v2_to_v3")
+    @patch("mouse_tracking.utils.writers.v2_to_v3")
     @patch("mouse_tracking.utils.writers.h5py.File")
     def test_v2_to_v4_skips_v3_promotion(
         self,
@@ -576,7 +576,7 @@ class TestPromotePoseDataEdgeCases:
                 side_effect=mock_file_side_effect,
             ),
             patch(
-                "mouse_tracking.pose.convert.v2_to_v3",
+                "mouse_tracking.utils.writers.v2_to_v3",
                 return_value=(
                     np.random.rand(3, 1, 12, 2),
                     np.random.rand(3, 1, 12),
@@ -608,7 +608,7 @@ class TestPromotePoseDataIntegration:
     @patch("mouse_tracking.utils.writers.write_pose_v4_data")
     @patch("mouse_tracking.utils.writers.write_pose_v3_data")
     @patch("mouse_tracking.utils.writers.write_pose_v2_data")
-    @patch("mouse_tracking.pose.convert.v2_to_v3")
+    @patch("mouse_tracking.utils.writers.v2_to_v3")
     @patch("mouse_tracking.utils.writers.h5py.File")
     def test_full_v2_to_v6_promotion(
         self,
