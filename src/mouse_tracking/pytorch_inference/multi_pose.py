@@ -11,10 +11,10 @@ import torch
 import torch.backends.cudnn as cudnn
 
 from mouse_tracking.models.model_definitions import MULTI_MOUSE_POSE
+from mouse_tracking.pose.render import render_pose_overlay
 from mouse_tracking.pytorch_inference.hrnet.config import cfg
 from mouse_tracking.pytorch_inference.hrnet.models import pose_hrnet
 from mouse_tracking.utils.hrnet import argmax_2d_torch, preprocess_hrnet
-from mouse_tracking.utils.pose import render_pose_overlay
 from mouse_tracking.utils.prediction_saver import prediction_saver
 from mouse_tracking.utils.segmentation import get_frame_masks
 from mouse_tracking.utils.timers import time_accumulator

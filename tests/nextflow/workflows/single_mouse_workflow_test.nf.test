@@ -1,0 +1,24 @@
+nextflow_workflow {
+
+    name "Test single-mouse workflow"
+    tag "integration"
+    tag "tracking"
+    script "nextflow/workflows/single_mouse_pipeline.nf"
+    workflow "SINGLE_MOUSE_TRACKING"
+
+    test("Predict single mouse pose on example video") {
+        when {
+            workflow {
+                """
+                input[0] = file("$baseDir/tests/assets/test-single-vid.mp4")
+                """
+            }
+        }
+
+        then {
+
+            assert workflow.success
+
+        }
+    }
+}

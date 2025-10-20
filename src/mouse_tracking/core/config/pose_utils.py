@@ -34,3 +34,33 @@ class PoseUtilsConfig(BaseSettings):
     MIN_GAIT_CONFIDENCE: float = 0.3
     MIN_JABS_CONFIDENCE: float = 0.3
     MIN_JABS_KEYPOINTS: int = 3
+
+    # Large animals are rarely larger than 100px in our OFA
+    OFA_MAX_EXPECTED_AREA_PX: int = 150 * 150
+
+    # Colors
+    MOUSE_COLORS: list[tuple[int, int, int]] = [
+        (228, 26, 28),  # Red
+        (152, 78, 163),  # Purple
+        (255, 255, 51),  # Yellow
+        (166, 86, 40),  # Brown
+        (247, 129, 191),  # Pink
+        (166, 206, 227),  # Light Blue
+        (178, 223, 138),  # Light Green
+        (251, 154, 153),  # Peach
+        (253, 191, 111),  # Light Orange
+        (202, 178, 214),  # Light Purple
+        (255, 255, 153),  # Faded Yellow
+    ]
+
+    # Static object settings
+    STATIC_OBJ_XY: dict[str, bool] = {
+        "lixit": False,
+        "food_hopper": False,
+        "corners": True,
+    }
+    STATIC_OBJ_COLORS: dict[str, tuple[int, int, int]] = {
+        "lixit": (55, 126, 184),  # Water spout is Blue
+        "food_hopper": (255, 127, 0),  # Food hopper is Orange
+        "corners": (75, 175, 74),  # Arena corners are Green
+    }
