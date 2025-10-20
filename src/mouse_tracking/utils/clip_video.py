@@ -5,8 +5,8 @@ from pathlib import Path
 
 import numpy as np
 
+from mouse_tracking.pose.inspect import find_first_pose_file
 from mouse_tracking.utils import writers
-from mouse_tracking.utils.pose import find_first_pose_file
 from mouse_tracking.utils.timers import print_time
 
 

@@ -68,7 +68,9 @@ def test_all_expected_utils_commands_present():
     expected_commands = {
         "aggregate_fecal_boli",
         "downgrade_multi_to_single",
+        "filter_large_area_pose",
         "flip_xy_field",
+        "render_fecal_boli_video",
         "render_pose",
         "stitch_tracklets",
     }
