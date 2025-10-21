@@ -113,7 +113,8 @@ def infer_arena_corner_model(args):
                 model_definition["model-checkpoint"],
             )
         px_per_cm = get_px_per_cm(filtered_corners)
-        write_pixel_per_cm_attr(args.out_file, px_per_cm, "corner_detection")
+        if args.out_file is not None:
+            write_pixel_per_cm_attr(args.out_file, px_per_cm, "corner_detection")
         if args.out_image is not None:
             render = plot_keypoints(filtered_corners, frame)
             imageio.imwrite(args.out_image, render)
