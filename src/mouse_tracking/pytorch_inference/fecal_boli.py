@@ -163,7 +163,7 @@ def infer_fecal_boli_pytorch(args):
     )
     final_fecal_boli_detections = fecal_boli_results.get_results()
     final_fecal_boli_counts = fecal_boli_counts.get_results()
-    if args.aout_file is not None:
+    if args.out_file is not None:
         write_fecal_boli_data(
             args.out_file,
             final_fecal_boli_detections,
