@@ -5,6 +5,7 @@ This module provides functionality to read, process, and aggregate behavior data
 from JABS postprocessing summary tables, calculating metrics like time spent in
 behaviors and distances traveled.
 """
+
 import argparse
 
 import pandas as pd
@@ -129,10 +130,11 @@ def aggregate_data_by_bin_size(
     time_behavior_col = f"{behavior}_time_behavior"
     time_not_behavior_col = f"{behavior}_time_not_behavior"
     behavior_dist_col = f"{behavior}_behavior_dist"
+    behavior_bout_col = f"{behavior}_bout_behavior"
 
     # Calculate time spent in behavior
     # TODO: Do we need to make `5` a configurable parameter?
-    aggregated[f"bin_avg_{bin_size*5}.{behavior}_time_secs"] = (
+    aggregated[f"bin_sum_{bin_size * 5}.{behavior}_time_secs"] = (
         aggregated[time_behavior_col]
         / (aggregated[time_behavior_col] + aggregated[time_not_behavior_col])
         * bin_size
@@ -141,9 +143,17 @@ def aggregate_data_by_bin_size(
 
     # Calculate average distance (in cm)
     # TODO: Do we need to make `5` a configurable parameter?
-    aggregated[f"bin_avg_{bin_size*5}.{behavior}_distance_cm"] = aggregated[
+    aggregated[f"bin_avg_{bin_size * 5}.{behavior}_distance_cm"] = aggregated[
         behavior_dist_col
     ] / (bin_size * 5)
+    aggregated[f"bin_sum_{bin_size * 5}.{behavior}_distance_cm"] = aggregated[
+        behavior_dist_col
+    ]
+
+    # Sum up bout count
+    aggregated[f"bin_sum_{bin_size * 5}.{behavior}_bout_behavior"] = aggregated[
+        behavior_bout_col
+    ]
 
     # Reset index to make MouseID a regular column
     return aggregated.reset_index()
