@@ -163,12 +163,13 @@ def infer_fecal_boli_pytorch(args):
     )
     final_fecal_boli_detections = fecal_boli_results.get_results()
     final_fecal_boli_counts = fecal_boli_counts.get_results()
-    write_fecal_boli_data(
-        args.out_file,
-        final_fecal_boli_detections,
-        final_fecal_boli_counts,
-        args.frame_interval,
-        model_definition["model-name"],
-        model_definition["model-checkpoint"],
-    )
+    if args.out_file is not None:
+        write_fecal_boli_data(
+            args.out_file,
+            final_fecal_boli_detections,
+            final_fecal_boli_counts,
+            args.frame_interval,
+            model_definition["model-name"],
+            model_definition["model-checkpoint"],
+        )
     performance_accumulator.print_performance()
