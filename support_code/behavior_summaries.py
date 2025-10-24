@@ -5,8 +5,10 @@ This module provides functionality to read, process, and aggregate behavior data
 from JABS postprocessing summary tables, calculating metrics like time spent in
 behaviors and distances traveled.
 """
+
 import argparse
 
+import numpy as np
 import pandas as pd
 
 
@@ -100,6 +102,14 @@ def get_columns_to_exclude(behavior: str) -> list:
         "bout_behavior",
         "not_behavior_dist",
         "behavior_dist",
+        "behavior_dist_threshold",
+        "behavior_dist_seg",
+        "avg_bout_duration",
+        "_stats_sample_count",
+        "bout_duration_std",
+        "bout_duration_var",
+        "latency_to_first_prediction",
+        "latency_to_last_prediction",
     ]
     return [f"{behavior}_{suffix}" for suffix in suffixes]
 
@@ -129,10 +139,11 @@ def aggregate_data_by_bin_size(
     time_behavior_col = f"{behavior}_time_behavior"
     time_not_behavior_col = f"{behavior}_time_not_behavior"
     behavior_dist_col = f"{behavior}_behavior_dist"
+    behavior_bout_col = f"{behavior}_bout_behavior"
 
     # Calculate time spent in behavior
     # TODO: Do we need to make `5` a configurable parameter?
-    aggregated[f"bin_avg_{bin_size*5}.{behavior}_time_secs"] = (
+    aggregated[f"bin_sum_{bin_size * 5}.{behavior}_time_secs"] = (
         aggregated[time_behavior_col]
         / (aggregated[time_behavior_col] + aggregated[time_not_behavior_col])
         * bin_size
@@ -141,9 +152,40 @@ def aggregate_data_by_bin_size(
 
     # Calculate average distance (in cm)
     # TODO: Do we need to make `5` a configurable parameter?
-    aggregated[f"bin_avg_{bin_size*5}.{behavior}_distance_cm"] = aggregated[
+    aggregated[f"bin_avg_{bin_size * 5}.{behavior}_distance_cm"] = aggregated[
         behavior_dist_col
     ] / (bin_size * 5)
+    aggregated[f"bin_sum_{bin_size * 5}.{behavior}_distance_cm"] = aggregated[
+        behavior_dist_col
+    ]
+    aggregated[f"bin_sum_{bin_size * 5}.{behavior}_distance_cm_threshold"] = aggregated[
+        f"{behavior}_behavior_dist_threshold"
+    ]
+    aggregated[f"bin_sum_{bin_size * 5}.{behavior}_distance_cm_seg"] = aggregated[
+        f"{behavior}_behavior_dist_seg"
+    ]
+
+    # Sum up bout count
+    aggregated[f"bin_sum_{bin_size * 5}.{behavior}_bout_behavior"] = aggregated[
+        behavior_bout_col
+    ]
+
+    # Additional stats
+    if np.sum(aggregated[f"{behavior}__stats_sample_count"]) == 0:
+        aggregated[f"bin_avg_{bin_size * 5}.{behavior}_avg_bout_length"] = np.nan
+    else:
+        aggregated[f"bin_avg_{bin_size * 5}.{behavior}_avg_bout_length"] = np.average(
+            aggregated[f"{behavior}_avg_bout_duration"],
+            weights=aggregated[f"{behavior}__stats_sample_count"],
+        )
+    # TODO: var and std need to be aggregated across bins.
+    # This is non-trivial because of the partial bouts and their associated weights.
+    aggregated[f"bin_first_{bin_size * 5}.{behavior}_latency_first_prediction"] = (
+        aggregated[f"{behavior}_latency_to_first_prediction"].head(1)
+    )
+    aggregated[f"bin_last_{bin_size * 5}.{behavior}_latency_last_prediction"] = (
+        aggregated[f"{behavior}_latency_to_last_prediction"].tail(1)
+    )
 
     # Reset index to make MouseID a regular column
     return aggregated.reset_index()
