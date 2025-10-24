@@ -135,6 +135,10 @@ def compute_vectorized_pose_distances(
     Returns:
             Distance matrix of shape (n1, n2) with mean pose distances
     """
+    # Handle edge case where either set has no detections
+    if features1.n_detections == 0 or features2.n_detections == 0:
+        return np.full((features1.n_detections, features2.n_detections), np.nan)
+
     poses1 = features1.poses  # Shape: (n1, 12, 2)
     poses2 = features2.poses  # Shape: (n2, 12, 2)
     valid1 = features1.valid_pose_masks  # Shape: (n1, 12)

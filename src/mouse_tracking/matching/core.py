@@ -786,6 +786,10 @@ class VideoObservations:
         longterm_ids = np.asarray(list(set(self._stitch_translation.values())))
         longterm_ids = longterm_ids[longterm_ids != 0]
 
+        # Handle edge case where all longterm IDs are 0 (filtered out)
+        if len(longterm_ids) == 0:
+            return np.zeros([0, embedding_shape[0]])
+
         # To calculate an average for merged tracklets, we weight by number of frames
         longterm_data = {}
         for cur_tracklet in self._tracklets:
@@ -841,8 +845,12 @@ class VideoObservations:
         for tracklet_id, observation_list in tracklet_dict.items():
             tracklet_list.append(Tracklet(tracklet_id, observation_list))
 
-        if include_unassigned:
-            cur_tracklet_id = np.max(np.asarray(list(tracklet_dict.keys())))
+        if include_unassigned and len(unmatched_observations) > 0:
+            # Handle edge case where tracklet_dict is empty
+            if len(tracklet_dict) > 0:
+                cur_tracklet_id = np.max(np.asarray(list(tracklet_dict.keys())))
+            else:
+                cur_tracklet_id = 0
             for cur_observation in unmatched_observations:
                 tracklet_list.append(Tracklet(int(cur_tracklet_id), [cur_observation]))
                 cur_tracklet_id += 1

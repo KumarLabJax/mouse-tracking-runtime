@@ -102,12 +102,14 @@ class TestGenerateGreedyTracklets:
         observations = [[] for _ in range(3)]  # All empty frames
         video_obs = VideoObservations(observations)
 
-        # TODO: This reveals a bug - _make_tracklets fails with empty tracklet_dict
-        # The _make_tracklets method tries to call np.max on empty array
-        with pytest.raises(
-            ValueError, match="zero-size array to reduction operation maximum"
-        ):
-            video_obs.generate_greedy_tracklets()
+        # Should handle empty frames gracefully
+        video_obs.generate_greedy_tracklets()
+
+        # Should have empty observation_id_dict and empty tracklets
+        assert video_obs._observation_id_dict is not None
+        assert video_obs._tracklet_gen_method == "greedy"
+        assert video_obs._tracklets is not None
+        assert len(video_obs._tracklets) == 0  # No tracklets for no observations
 
     def test_generate_greedy_tracklets_single_observation_per_frame(
         self, basic_detection
