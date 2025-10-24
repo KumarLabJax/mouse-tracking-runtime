@@ -601,9 +601,14 @@ class VideoObservations:
 
         # Metadata
         self._num_frames = len(observations)
-        self._median_observation = int(np.median([len(x) for x in observations]))
-        # Add 0.5 to do proper rounding with int cast
-        self._avg_observation = int(np.mean([len(x) for x in observations]) + 0.5)
+        # Handle empty observation list edge case
+        if len(observations) == 0:
+            self._median_observation = 0
+            self._avg_observation = 0
+        else:
+            self._median_observation = int(np.median([len(x) for x in observations]))
+            # Add 0.5 to do proper rounding with int cast
+            self._avg_observation = int(np.mean([len(x) for x in observations]) + 0.5)
         self._tracklet_gen_method = None
         self._tracklet_stitch_method = None
 

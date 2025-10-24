@@ -546,11 +546,15 @@ class TestGenerateGreedyTracklets:
 
     def test_generate_greedy_tracklets_empty_observation_list(self):
         """Test with empty observation list."""
-        # TODO: This reveals a bug - VideoObservations constructor can't handle empty lists
-        # The constructor tries to calculate median of empty list
-        with pytest.raises(ValueError, match="cannot convert float NaN to integer"):
-            observations = []
-            VideoObservations(observations)
+        # Should handle empty observation list gracefully
+        observations = []
+        video_obs = VideoObservations(observations)
+
+        # Verify attributes are set correctly
+        assert video_obs._num_frames == 0
+        assert video_obs._median_observation == 0
+        assert video_obs._avg_observation == 0
+        assert video_obs._observations == []
 
     def test_generate_greedy_tracklets_numerical_stability(self, basic_detection):
         """Test with edge cases that might cause numerical issues."""
