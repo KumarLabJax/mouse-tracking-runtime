@@ -102,12 +102,14 @@ class TestGenerateGreedyTracklets:
         observations = [[] for _ in range(3)]  # All empty frames
         video_obs = VideoObservations(observations)
 
-        # TODO: This reveals a bug - _make_tracklets fails with empty tracklet_dict
-        # The _make_tracklets method tries to call np.max on empty array
-        with pytest.raises(
-            ValueError, match="zero-size array to reduction operation maximum"
-        ):
-            video_obs.generate_greedy_tracklets()
+        # Should handle empty frames gracefully
+        video_obs.generate_greedy_tracklets()
+
+        # Should have empty observation_id_dict and empty tracklets
+        assert video_obs._observation_id_dict is not None
+        assert video_obs._tracklet_gen_method == "greedy"
+        assert video_obs._tracklets is not None
+        assert len(video_obs._tracklets) == 0  # No tracklets for no observations
 
     def test_generate_greedy_tracklets_single_observation_per_frame(
         self, basic_detection
@@ -362,6 +364,15 @@ class TestGenerateGreedyTracklets:
 
         video_obs = VideoObservations(observations)
 
+        # Mock the pool object
+        mock_pool = MagicMock()
+
+        def mock_start_pool_impl(num_threads):
+            video_obs._pool = mock_pool
+
+        def mock_kill_pool_impl():
+            video_obs._pool = None
+
         with (
             patch.object(video_obs, "_start_pool") as mock_start_pool,
             patch.object(video_obs, "_kill_pool") as mock_kill_pool,
@@ -369,17 +380,17 @@ class TestGenerateGreedyTracklets:
                 video_obs, "_calculate_costs", side_effect=RuntimeError("Test error")
             ),
         ):
+            # Set up side effects so the mocks actually update _pool
+            mock_start_pool.side_effect = mock_start_pool_impl
+            mock_kill_pool.side_effect = mock_kill_pool_impl
+
             with pytest.raises(RuntimeError):
                 video_obs.generate_greedy_tracklets(num_threads=2)
 
             # Pool should be started
             mock_start_pool.assert_called_once()
-            # TODO: This reveals a bug - pool is not cleaned up on exception
-            # The generate_greedy_tracklets method doesn't use try/finally for cleanup
-            # Currently the pool is NOT cleaned up on exception
-            assert (
-                mock_kill_pool.call_count == 0
-            )  # Documents the current buggy behavior
+            # Pool should be cleaned up even though an exception occurred
+            mock_kill_pool.assert_called_once()
 
     def test_generate_greedy_tracklets_variable_observations_per_frame(
         self, basic_detection
@@ -443,10 +454,12 @@ class TestGenerateGreedyTracklets:
 
         video_obs = VideoObservations(observations)
 
-        # TODO: This reveals a bug - rotate_pose doesn't handle None poses correctly
-        # The rotate_pose method assumes points is not None
-        with pytest.raises(TypeError, match="unsupported operand type"):
-            video_obs.generate_greedy_tracklets()
+        # Should handle None poses gracefully (using default costs)
+        video_obs.generate_greedy_tracklets(rotate_pose=True)
+
+        # Should complete without crashing
+        assert video_obs._tracklets is not None
+        assert video_obs._tracklet_gen_method == "greedy"
 
     def test_generate_greedy_tracklets_large_cost_matrix(self, basic_detection):
         """Test with larger cost matrices to ensure scalability."""
@@ -533,11 +546,15 @@ class TestGenerateGreedyTracklets:
 
     def test_generate_greedy_tracklets_empty_observation_list(self):
         """Test with empty observation list."""
-        # TODO: This reveals a bug - VideoObservations constructor can't handle empty lists
-        # The constructor tries to calculate median of empty list
-        with pytest.raises(ValueError, match="cannot convert float NaN to integer"):
-            observations = []
-            VideoObservations(observations)
+        # Should handle empty observation list gracefully
+        observations = []
+        video_obs = VideoObservations(observations)
+
+        # Verify attributes are set correctly
+        assert video_obs._num_frames == 0
+        assert video_obs._median_observation == 0
+        assert video_obs._avg_observation == 0
+        assert video_obs._observations == []
 
     def test_generate_greedy_tracklets_numerical_stability(self, basic_detection):
         """Test with edge cases that might cause numerical issues."""

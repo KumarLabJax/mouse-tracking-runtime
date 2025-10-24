@@ -601,9 +601,14 @@ class VideoObservations:
 
         # Metadata
         self._num_frames = len(observations)
-        self._median_observation = int(np.median([len(x) for x in observations]))
-        # Add 0.5 to do proper rounding with int cast
-        self._avg_observation = int(np.mean([len(x) for x in observations]) + 0.5)
+        # Handle empty observation list edge case
+        if len(observations) == 0:
+            self._median_observation = 0
+            self._avg_observation = 0
+        else:
+            self._median_observation = int(np.median([len(x) for x in observations]))
+            # Add 0.5 to do proper rounding with int cast
+            self._avg_observation = int(np.mean([len(x) for x in observations]) + 0.5)
         self._tracklet_gen_method = None
         self._tracklet_stitch_method = None
 
@@ -786,6 +791,10 @@ class VideoObservations:
         longterm_ids = np.asarray(list(set(self._stitch_translation.values())))
         longterm_ids = longterm_ids[longterm_ids != 0]
 
+        # Handle edge case where all longterm IDs are 0 (filtered out)
+        if len(longterm_ids) == 0:
+            return np.zeros([0, embedding_shape[0]])
+
         # To calculate an average for merged tracklets, we weight by number of frames
         longterm_data = {}
         for cur_tracklet in self._tracklets:
@@ -841,8 +850,12 @@ class VideoObservations:
         for tracklet_id, observation_list in tracklet_dict.items():
             tracklet_list.append(Tracklet(tracklet_id, observation_list))
 
-        if include_unassigned:
-            cur_tracklet_id = np.max(np.asarray(list(tracklet_dict.keys())))
+        if include_unassigned and len(unmatched_observations) > 0:
+            # Handle edge case where tracklet_dict is empty
+            if len(tracklet_dict) > 0:
+                cur_tracklet_id = np.max(np.asarray(list(tracklet_dict.keys())))
+            else:
+                cur_tracklet_id = 0
             for cur_observation in unmatched_observations:
                 tracklet_list.append(Tracklet(int(cur_tracklet_id), [cur_observation]))
                 cur_tracklet_id += 1
@@ -1079,35 +1092,42 @@ class VideoObservations:
         if num_threads > 1:
             self._start_pool(num_threads)
 
-        # Main loop to cycle over greedy matching.
-        # Each match problem is posed as a bipartite graph between sequential frames
-        for frame in np.arange(len(self._observations) - 1) + 1:
-            # Cache the segmentation and rotation data
-            for obs in self._observations[frame - 1]:
-                obs.cache()
-            for obs in self._observations[frame]:
-                obs.cache()
-            # Calculate cost and greedily match
-            match_costs = self._calculate_costs(frame - 1, frame, rotate_pose)
-            match_costs = np.ma.array(match_costs, fill_value=max_cost, mask=False)
-            matches = {}
-            while np.any(~match_costs.mask) and np.any(match_costs.filled() < max_cost):
-                next_best = np.unravel_index(np.argmin(match_costs), match_costs.shape)
-                matches[next_best[1]] = prev_matches[next_best[0]]
-                match_costs.mask[next_best[0], :] = True
-                match_costs.mask[:, next_best[1]] = True
-            # Fill any unmatched observations
-            for j in range(len(self._observations[frame])):
-                if j not in matches:
-                    matches[j] = cur_tracklet_id
-                    cur_tracklet_id += 1
-            frame_dict[frame] = matches
-            # Cleanup for next loop iteration
-            for cur_obs in self._observations[frame - 1]:
-                cur_obs.clear_cache()
-            prev_matches = matches
-        if self._pool is not None:
-            self._kill_pool()
+        try:
+            # Main loop to cycle over greedy matching.
+            # Each match problem is posed as a bipartite graph between sequential frames
+            for frame in np.arange(len(self._observations) - 1) + 1:
+                # Cache the segmentation and rotation data
+                for obs in self._observations[frame - 1]:
+                    obs.cache()
+                for obs in self._observations[frame]:
+                    obs.cache()
+                # Calculate cost and greedily match
+                match_costs = self._calculate_costs(frame - 1, frame, rotate_pose)
+                match_costs = np.ma.array(match_costs, fill_value=max_cost, mask=False)
+                matches = {}
+                while np.any(~match_costs.mask) and np.any(
+                    match_costs.filled() < max_cost
+                ):
+                    next_best = np.unravel_index(
+                        np.argmin(match_costs), match_costs.shape
+                    )
+                    matches[next_best[1]] = prev_matches[next_best[0]]
+                    match_costs.mask[next_best[0], :] = True
+                    match_costs.mask[:, next_best[1]] = True
+                # Fill any unmatched observations
+                for j in range(len(self._observations[frame])):
+                    if j not in matches:
+                        matches[j] = cur_tracklet_id
+                        cur_tracklet_id += 1
+                frame_dict[frame] = matches
+                # Cleanup for next loop iteration
+                for cur_obs in self._observations[frame - 1]:
+                    cur_obs.clear_cache()
+                prev_matches = matches
+        finally:
+            # Ensure pool is always cleaned up, even if an exception occurs
+            if self._pool is not None:
+                self._kill_pool()
         # Final modification of internal state
         self._observation_id_dict = frame_dict
         self._tracklet_gen_method = "greedy"
