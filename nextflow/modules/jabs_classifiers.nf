@@ -183,7 +183,7 @@ process BEHAVIOR_TABLE_TO_FEATURES {
 
     script:
     """
-    python3 /media/bgeuther/LL3_Internal/mouse-tracking-runtime/support_code/behavior_summaries.py -f ${in_summary_table} -b ${bin_size} -o "${in_summary_table.baseName}_features_${bin_size}.csv"
+    python3 ${params.support_code_dir}/behavior_summaries.py -f ${in_summary_table} -b ${bin_size} -o "${in_summary_table.baseName}_features_${bin_size}.csv"
     """
 }
 
