@@ -364,6 +364,15 @@ class TestGenerateGreedyTracklets:
 
         video_obs = VideoObservations(observations)
 
+        # Mock the pool object
+        mock_pool = MagicMock()
+
+        def mock_start_pool_impl(num_threads):
+            video_obs._pool = mock_pool
+
+        def mock_kill_pool_impl():
+            video_obs._pool = None
+
         with (
             patch.object(video_obs, "_start_pool") as mock_start_pool,
             patch.object(video_obs, "_kill_pool") as mock_kill_pool,
@@ -371,17 +380,17 @@ class TestGenerateGreedyTracklets:
                 video_obs, "_calculate_costs", side_effect=RuntimeError("Test error")
             ),
         ):
+            # Set up side effects so the mocks actually update _pool
+            mock_start_pool.side_effect = mock_start_pool_impl
+            mock_kill_pool.side_effect = mock_kill_pool_impl
+
             with pytest.raises(RuntimeError):
                 video_obs.generate_greedy_tracklets(num_threads=2)
 
             # Pool should be started
             mock_start_pool.assert_called_once()
-            # TODO: This reveals a bug - pool is not cleaned up on exception
-            # The generate_greedy_tracklets method doesn't use try/finally for cleanup
-            # Currently the pool is NOT cleaned up on exception
-            assert (
-                mock_kill_pool.call_count == 0
-            )  # Documents the current buggy behavior
+            # Pool should be cleaned up even though an exception occurred
+            mock_kill_pool.assert_called_once()
 
     def test_generate_greedy_tracklets_variable_observations_per_frame(
         self, basic_detection
