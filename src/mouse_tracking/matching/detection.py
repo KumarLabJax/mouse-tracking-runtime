@@ -98,8 +98,12 @@ class Detection:
                 center: optional center of rotation. If not provided, the mean of non-tail keypoints are used as the center.
 
         Returns:
-                rotated keypoints
+                rotated keypoints, or None if points is None
         """
+        # Handle None input gracefully
+        if points is None:
+            return None
+
         points_valid = ~np.all(points == 0, axis=-1)
         # No points to rotate, just return original points.
         if np.all(~points_valid):
@@ -137,6 +141,9 @@ class Detection:
         Returns:
                 cosine distance between the embeddings
         """
+        # Check for None embeddings
+        if embed_1 is None or embed_2 is None:
+            return np.nan
         # Check for default embeddings
         if np.all(embed_1 == 0) or np.all(embed_2 == 0):
             return np.nan

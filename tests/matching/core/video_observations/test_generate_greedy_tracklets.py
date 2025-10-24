@@ -445,10 +445,12 @@ class TestGenerateGreedyTracklets:
 
         video_obs = VideoObservations(observations)
 
-        # TODO: This reveals a bug - rotate_pose doesn't handle None poses correctly
-        # The rotate_pose method assumes points is not None
-        with pytest.raises(TypeError, match="unsupported operand type"):
-            video_obs.generate_greedy_tracklets()
+        # Should handle None poses gracefully (using default costs)
+        video_obs.generate_greedy_tracklets(rotate_pose=True)
+
+        # Should complete without crashing
+        assert video_obs._tracklets is not None
+        assert video_obs._tracklet_gen_method == "greedy"
 
     def test_generate_greedy_tracklets_large_cost_matrix(self, basic_detection):
         """Test with larger cost matrices to ensure scalability."""
