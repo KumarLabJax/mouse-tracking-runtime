@@ -1,5 +1,5 @@
 Bootstrap: docker
-From: aberger4/mouse-tracking:python3.10-slim
+From: aberger4/mouse-tracking:latest
 
 %setup
     mkdir -p ${SINGULARITY_ROOTFS}/workspace/models/
