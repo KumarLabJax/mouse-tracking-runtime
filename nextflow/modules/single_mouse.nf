@@ -103,6 +103,9 @@ process QC_SINGLE_MOUSE {
  */
 process FILTER_LARGE_POSES {
     label "tracking"
+    // Segmentation is the largest table that needs to be read in, so the RAM will match
+    // TODO: time will be an overestimate
+    label "r_single_seg"
     
     input:
     tuple path(in_video), path(in_pose_file)
