@@ -21,12 +21,6 @@ jobs:
     needs: format-lint
     uses: ./.github/workflows/_run-tests-action.yml
 
-  build:
-    name: "Build Docker Image"
-    needs: [format-lint, test]
-    secrets: inherit
-    uses: ./.github/workflows/_build-docker-action.yml
-
   check-version-changed:
     name: "Check if version changed"
     runs-on: ubuntu-latest
@@ -69,6 +63,15 @@ jobs:
             echo "changed=false" >> $GITHUB_OUTPUT
             echo "pyproject.toml was not changed"
           fi
+
+  build:
+    name: "Build Docker Image"
+    needs: [format-lint, test, check-version-changed]
+    secrets: inherit
+    uses: ./.github/workflows/_build-docker-action.yml
+    if: needs.check-version-changed.outputs.version-changed == 'true'
+    with:
+      version: ${{ needs.check-version-changed.outputs.version }}
 
   build-package:
     name: "Build Python Package"
