@@ -11,6 +11,7 @@ process GET_DATA_FROM_DROPBOX {
     cpus 1
     time 20.m
     memory 12.GB
+    array 200
     queue 'xfer'
     clusterOptions '-q xfer'
     
@@ -42,7 +43,7 @@ process COMPRESS_VIDEO_CRF {
     cpus 2
     memory 2.GB
     time 2.hours
-    //array 200
+    array 200
     errorStrategy 'ignore'
 
     input:
@@ -70,6 +71,7 @@ process PUT_DATA_TO_CLOUDIAN {
     cpus 1
     time 10.m
     memory 1.GB
+    array 200
     queue 'xfer'
     clusterOptions '-q xfer'
     
@@ -80,7 +82,7 @@ process PUT_DATA_TO_CLOUDIAN {
 
     script:
     """
-    rclone copy --config=${rclone_config} --transfers=1 --copy-links --include ${result_file} . ${rclone_prefix}/${publish_filename}
+    rclone copy --config=${rclone_config} --transfers=1 --copy-links --include ${result_file} . ${rclone_prefix}${publish_filename}
     """
 }
 
@@ -99,7 +101,7 @@ workflow {
     compressed_videos = COMPRESS_VIDEO_CRF(local_video_channel).files
 
     sync_names = compressed_videos.map { original_file, video ->
-        tuple(video, "${file(original_file).getParent().toString().replaceAll(".*retrieved_files/", "/") + '/'}")
+        tuple(video, "${file(original_file).getParent().toString().replaceAll(".*retrieved_files/", "/")}")
     }
     PUT_DATA_TO_CLOUDIAN(sync_names, params.cloudian_prefix, params.cloudian_config)
 
