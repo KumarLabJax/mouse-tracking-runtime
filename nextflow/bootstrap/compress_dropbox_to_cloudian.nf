@@ -3,6 +3,7 @@
  *
  * @param files_to_transfer A file containing a list of files to transfer
  * @param rclone_prefix The rclone remote prefix where files are stored
+ * @param rclone_config The rclone config file that provides remote dropbox authentication
  *
  * @return remote_files A file containing a list of the retrieved files with full paths.
  */
@@ -10,10 +11,11 @@ process GET_DATA_FROM_DROPBOX {
     container "/projects/kumar-lab/meta/images/mouse-tracking-runtime/rclone/latest.sif"
     cpus 1
     time 20.m
-    memory 12.GB
+    memory 1.GB
     array 200
     queue 'xfer'
     clusterOptions '-q xfer'
+    maxForks 2
     
     input:
     path files_to_transfer
@@ -34,14 +36,17 @@ process GET_DATA_FROM_DROPBOX {
  * Video compression
  *
  * @param tuple
+ *  - filename The original input filename that be being compressed (to pass forward)
  *  - video_file The input video file to compress
  *
- * @return file Path to compressed video
+ * @return tuple files
+ *  - filename Val Copy of original input filename compressed
+ *  - file Path to compressed video
  */
 process COMPRESS_VIDEO_CRF {
     container "/projects/kumar-lab/meta/images/mouse-tracking-runtime/runtime/latest.sif"
     cpus 2
-    memory 2.GB
+    memory 1.GB
     time 2.hours
     array 200
     errorStrategy 'ignore'
@@ -65,6 +70,7 @@ process COMPRESS_VIDEO_CRF {
  *  - result_file The path to the result file
  *  - publish_filename The desired publish filename
  * @param rclone_prefix The rclone remote prefix where files are to be uploaded
+ * @param rclone_config The rclone config file that provides remote cloudian authentication
  */
 process PUT_DATA_TO_CLOUDIAN {
     container "/projects/kumar-lab/meta/images/mouse-tracking-runtime/rclone/latest.sif"
@@ -74,6 +80,7 @@ process PUT_DATA_TO_CLOUDIAN {
     array 200
     queue 'xfer'
     clusterOptions '-q xfer'
+    maxForks 2
     
     input:
     tuple path(result_file), val(publish_filename)
@@ -89,7 +96,11 @@ process PUT_DATA_TO_CLOUDIAN {
 /**
  * Main workflow to retrieve data, compress it, and send it to a different remote server.
  *
- * 
+ * params.input_batch is a list of files where each line contains a remote video to compress.
+ * The pipeline splits this file by line and submits individual dependent jobs that run the following 3 steps:
+ * 1. Retrieve the remote video data from dropbox to local compute
+ * 2. Compress the video data
+ * 3. Push the compressed video to cloudian remote storage
  */
 workflow {
     input_files = channel.fromPath(params.input_batch)
