@@ -14,7 +14,7 @@ cd /projects/kumar-lab/bgeuther/dropbox-compression
 nextflow run KumarLabJax/mouse-tracking-runtime \
     -r compression-standalone \
     -main-script bootstrap/compress_dropbox_to_cloudian.nf \
-    -profile _compression \
+    -profile compression \
     --input_batch TEST_HPC.txt \
     -with-trace \
     -with-report \
