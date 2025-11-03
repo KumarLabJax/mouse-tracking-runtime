@@ -1,3 +1,5 @@
+nextflow.enable.dsl=2
+
 /**
  * Retrieves files from Dropbox using rclone.
  *
