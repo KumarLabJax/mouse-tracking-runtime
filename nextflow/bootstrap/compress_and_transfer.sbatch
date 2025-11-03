@@ -11,4 +11,10 @@
 module load nextflow
 
 cd /projects/kumar-lab/bgeuther/dropbox-compression
-nextflow run compress_dropbox_to_cloudian.nf -c dropbox_to_cloudian.config --input_batch TEST_HPC.txt -with-trace -with-report
+nextflow run KumarLabJax/mouse-tracking-runtime \
+    -r compression-standalone \
+    -main-script bootstrap/compress_dropbox_to_cloudian.nf \
+    -p _compression \
+    --input_batch TEST_HPC.txt \
+    -with-trace \
+    -with-report
