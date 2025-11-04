@@ -49,15 +49,15 @@ if [[ $STATE == 1 ]]; then
     echo "Error: Nextflow run on batch ${CURRENT_BATCH} failed." >&2
     exit 1
 else
-    echo "Nextflow run on batch ${CURRENT_BATCH} succeeded.
+    echo "Nextflow run on batch ${CURRENT_BATCH} succeeded."
 fi
 
 # Submit next batch if there is one.
 NEXT_BATCH=$((CURRENT_BATCH + 1))
-if [[ $NEXT_BATCH <= $BATCH_END ]]; then
+if [[ $NEXT_BATCH -lt $BATCH_END ]]; then
     # Self-submit the next batch
     SUBMITTED_JOBID=$(sbatch --parsable --export=CURRENT_BATCH="${NEXT_BATCH}" "${0}")
-    echo "Submitted next processing job (batch_${NEXT_BATCH}). Job ID: ${SUBMITTED_JOBID}.
+    echo "Submitted next processing job (batch_${NEXT_BATCH}). Job ID: ${SUBMITTED_JOBID}."
 else
-    echo "Batches complete! Exiting self-submitting loop.
+    echo "Batches complete! Exiting self-submitting loop."
 fi
