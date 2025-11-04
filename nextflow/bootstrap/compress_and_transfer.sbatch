@@ -24,7 +24,8 @@ BATCH_END=73
 cd /projects/kumar-lab/bgeuther/dropbox-compression/dropbox_file_lists/batches_25TB/
 
 # Sanity checks on environment variable pointing to a valid batch to process.
-if ! [[ $CURRENT_BATCH =~ '^[0-9]+$' ]]; then
+re='^[0-9]+$'
+if ! [[ $CURRENT_BATCH =~ $re ]]; then
    echo "Error: CURRENT_BATCH is unset or not a number. Current value: \"${CURRENT_BATCH}\"" >&2
    echo "Example submission: \"sbatch ${0} --export=CURRENT_BATCH=1\"" >&2
    exit 1
@@ -36,7 +37,7 @@ fi
 # Run the actual processing
 nextflow run KumarLabJax/mouse-tracking-runtime \
     -r compression-standalone \
-    -main-script bootstrap/compress_dropbox_to_cloudian.nf \
+    -main-script nextflow/bootstrap/compress_dropbox_to_cloudian.nf \
     -profile compression \
     --input_batch batch_${CURRENT_BATCH}.txt \
     -with-trace \
