@@ -14,7 +14,6 @@ process GET_DATA_FROM_DROPBOX {
     cpus 1
     time 20.m
     memory 1.GB
-    array 200
     queue 'xfer'
     clusterOptions '-q xfer'
     maxForks 2
