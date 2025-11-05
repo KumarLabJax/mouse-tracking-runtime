@@ -13,7 +13,7 @@ process GET_DATA_FROM_DROPBOX {
     container "/projects/kumar-lab/meta/images/mouse-tracking-runtime/rclone/latest.sif"
     cpus 1
     time 20.m
-    memory 1.GB
+    memory 4.GB
     queue 'xfer'
     clusterOptions '-q xfer'
     maxForks 2
