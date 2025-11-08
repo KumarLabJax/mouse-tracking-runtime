@@ -44,7 +44,7 @@ EOF
 
 # Default values
 PIPELINE="KumarLabJax/mouse-tracking-runtime"
-REVISION="v0.2.0"
+REVISION="stable"
 WORKFLOW="single-mouse"
 PROFILE="sumner2"
 JOB_NAME="KL_Tracking_Nextflow"
@@ -57,6 +57,12 @@ DRY_RUN=false
 INPUT_BATCH=""
 OUTPUT_DIR=""
 ADDITIONAL_ARGS=()
+NEXTFLOW_MODULE_VERSION="stable"
+# Put the nextflow cache into a unique directory associated with the launch directory.
+# e.g. /flashscratch/aberger/$HASH/.nextflow where $HASH is the md5sum of the full
+# path of the directory that nextflow was launched from.
+NEXTFLOW_CACHE_DIR_ROOT="/flashscratch/$(whoami)"
+NEXTFLOW_CACHE_DIR="$NEXTFLOW_CACHE_DIR_ROOT/$(pwd | md5sum | cut -d' ' -f1)/.nextflow"
 
 # Parse command line arguments
 while [[ $# -gt 0 ]]; do
@@ -169,6 +175,54 @@ if [[ -n "$REVISION" ]]; then
     REVISION_FLAG="-r $REVISION"
 fi
 
+# Generate resubmit.sh script
+RESUBMIT_SCRIPT="$OUTPUT_DIR/resubmit.sh"
+generate_resubmit_script() {
+    local script_path=$(readlink -f "$0")
+
+    cat > "$RESUBMIT_SCRIPT" << 'RESUBMIT_EOF'
+#!/bin/bash
+# Auto-generated resubmit script
+# Created: $(date)
+# Original command parameters saved for exact resubmission
+
+RESUBMIT_EOF
+
+    # Add the actual command with all parameters
+    echo -n "\"$script_path\" \\" >> "$RESUBMIT_SCRIPT"
+    echo "" >> "$RESUBMIT_SCRIPT"
+
+    # Add all the parameters
+    echo "    -i \"$INPUT_BATCH\" \\" >> "$RESUBMIT_SCRIPT"
+    echo "    -o \"$OUTPUT_DIR\" \\" >> "$RESUBMIT_SCRIPT"
+    echo "    -n \"$PIPELINE\" \\" >> "$RESUBMIT_SCRIPT"
+    [[ -n "$REVISION" ]] && echo "    -r \"$REVISION\" \\" >> "$RESUBMIT_SCRIPT"
+    echo "    -w \"$WORKFLOW\" \\" >> "$RESUBMIT_SCRIPT"
+    echo "    -p \"$PROFILE\" \\" >> "$RESUBMIT_SCRIPT"
+    echo "    -j \"$JOB_NAME\" \\" >> "$RESUBMIT_SCRIPT"
+    echo "    -t \"$TIME_LIMIT\" \\" >> "$RESUBMIT_SCRIPT"
+    echo "    -m \"$MEMORY\" \\" >> "$RESUBMIT_SCRIPT"
+    echo "    --partition \"$PARTITION\" \\" >> "$RESUBMIT_SCRIPT"
+    echo "    --qos \"$QOS\" \\" >> "$RESUBMIT_SCRIPT"
+    [[ -n "$RESUME" ]] && echo "    --resume \\" >> "$RESUBMIT_SCRIPT"
+
+    # Add additional arguments if any
+    if [[ ${#ADDITIONAL_ARGS[@]} -gt 0 ]]; then
+        echo -n "    -- " >> "$RESUBMIT_SCRIPT"
+        for arg in "${ADDITIONAL_ARGS[@]}"; do
+            echo -n "\"$arg\" " >> "$RESUBMIT_SCRIPT"
+        done
+        echo "\\" >> "$RESUBMIT_SCRIPT"
+    fi
+
+    # Remove the last backslash
+    sed -i '$ s/ \\$//' "$RESUBMIT_SCRIPT"
+    echo "" >> "$RESUBMIT_SCRIPT"
+
+    # Make it executable
+    chmod +x "$RESUBMIT_SCRIPT"
+}
+
 # Generate the sbatch script content
 SBATCH_SCRIPT=$(cat << EOF
 #!/bin/bash
@@ -182,7 +236,9 @@ SBATCH_SCRIPT=$(cat << EOF
 
 # LOAD NEXTFLOW
 module use --append /projects/kumar-lab/meta/modules
-module load nextflow/stable
+module load nextflow/$NEXTFLOW_MODULE_VERSION
+
+export NXF_CACHE_DIR="$NEXTFLOW_CACHE_DIR"
 
 # RUN NEXTFLOW PIPELINE
 nextflow run $PIPELINE $REVISION_FLAG -profile $PROFILE --input_batch $INPUT_BATCH --workflow $WORKFLOW --pubdir $OUTPUT_DIR $RESUME $(printf " %s" "${ADDITIONAL_ARGS[@]}")
@@ -194,6 +250,15 @@ if [[ "$DRY_RUN" == true ]]; then
     echo "$SBATCH_SCRIPT"
     echo "=============================================="
     echo "Command that would be executed: sbatch <<< \"\$SBATCH_SCRIPT\""
+    echo ""
+
+    # Inform user of cache directory
+    echo ""
+    echo "Would use cache directory: $NXF_CACHE_DIR"
+
+    # Generate resubmit script even in dry-run mode
+    generate_resubmit_script
+    echo "Resubmit script would be saved to: $RESUBMIT_SCRIPT"
 else
     # Submit the job
     echo "Submitting Nextflow pipeline with the following parameters:"
@@ -214,4 +279,14 @@ else
 
     # Submit using here-string to avoid temporary files
     sbatch <<< "$SBATCH_SCRIPT"
+
+    # Inform user of cache directory
+    echo ""
+    echo "Using cache directory: $NXF_CACHE_DIR"
+
+    # Generate resubmit script after successful submission
+    generate_resubmit_script
+    echo ""
+    echo "Resubmit script saved to: $RESUBMIT_SCRIPT"
+    echo "To resubmit with identical parameters, run: $RESUBMIT_SCRIPT"
 fi
