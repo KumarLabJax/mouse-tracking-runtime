@@ -61,7 +61,7 @@ NEXTFLOW_MODULE_VERSION="stable"
 # Put the nextflow cache into a unique directory associated with the launch directory.
 # e.g. /flashscratch/aberger/$HASH/.nextflow where $HASH is the md5sum of the full
 # path of the directory that nextflow was launched from.
-NEXTFLOW_CACHE_DIR_ROOT="/flashscratch/$(whoami)"
+NEXTFLOW_CACHE_DIR_ROOT="/flashscratch/$USER"
 NEXTFLOW_CACHE_DIR="$NEXTFLOW_CACHE_DIR_ROOT/$(pwd | md5sum | cut -d' ' -f1)/.nextflow"
 
 # Parse command line arguments
@@ -184,6 +184,7 @@ generate_resubmit_script() {
 #!/bin/bash
 # Auto-generated resubmit script
 # Created: $(date)
+# Cache Directory: $NXF_CACHE_DIR
 # Original command parameters saved for exact resubmission
 
 RESUBMIT_EOF
