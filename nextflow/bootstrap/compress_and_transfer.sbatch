@@ -55,7 +55,7 @@ fi
 
 # Submit next batch if there is one.
 NEXT_BATCH=$((CURRENT_BATCH + 1))
-if [[ $NEXT_BATCH -lt $BATCH_END ]]; then
+if [[ $NEXT_BATCH -le $BATCH_END ]]; then
     # Self-submit the next batch
     SUBMITTED_JOBID=$(sbatch --parsable --export=CURRENT_BATCH="${NEXT_BATCH}" "${0}")
     echo "Submitted next processing job (batch_${NEXT_BATCH}). Job ID: ${SUBMITTED_JOBID}."

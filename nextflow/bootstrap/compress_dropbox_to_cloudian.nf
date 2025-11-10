@@ -17,6 +17,7 @@ process GET_DATA_FROM_DROPBOX {
     queue 'xfer'
     clusterOptions '-q xfer'
     maxForks 2
+    errorStrategy 'ignore'
     
     input:
     path files_to_transfer
@@ -82,6 +83,7 @@ process PUT_DATA_TO_CLOUDIAN {
     queue 'xfer'
     clusterOptions '-q xfer'
     maxForks 2
+    errorStrategy 'ignore'
     
     input:
     tuple path(result_file), val(publish_filename)
