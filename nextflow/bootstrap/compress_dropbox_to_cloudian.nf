@@ -71,6 +71,7 @@ process COMPRESS_VIDEO_CRF {
  * @param tuple
  *  - result_file The path to the result file
  *  - publish_filename The desired publish filename
+ * @param rclone_alias The rclone remote alias of the configured remote server
  * @param rclone_prefix The rclone remote prefix where files are to be uploaded
  * @param rclone_config The rclone config file that provides remote cloudian authentication
  */
@@ -87,12 +88,13 @@ process PUT_DATA_TO_CLOUDIAN {
     
     input:
     tuple path(result_file), val(publish_filename)
+    val rclone_alias
     val rclone_prefix
     path rclone_config
 
     script:
     """
-    rclone copy --config=${rclone_config} --transfers=1 --copy-links --include ${result_file} . ${rclone_prefix}${publish_filename}
+    rclone copy --config=${rclone_config} --transfers=1 --copy-links --include ${result_file} . ${rclone_alias}:"${rclone_prefix}${publish_filename}"
     """
 }
 
@@ -117,6 +119,6 @@ workflow {
     sync_names = compressed_videos.map { original_file, video ->
         tuple(video, "${file(original_file).getParent().toString().replaceAll(".*retrieved_files/", "/")}")
     }
-    PUT_DATA_TO_CLOUDIAN(sync_names, params.cloudian_prefix, params.cloudian_config)
+    PUT_DATA_TO_CLOUDIAN(sync_names, params.cloudian_alias, params.cloudian_prefix, params.cloudian_config)
 
 }
