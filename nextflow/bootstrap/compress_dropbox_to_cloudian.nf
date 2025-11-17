@@ -94,7 +94,7 @@ process PUT_DATA_TO_CLOUDIAN {
 
     script:
     """
-    rclone copy --config=${rclone_config} --transfers=1 --copy-links --include ${result_file} . ${rclone_alias}:"${rclone_prefix}${publish_filename}"
+    rclone copy --config=${rclone_config} --transfers=1 --copy-links --include ${result_file} . ${rclone_alias}:"${rclone_prefix}${publish_filename}" --no-check-certificate
     """
 }
 
