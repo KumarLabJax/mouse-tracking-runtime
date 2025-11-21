@@ -83,7 +83,6 @@ process PUT_DATA_TO_CLOUDIAN {
     array 200
     queue 'xfer'
     clusterOptions '-q xfer'
-    maxForks 2
     errorStrategy 'ignore'
     
     input:
