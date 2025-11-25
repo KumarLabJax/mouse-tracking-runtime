@@ -16,7 +16,7 @@ process GET_DATA_FROM_DROPBOX {
     memory 4.GB
     queue 'xfer'
     clusterOptions '-q xfer'
-    maxForks 4
+    maxForks 8
     errorStrategy 'ignore'
     
     input:
