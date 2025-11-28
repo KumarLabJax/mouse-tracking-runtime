@@ -13,6 +13,25 @@ import pandas as pd
 import plotnine as p9
 from bs4 import BeautifulSoup
 
+def fix_script_escapes(match):
+    prefix = match.string[match.regs[0][0]:match.regs[1][0]]
+    postfix = match.string[match.regs[1][1]:match.regs[0][1]]
+    # Delete escaped newlines, double quotes, and spaces
+    fixed_content = re.sub('(\\\\[n" ])', '', match.groups(1)[0])
+    return f"{prefix}{fixed_content}{postfix}"
+
+class LazyDecoder(json.JSONDecoder):
+    def decode(self, s, **kwargs):
+        regex_replacements = [
+            # Treat the script block special.
+            # Dangerous: will fail if script contains "," within it.
+            (re.compile(r'"script":"(.*?)","'), fix_script_escapes),
+            # Escape all json characters
+            (re.compile(r'\\(?![\\/"bfnrtu])'), r"\\\\"),
+        ]
+        for regex, replacement in regex_replacements:
+            s = regex.sub(replacement, s)
+        return super().decode(s, **kwargs)
 
 def extract_nextflow_df_from_report(report_file):
     """
@@ -41,8 +60,7 @@ def extract_nextflow_df_from_report(report_file):
     table_data = script.getText("window.data")
     # This is a lazy json as raw text being assigned
     raw = table_data[re.search("window.data = ", table_data).span()[0] + 14 : -5]
-    fixed = re.sub(r'\\(?![\\/"bfnrtu])', r"\\\\", raw)
-    data = json.loads(fixed)
+    data = json.loads(raw, cls=LazyDecoder)
     df = pd.DataFrame(data["trace"])
     # Coercing string data into actually useful pandas types
     df["write_bytes"] = pd.to_numeric(df["write_bytes"], errors="coerce")
@@ -101,6 +119,9 @@ df = pd.concat(dfs)
 switch_date = "2025-11-14 8:00:00"
 df["simultaneous_retrieval"] = 2
 df.loc[df["start"] > switch_date, "simultaneous_retrieval"] = 4
+# Switched again
+switch_date = "2025-11-25 8:00:00"
+df.loc[df["start"] > switch_date, "simultaneous_retrieval"] = 8
 
 # Some plots used to better understand some metrics
 
