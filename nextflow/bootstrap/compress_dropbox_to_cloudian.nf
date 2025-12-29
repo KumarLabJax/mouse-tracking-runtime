@@ -79,8 +79,6 @@ process PUT_DATA_TO_CLOUDIAN {
     time 10.m
     memory 1.GB
     array 200
-    queue 'xfer'
-    clusterOptions '-q xfer'
     errorStrategy 'ignore'
     
     input:
