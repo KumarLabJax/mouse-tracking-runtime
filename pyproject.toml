@@ -12,7 +12,7 @@ dependencies = [
   "imageio[ffmpeg]==2.31.6",
   "pillow==9.4.0",
   "matplotlib==3.7.1",
-  "typer>=0.12.4",
+  "typer>=0.12.4,<0.17",
   "absl-py==1.4.0",
   "pydantic==2.7.4",
   "networkx==3.3",
@@ -126,7 +126,7 @@ test = [
     "pytest-cov>=6.1.1",
 ]
 lint = [
-    "ruff>=0.11.2",
+    "ruff>=0.12.0,<0.13",
 ]
 docs = [
     "mike>=2.1.3",
