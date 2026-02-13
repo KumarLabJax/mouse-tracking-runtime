@@ -59,7 +59,7 @@ process COMPRESS_VIDEO_CRF {
 
     script:
     """
-    ffmpeg -i ${video_file} -c:v libx264 -pix_fmt yuv420p -preset veryfast -crf 23 -g 3000 -f mp4 ${video_file.baseName}_compressed.mp4
+    ffmpeg -i '${video_file}' -c:v libx264 -pix_fmt yuv420p -preset veryfast -crf 23 -g 3000 -f mp4 '${video_file.baseName}_compressed.mp4'
     """
 }
 
