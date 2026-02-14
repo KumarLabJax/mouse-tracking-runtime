@@ -52,14 +52,14 @@ process COMPRESS_VIDEO_CRF {
     errorStrategy 'ignore'
 
     input:
-    tuple val(filename), path(video_file)
+    tuple val(filename), path(video_file, stageAs: 'input_video.avi')
 
     output:
-    tuple val(filename), path("${video_file.baseName}_compressed.mp4"), emit: files
+    tuple val(filename), path("compressed_output.mp4"), emit: files
 
     script:
     """
-    ffmpeg -i '${video_file}' -c:v libx264 -pix_fmt yuv420p -preset veryfast -crf 23 -g 3000 -f mp4 '${video_file.baseName}_compressed.mp4'
+    ffmpeg -i input_video.avi -c:v libx264 -pix_fmt yuv420p -preset veryfast -crf 23 -g 3000 -f mp4 compressed_output.mp4
     """
 }
 
