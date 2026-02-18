@@ -14,7 +14,7 @@ process GET_DATA_FROM_DROPBOX {
     cpus 1
     time 20.m
     memory 6.GB
-    maxForks 8
+    maxForks 12
     errorStrategy 'ignore'
     
     input:
@@ -48,7 +48,7 @@ process COMPRESS_VIDEO_CRF {
     cpus 2
     memory 1.GB
     time 2.hours
-    array 200
+    array 100
     errorStrategy 'ignore'
 
     input:
@@ -68,7 +68,7 @@ process COMPRESS_VIDEO_CRF {
  *
  * @param tuple
  *  - result_file The path to the result file
- *  - publish_filename The desired publish filename
+ *  - publish_path The desired publish path (including filename)
  * @param rclone_alias The rclone remote alias of the configured remote server
  * @param rclone_prefix The rclone remote prefix where files are to be uploaded
  * @param rclone_config The rclone config file that provides remote cloudian authentication
@@ -78,18 +78,18 @@ process PUT_DATA_TO_CLOUDIAN {
     cpus 1
     time 10.m
     memory 1.GB
-    array 200
+    array 100
     errorStrategy 'ignore'
     
     input:
-    tuple path(result_file), val(publish_filename)
+    tuple path(result_file), val(publish_path)
     val rclone_alias
     val rclone_prefix
     path rclone_config
 
     script:
     """
-    rclone copy --config=${rclone_config} --transfers=1 --copy-links --include ${result_file} . ${rclone_alias}:"${rclone_prefix}${publish_filename}" --no-check-certificate
+    rclone copyto --config=${rclone_config} --transfers=1 --copy-links "${result_file}" ${rclone_alias}:"${rclone_prefix}${publish_path}" --no-check-certificate
     """
 }
 
@@ -112,7 +112,9 @@ workflow {
     compressed_videos = COMPRESS_VIDEO_CRF(local_video_channel).files
 
     sync_names = compressed_videos.map { original_file, video ->
-        tuple(video, "${file(original_file).getParent().toString().replaceAll(".*retrieved_files/", "/")}")
+        def parent_path = file(original_file).getParent().toString().replaceAll(".*retrieved_files/", "/")
+        def publish_filename = "${file(original_file).baseName}_compressed.mp4"
+        tuple(video, "${parent_path}/${publish_filename}")
     }
     PUT_DATA_TO_CLOUDIAN(sync_names, params.cloudian_alias, params.cloudian_prefix, params.cloudian_config)
 
