@@ -131,6 +131,18 @@ def aggregate_data_by_bin_size(
     grouped = data.groupby("MouseID")
     filtered_data = pd.concat([group.iloc[:bin_size] for _, group in grouped])
 
+    # Extract latency values before summing. agg with a positional lambda
+    # preserves NaN (unlike first()/last() which skip NaN), returns a Series
+    # indexed by MouseID for correct alignment with aggregated.
+    latency_first_col = f"{behavior}_latency_to_first_prediction"
+    latency_last_col = f"{behavior}_latency_to_last_prediction"
+    latency_first = filtered_data.groupby("MouseID")[latency_first_col].agg(
+        lambda s: s.iloc[0]
+    )
+    latency_last = filtered_data.groupby("MouseID")[latency_last_col].agg(
+        lambda s: s.iloc[-1]
+    )
+
     # Aggregate numeric columns by summing them
     numeric_cols = filtered_data.select_dtypes(include=["number"]).columns
     aggregated = filtered_data.groupby("MouseID")[numeric_cols].sum()
@@ -181,10 +193,10 @@ def aggregate_data_by_bin_size(
     # TODO: var and std need to be aggregated across bins.
     # This is non-trivial because of the partial bouts and their associated weights.
     aggregated[f"bin_first_{bin_size * 5}.{behavior}_latency_first_prediction"] = (
-        aggregated[f"{behavior}_latency_to_first_prediction"].head(1)
+        latency_first
     )
     aggregated[f"bin_last_{bin_size * 5}.{behavior}_latency_last_prediction"] = (
-        aggregated[f"{behavior}_latency_to_last_prediction"].tail(1)
+        latency_last
     )
 
     # Reset index to make MouseID a regular column
