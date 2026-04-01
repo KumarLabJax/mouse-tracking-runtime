@@ -143,6 +143,17 @@ def aggregate_data_by_bin_size(
         lambda s: s.iloc[-1]
     )
 
+    # Extract last-bin avg_bout_duration and sample_count before summing.
+    # Same pattern as latency: last bin's value per MouseID, NaN-preserving.
+    avg_bout_dur_col = f"{behavior}_avg_bout_duration"
+    sample_count_col = f"{behavior}__stats_sample_count"
+    last_bin_avg_bout_dur = filtered_data.groupby("MouseID")[avg_bout_dur_col].agg(
+        lambda s: s.iloc[-1]
+    )
+    last_bin_sample_count = filtered_data.groupby("MouseID")[sample_count_col].agg(
+        lambda s: s.iloc[-1]
+    )
+
     # Aggregate numeric columns by summing them
     numeric_cols = filtered_data.select_dtypes(include=["number"]).columns
     aggregated = filtered_data.groupby("MouseID")[numeric_cols].sum()
@@ -182,14 +193,11 @@ def aggregate_data_by_bin_size(
         behavior_bout_col
     ]
 
-    # Additional stats
-    if np.sum(aggregated[f"{behavior}__stats_sample_count"]) == 0:
-        aggregated[f"bin_avg_{bin_size * 5}.{behavior}_avg_bout_length"] = np.nan
-    else:
-        aggregated[f"bin_avg_{bin_size * 5}.{behavior}_avg_bout_length"] = np.average(
-            aggregated[f"{behavior}_avg_bout_duration"],
-            weights=aggregated[f"{behavior}__stats_sample_count"],
-        )
+    # Average bout length: use the last bin's value directly. Where that bin
+    # had no behavior (sample_count == 0), force NaN as a safety guard.
+    aggregated[f"bin_avg_{bin_size * 5}.{behavior}_avg_bout_length"] = (
+        last_bin_avg_bout_dur.where(last_bin_sample_count > 0, other=np.nan)
+    )
     # TODO: var and std need to be aggregated across bins.
     # This is non-trivial because of the partial bouts and their associated weights.
     aggregated[f"bin_first_{bin_size * 5}.{behavior}_latency_first_prediction"] = (

@@ -105,6 +105,72 @@ class TestLatencyLastPrediction:
         assert result[col].iloc[0] == pytest.approx(4900.0)
 
 
+def _make_per_bin_data(
+    avg_bout_durations: list,
+    stats_sample_counts: list,
+    mouse_id: str = "mouse_A",
+) -> pd.DataFrame:
+    """Build a per-bin DataFrame with varying avg_bout_duration and sample counts."""
+    n = len(avg_bout_durations)
+    return pd.DataFrame(
+        {
+            "MouseID": [mouse_id] * n,
+            f"{BEHAVIOR}_latency_to_first_prediction": [100.0] * n,
+            f"{BEHAVIOR}_latency_to_last_prediction": [200.0] * n,
+            f"{BEHAVIOR}_time_behavior": [100.0] * n,
+            f"{BEHAVIOR}_time_not_behavior": [200.0] * n,
+            f"{BEHAVIOR}_behavior_dist": [50.0] * n,
+            f"{BEHAVIOR}_behavior_dist_threshold": [10.0] * n,
+            f"{BEHAVIOR}_behavior_dist_seg": [5.0] * n,
+            f"{BEHAVIOR}_bout_behavior": [2] * n,
+            f"{BEHAVIOR}_avg_bout_duration": avg_bout_durations,
+            f"{BEHAVIOR}__stats_sample_count": stats_sample_counts,
+            f"{BEHAVIOR}_bout_duration_std": [0.1] * n,
+            f"{BEHAVIOR}_bout_duration_var": [0.01] * n,
+        }
+    )
+
+
+class TestAvgBoutLength:
+    def test_single_bin_returns_that_bins_value(self):
+        data = _make_per_bin_data(
+            avg_bout_durations=[18.8],
+            stats_sample_counts=[5],
+        )
+        result = behavior_summaries.aggregate_data_by_bin_size(data, bin_size=1, behavior=BEHAVIOR)
+        col = f"bin_avg_5.{BEHAVIOR}_avg_bout_length"
+        assert result[col].iloc[0] == pytest.approx(18.8)
+
+    def test_multi_bin_returns_last_bin_value_not_sum(self):
+        """avg_bout_length should be the last bin's value, not a cumulative sum."""
+        data = _make_per_bin_data(
+            avg_bout_durations=[10.0, 20.0, 30.0],
+            stats_sample_counts=[5, 3, 4],
+        )
+        result = behavior_summaries.aggregate_data_by_bin_size(data, bin_size=3, behavior=BEHAVIOR)
+        col = f"bin_avg_15.{BEHAVIOR}_avg_bout_length"
+        # Should be 30.0 (last bin), NOT 60.0 (sum of 10+20+30)
+        assert result[col].iloc[0] == pytest.approx(30.0)
+
+    def test_returns_nan_when_last_bin_has_no_behavior(self):
+        data = _make_per_bin_data(
+            avg_bout_durations=[18.0, 0.0],
+            stats_sample_counts=[4, 0],
+        )
+        result = behavior_summaries.aggregate_data_by_bin_size(data, bin_size=2, behavior=BEHAVIOR)
+        col = f"bin_avg_10.{BEHAVIOR}_avg_bout_length"
+        assert math.isnan(result[col].iloc[0])
+
+    def test_returns_nan_when_all_bins_have_no_behavior(self):
+        data = _make_per_bin_data(
+            avg_bout_durations=[0.0, 0.0],
+            stats_sample_counts=[0, 0],
+        )
+        result = behavior_summaries.aggregate_data_by_bin_size(data, bin_size=2, behavior=BEHAVIOR)
+        col = f"bin_avg_10.{BEHAVIOR}_avg_bout_length"
+        assert math.isnan(result[col].iloc[0])
+
+
 class TestMultiMouseAlignment:
     def test_each_mouse_gets_its_own_first_latency(self):
         """With multiple mice, each should receive their own first-bin latency value."""
@@ -130,3 +196,23 @@ class TestMultiMouseAlignment:
 
         assert result.loc["mouse_A", last_col] == pytest.approx(11000.0)
         assert result.loc["mouse_B", last_col] == pytest.approx(8000.0)
+
+    def test_each_mouse_gets_its_own_avg_bout_length(self):
+        """Each mouse should get its own last-bin avg_bout_length, not a shared scalar."""
+        mouse_a = _make_per_bin_data(
+            avg_bout_durations=[10.0, 20.0],
+            stats_sample_counts=[3, 5],
+            mouse_id="mouse_A",
+        )
+        mouse_b = _make_per_bin_data(
+            avg_bout_durations=[7.0, 0.0],
+            stats_sample_counts=[2, 0],
+            mouse_id="mouse_B",
+        )
+        data = pd.concat([mouse_a, mouse_b], ignore_index=True)
+        result = behavior_summaries.aggregate_data_by_bin_size(data, bin_size=2, behavior=BEHAVIOR)
+        result = result.set_index("MouseID")
+
+        col = f"bin_avg_10.{BEHAVIOR}_avg_bout_length"
+        assert result.loc["mouse_A", col] == pytest.approx(20.0)
+        assert math.isnan(result.loc["mouse_B", col])
