@@ -11,8 +11,7 @@ import pytest
 # Add it to sys.path so we can import it directly.
 sys.path.insert(0, str(Path(__file__).parents[2] / "support_code"))
 
-import behavior_summaries  # noqa: E402
-
+import behavior_summaries
 
 BEHAVIOR = "Jumping"
 
@@ -44,13 +43,17 @@ def _make_filtered_data(
 
 
 class TestLatencyFirstPrediction:
+    """Tests for latency_first_prediction aggregation."""
+
     def test_returns_first_bin_value_when_present(self):
         """latency_first should be the first bin's value, not a cumulative sum."""
         data = _make_filtered_data(
             latency_first_values=[2506.0, 9412.0, 18082.0, float("nan")],
             latency_last_values=[4900.0, 11000.0, 19000.0, float("nan")],
         )
-        result = behavior_summaries.aggregate_data_by_bin_size(data, bin_size=4, behavior=BEHAVIOR)
+        result = behavior_summaries.aggregate_data_by_bin_size(
+            data, bin_size=4, behavior=BEHAVIOR
+        )
         col = f"bin_first_20.{BEHAVIOR}_latency_first_prediction"
         assert result[col].iloc[0] == pytest.approx(2506.0)
 
@@ -60,28 +63,37 @@ class TestLatencyFirstPrediction:
             latency_first_values=[float("nan"), 5000.0, 12000.0, float("nan")],
             latency_last_values=[float("nan"), 8000.0, 15000.0, float("nan")],
         )
-        result = behavior_summaries.aggregate_data_by_bin_size(data, bin_size=4, behavior=BEHAVIOR)
+        result = behavior_summaries.aggregate_data_by_bin_size(
+            data, bin_size=4, behavior=BEHAVIOR
+        )
         col = f"bin_first_20.{BEHAVIOR}_latency_first_prediction"
         assert math.isnan(result[col].iloc[0])
 
     def test_single_bin_returns_that_bins_value(self):
+        """Single bin should return that bin's latency_first value."""
         data = _make_filtered_data(
             latency_first_values=[2506.0],
             latency_last_values=[4900.0],
         )
-        result = behavior_summaries.aggregate_data_by_bin_size(data, bin_size=1, behavior=BEHAVIOR)
+        result = behavior_summaries.aggregate_data_by_bin_size(
+            data, bin_size=1, behavior=BEHAVIOR
+        )
         col = f"bin_first_5.{BEHAVIOR}_latency_first_prediction"
         assert result[col].iloc[0] == pytest.approx(2506.0)
 
 
 class TestLatencyLastPrediction:
+    """Tests for latency_last_prediction aggregation."""
+
     def test_returns_last_bin_value_when_present(self):
         """latency_last should be the last bin's value, not a cumulative sum."""
         data = _make_filtered_data(
             latency_first_values=[2506.0, 9412.0, 18082.0, 38222.0],
             latency_last_values=[4900.0, 11000.0, 19000.0, 45000.0],
         )
-        result = behavior_summaries.aggregate_data_by_bin_size(data, bin_size=4, behavior=BEHAVIOR)
+        result = behavior_summaries.aggregate_data_by_bin_size(
+            data, bin_size=4, behavior=BEHAVIOR
+        )
         col = f"bin_last_20.{BEHAVIOR}_latency_last_prediction"
         assert result[col].iloc[0] == pytest.approx(45000.0)
 
@@ -91,16 +103,21 @@ class TestLatencyLastPrediction:
             latency_first_values=[float("nan"), 5000.0, 12000.0, float("nan")],
             latency_last_values=[float("nan"), 8000.0, 15000.0, float("nan")],
         )
-        result = behavior_summaries.aggregate_data_by_bin_size(data, bin_size=4, behavior=BEHAVIOR)
+        result = behavior_summaries.aggregate_data_by_bin_size(
+            data, bin_size=4, behavior=BEHAVIOR
+        )
         col = f"bin_last_20.{BEHAVIOR}_latency_last_prediction"
         assert math.isnan(result[col].iloc[0])
 
     def test_single_bin_returns_that_bins_value(self):
+        """Single bin should return that bin's latency_last value."""
         data = _make_filtered_data(
             latency_first_values=[2506.0],
             latency_last_values=[4900.0],
         )
-        result = behavior_summaries.aggregate_data_by_bin_size(data, bin_size=1, behavior=BEHAVIOR)
+        result = behavior_summaries.aggregate_data_by_bin_size(
+            data, bin_size=1, behavior=BEHAVIOR
+        )
         col = f"bin_last_5.{BEHAVIOR}_latency_last_prediction"
         assert result[col].iloc[0] == pytest.approx(4900.0)
 
@@ -132,12 +149,17 @@ def _make_per_bin_data(
 
 
 class TestAvgBoutLength:
+    """Tests for avg_bout_length aggregation."""
+
     def test_single_bin_returns_that_bins_value(self):
+        """Single bin should return that bin's avg_bout_duration."""
         data = _make_per_bin_data(
             avg_bout_durations=[18.8],
             stats_sample_counts=[5],
         )
-        result = behavior_summaries.aggregate_data_by_bin_size(data, bin_size=1, behavior=BEHAVIOR)
+        result = behavior_summaries.aggregate_data_by_bin_size(
+            data, bin_size=1, behavior=BEHAVIOR
+        )
         col = f"bin_avg_5.{BEHAVIOR}_avg_bout_length"
         assert result[col].iloc[0] == pytest.approx(18.8)
 
@@ -147,31 +169,41 @@ class TestAvgBoutLength:
             avg_bout_durations=[10.0, 20.0, 30.0],
             stats_sample_counts=[5, 3, 4],
         )
-        result = behavior_summaries.aggregate_data_by_bin_size(data, bin_size=3, behavior=BEHAVIOR)
+        result = behavior_summaries.aggregate_data_by_bin_size(
+            data, bin_size=3, behavior=BEHAVIOR
+        )
         col = f"bin_avg_15.{BEHAVIOR}_avg_bout_length"
         # Should be 30.0 (last bin), NOT 60.0 (sum of 10+20+30)
         assert result[col].iloc[0] == pytest.approx(30.0)
 
     def test_returns_nan_when_last_bin_has_no_behavior(self):
+        """Should return NaN when the last bin has no behavior."""
         data = _make_per_bin_data(
             avg_bout_durations=[18.0, 0.0],
             stats_sample_counts=[4, 0],
         )
-        result = behavior_summaries.aggregate_data_by_bin_size(data, bin_size=2, behavior=BEHAVIOR)
+        result = behavior_summaries.aggregate_data_by_bin_size(
+            data, bin_size=2, behavior=BEHAVIOR
+        )
         col = f"bin_avg_10.{BEHAVIOR}_avg_bout_length"
         assert math.isnan(result[col].iloc[0])
 
     def test_returns_nan_when_all_bins_have_no_behavior(self):
+        """Should return NaN when all bins have no behavior."""
         data = _make_per_bin_data(
             avg_bout_durations=[0.0, 0.0],
             stats_sample_counts=[0, 0],
         )
-        result = behavior_summaries.aggregate_data_by_bin_size(data, bin_size=2, behavior=BEHAVIOR)
+        result = behavior_summaries.aggregate_data_by_bin_size(
+            data, bin_size=2, behavior=BEHAVIOR
+        )
         col = f"bin_avg_10.{BEHAVIOR}_avg_bout_length"
         assert math.isnan(result[col].iloc[0])
 
 
 class TestMultiMouseAlignment:
+    """Tests for multi-mouse alignment in aggregation."""
+
     def test_each_mouse_gets_its_own_first_latency(self):
         """With multiple mice, each should receive their own first-bin latency value."""
         mouse_a = _make_filtered_data(
@@ -185,7 +217,9 @@ class TestMultiMouseAlignment:
             mouse_id="mouse_B",
         )
         data = pd.concat([mouse_a, mouse_b], ignore_index=True)
-        result = behavior_summaries.aggregate_data_by_bin_size(data, bin_size=2, behavior=BEHAVIOR)
+        result = behavior_summaries.aggregate_data_by_bin_size(
+            data, bin_size=2, behavior=BEHAVIOR
+        )
         result = result.set_index("MouseID")
 
         first_col = f"bin_first_10.{BEHAVIOR}_latency_first_prediction"
@@ -210,7 +244,9 @@ class TestMultiMouseAlignment:
             mouse_id="mouse_B",
         )
         data = pd.concat([mouse_a, mouse_b], ignore_index=True)
-        result = behavior_summaries.aggregate_data_by_bin_size(data, bin_size=2, behavior=BEHAVIOR)
+        result = behavior_summaries.aggregate_data_by_bin_size(
+            data, bin_size=2, behavior=BEHAVIOR
+        )
         result = result.set_index("MouseID")
 
         col = f"bin_avg_10.{BEHAVIOR}_avg_bout_length"
