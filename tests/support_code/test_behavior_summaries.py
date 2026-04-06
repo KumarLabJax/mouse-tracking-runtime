@@ -12,8 +12,7 @@ import pytest
 # Add it to sys.path so we can import it directly.
 sys.path.insert(0, str(Path(__file__).parents[2] / "support_code"))
 
-import behavior_summaries  # noqa: E402
-
+import behavior_summaries
 
 BEHAVIOR = "Jumping"
 
@@ -189,9 +188,10 @@ class TestLatencyLastPrediction:
 
 
 class TestAvgBoutLength:
-    """Tests for avg_bout_length (cumulative weighted average over all bins 0..bin_size)."""
+    """Tests for avg_bout_length aggregation."""
 
-    def test_single_bin_returns_value(self):
+    def test_single_bin_returns_that_bins_value(self):
+        """Single bin should return that bin's avg_bout_duration."""
         data = _make_bin_data(
             latency_first_values=[100.0],
             latency_last_values=[200.0],
@@ -213,14 +213,29 @@ class TestAvgBoutLength:
             stats_sample_counts=[5, 3, 4],
         )
         result = behavior_summaries.aggregate_data_by_bin_size(
-            data, bin_size=3, behavior=BEHAVIOR, prev_bin_size=1
+            data, bin_size=3, behavior=BEHAVIOR
         )
         col = f"bin_avg_15.{BEHAVIOR}_avg_bout_length"
-        # Weighted avg = (10*5 + 20*3 + 30*4) / (5+3+4) = 230/12 ≈ 19.1667
+        # Weighted avg across all bins: (10*5 + 20*3 + 30*4) / (5+3+4) = 230/12
         expected = np.average([10.0, 20.0, 30.0], weights=[5, 3, 4])
         assert result[col].iloc[0] == pytest.approx(expected)
 
-    def test_returns_nan_when_all_bins_no_behavior(self):
+    def test_returns_nan_when_last_bin_has_no_behavior(self):
+        """Bins with sample_count=0 have zero weight; only bins with behavior contribute."""
+        data = _make_bin_data(
+            latency_first_values=[100.0, float("nan")],
+            latency_last_values=[200.0, float("nan")],
+            avg_bout_durations=[18.0, 0.0],
+            stats_sample_counts=[4, 0],
+        )
+        result = behavior_summaries.aggregate_data_by_bin_size(
+            data, bin_size=2, behavior=BEHAVIOR
+        )
+        col = f"bin_avg_10.{BEHAVIOR}_avg_bout_length"
+        assert result[col].iloc[0] == pytest.approx(18.0)
+
+    def test_returns_nan_when_all_bins_have_no_behavior(self):
+        """Should return NaN when all bins have no behavior."""
         data = _make_bin_data(
             latency_first_values=[float("nan"), float("nan")],
             latency_last_values=[float("nan"), float("nan")],
@@ -251,8 +266,10 @@ class TestAvgBoutLength:
 
 
 class TestMultiMouseAlignment:
-    def test_each_mouse_gets_own_latency(self):
-        """Each mouse gets its own incremental latency values."""
+    """Tests for multi-mouse alignment in aggregation."""
+
+    def test_each_mouse_gets_its_own_first_latency(self):
+        """With multiple mice, each should receive their own first-bin latency value."""
         mouse_a = _make_bin_data(
             latency_first_values=[2506.0, 9412.0],
             latency_last_values=[4900.0, 11000.0],
