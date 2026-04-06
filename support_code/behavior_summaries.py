@@ -163,10 +163,13 @@ def aggregate_data_by_bin_size(
     sample_count_col = f"{behavior}__stats_sample_count"
 
     def _weighted_avg_bout(group):
-        total_count = group[sample_count_col].sum()
-        if total_count == 0:
+        mask = group[sample_count_col] > 0
+        if not mask.any():
             return np.nan
-        return np.average(group[avg_bout_dur_col], weights=group[sample_count_col])
+        return np.average(
+            group.loc[mask, avg_bout_dur_col],
+            weights=group.loc[mask, sample_count_col],
+        )
 
     avg_bout_length = filtered_data.groupby("MouseID").apply(_weighted_avg_bout)
 

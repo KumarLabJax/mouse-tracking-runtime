@@ -248,6 +248,38 @@ class TestAvgBoutLength:
         col = f"bin_avg_10.{BEHAVIOR}_avg_bout_length"
         assert math.isnan(result[col].iloc[0])
 
+    def test_first_bin_no_behavior_uses_later_bins(self):
+        """No behavior in first bin (NaN duration, 0 count) — later bins drive the average."""
+        data = _make_bin_data(
+            latency_first_values=[float("nan"), 100.0, 200.0],
+            latency_last_values=[float("nan"), 150.0, 250.0],
+            avg_bout_durations=[float("nan"), 10.0, 20.0],
+            stats_sample_counts=[0, 5, 3],
+        )
+        result = behavior_summaries.aggregate_data_by_bin_size(
+            data, bin_size=3, behavior=BEHAVIOR
+        )
+        col = f"bin_avg_15.{BEHAVIOR}_avg_bout_length"
+        # Bins 1 and 2 contribute: (10*5 + 20*3) / (5+3) = 110/8 = 13.75
+        expected = np.average([10.0, 20.0], weights=[5, 3])
+        assert result[col].iloc[0] == pytest.approx(expected)
+
+    def test_nan_duration_with_zero_weight_is_ignored(self):
+        """NaN avg_bout_duration with sample_count=0 should not poison the weighted average."""
+        data = _make_bin_data(
+            latency_first_values=[100.0, 200.0, float("nan")],
+            latency_last_values=[150.0, 250.0, float("nan")],
+            avg_bout_durations=[10.0, 20.0, float("nan")],
+            stats_sample_counts=[5, 3, 0],
+        )
+        result = behavior_summaries.aggregate_data_by_bin_size(
+            data, bin_size=3, behavior=BEHAVIOR
+        )
+        col = f"bin_avg_15.{BEHAVIOR}_avg_bout_length"
+        # Only bins 0 and 1 contribute: (10*5 + 20*3) / (5+3) = 110/8 = 13.75
+        expected = np.average([10.0, 20.0], weights=[5, 3])
+        assert result[col].iloc[0] == pytest.approx(expected)
+
     def test_skips_bins_with_no_behavior_in_weighted_avg(self):
         """Bins with sample_count=0 have zero weight and don't affect the average."""
         data = _make_bin_data(
