@@ -34,6 +34,13 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "-o", "--output", type=str, required=True, help="output file name"
     )
+    parser.add_argument(
+        "-p",
+        "--prev_bin_size",
+        type=int,
+        default=0,
+        help="previous bin size (rows to skip for incremental latency features)",
+    )
     return parser.parse_args()
 
 
@@ -115,7 +122,7 @@ def get_columns_to_exclude(behavior: str) -> list:
 
 
 def aggregate_data_by_bin_size(
-    data: pd.DataFrame, bin_size: int, behavior: str
+    data: pd.DataFrame, bin_size: int, behavior: str, prev_bin_size: int = 0
 ) -> pd.DataFrame:
     """Aggregate data by bin size.
 
@@ -123,6 +130,9 @@ def aggregate_data_by_bin_size(
         data: Preprocessed dataframe.
         bin_size: Number of bins to aggregate.
         behavior: Behavior name.
+        prev_bin_size: Previous bin size; rows before this index are excluded
+            from incremental features (latency). Sum features and avg_bout_length
+            remain cumulative from bin 0.
 
     Returns:
         pd.DataFrame: Aggregated dataframe.
@@ -131,28 +141,34 @@ def aggregate_data_by_bin_size(
     grouped = data.groupby("MouseID")
     filtered_data = pd.concat([group.iloc[:bin_size] for _, group in grouped])
 
-    # Extract latency values before summing. agg with a positional lambda
-    # preserves NaN (unlike first()/last() which skip NaN), returns a Series
-    # indexed by MouseID for correct alignment with aggregated.
+    # Incremental slice: only the "new" bins for latency features.
+    # E.g., with feature_bins=[1,4], bin_size=4, prev_bin_size=1:
+    #   filtered_data has bins 0-3 (0-20min), incremental has bins 1-3 (5-20min)
+    incremental_data = pd.concat([
+        group.iloc[prev_bin_size:bin_size]
+        for _, group in filtered_data.groupby("MouseID")
+    ])
+
+    # Latency: first()/last() skip NaN within the incremental window.
+    # For a single-bin window, returns that bin's value or NaN.
+    # For a multi-bin window, returns first/last non-NaN, or NaN if all are NaN.
     latency_first_col = f"{behavior}_latency_to_first_prediction"
     latency_last_col = f"{behavior}_latency_to_last_prediction"
-    latency_first = filtered_data.groupby("MouseID")[latency_first_col].agg(
-        lambda s: s.iloc[0]
-    )
-    latency_last = filtered_data.groupby("MouseID")[latency_last_col].agg(
-        lambda s: s.iloc[-1]
-    )
+    latency_first = incremental_data.groupby("MouseID")[latency_first_col].first()
+    latency_last = incremental_data.groupby("MouseID")[latency_last_col].last()
 
-    # Extract last-bin avg_bout_duration and sample_count before summing.
-    # Same pattern as latency: last bin's value per MouseID, NaN-preserving.
+    # Avg bout length: cumulative weighted average across ALL bins (0 to bin_size),
+    # matching the semantics of sum features.
     avg_bout_dur_col = f"{behavior}_avg_bout_duration"
     sample_count_col = f"{behavior}__stats_sample_count"
-    last_bin_avg_bout_dur = filtered_data.groupby("MouseID")[avg_bout_dur_col].agg(
-        lambda s: s.iloc[-1]
-    )
-    last_bin_sample_count = filtered_data.groupby("MouseID")[sample_count_col].agg(
-        lambda s: s.iloc[-1]
-    )
+
+    def _weighted_avg_bout(group):
+        total_count = group[sample_count_col].sum()
+        if total_count == 0:
+            return np.nan
+        return np.average(group[avg_bout_dur_col], weights=group[sample_count_col])
+
+    avg_bout_length = filtered_data.groupby("MouseID").apply(_weighted_avg_bout)
 
     # Aggregate numeric columns by summing them
     numeric_cols = filtered_data.select_dtypes(include=["number"]).columns
@@ -193,11 +209,7 @@ def aggregate_data_by_bin_size(
         behavior_bout_col
     ]
 
-    # Average bout length: use the last bin's value directly. Where that bin
-    # had no behavior (sample_count == 0), force NaN as a safety guard.
-    aggregated[f"bin_avg_{bin_size * 5}.{behavior}_avg_bout_length"] = (
-        last_bin_avg_bout_dur.where(last_bin_sample_count > 0, other=np.nan)
-    )
+    aggregated[f"bin_avg_{bin_size * 5}.{behavior}_avg_bout_length"] = avg_bout_length
     # TODO: var and std need to be aggregated across bins.
     # This is non-trivial because of the partial bouts and their associated weights.
     aggregated[f"bin_first_{bin_size * 5}.{behavior}_latency_first_prediction"] = (
@@ -227,7 +239,7 @@ def main():
 
     # Aggregate data by bin size
     aggregated_data = aggregate_data_by_bin_size(
-        processed_data, args.bin_size, behavior
+        processed_data, args.bin_size, behavior, args.prev_bin_size
     )
 
     # Drop excluded columns
