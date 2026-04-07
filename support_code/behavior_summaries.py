@@ -144,10 +144,12 @@ def aggregate_data_by_bin_size(
     # Incremental slice: only the "new" bins for latency features.
     # E.g., with feature_bins=[1,4], bin_size=4, prev_bin_size=1:
     #   filtered_data has bins 0-3 (0-20min), incremental has bins 1-3 (5-20min)
-    incremental_data = pd.concat([
-        group.iloc[prev_bin_size:bin_size]
-        for _, group in filtered_data.groupby("MouseID")
-    ])
+    incremental_data = pd.concat(
+        [
+            group.iloc[prev_bin_size:bin_size]
+            for _, group in filtered_data.groupby("MouseID")
+        ]
+    )
 
     # Latency: first()/last() skip NaN within the incremental window.
     # For a single-bin window, returns that bin's value or NaN.

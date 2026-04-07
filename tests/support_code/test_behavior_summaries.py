@@ -65,6 +65,7 @@ class TestLatencyFirstPrediction:
         assert result[col].iloc[0] == pytest.approx(2506.0)
 
     def test_single_bin_nan_returns_nan(self):
+        """NaN input returns NaN for single bin."""
         data = _make_bin_data(
             latency_first_values=[float("nan")],
             latency_last_values=[float("nan")],
@@ -89,7 +90,9 @@ class TestLatencyFirstPrediction:
 
     def test_non_consecutive_bins_returns_first_in_range(self):
         """bin_size=3, prev_bin_size=1: incremental window is bins 1-2 (5-15min).
-        Should return first non-NaN in that range."""
+
+        Should return first non-NaN in that range.
+        """
         data = _make_bin_data(
             latency_first_values=[2506.0, 9412.0, 18082.0],
             latency_last_values=[4900.0, 11000.0, 19000.0],
@@ -141,6 +144,7 @@ class TestLatencyLastPrediction:
     """Tests for bin_last_XX.latency_last_prediction (incremental semantics)."""
 
     def test_single_bin_returns_value(self):
+        """Single bin returns the last prediction value."""
         data = _make_bin_data(
             latency_first_values=[2506.0],
             latency_last_values=[4900.0],
@@ -176,6 +180,7 @@ class TestLatencyLastPrediction:
         assert result[col].iloc[0] == pytest.approx(11000.0)
 
     def test_incremental_all_nan_returns_nan(self):
+        """All NaN in incremental range returns NaN."""
         data = _make_bin_data(
             latency_first_values=[2506.0, float("nan"), float("nan")],
             latency_last_values=[4900.0, float("nan"), float("nan")],
