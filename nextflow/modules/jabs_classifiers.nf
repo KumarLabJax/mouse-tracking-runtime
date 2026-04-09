@@ -176,14 +176,14 @@ process BEHAVIOR_TABLE_TO_FEATURES {
     label "r_jabs_table_convert"
 
     input:
-    tuple path(in_summary_table), val(bin_size)
+    tuple path(in_summary_table), val(bin_size), val(prev_bin_size)
 
     output:
     path("${in_summary_table.baseName}_features_${bin_size}.csv"), emit: features
 
     script:
     """
-    python3 ${params.support_code_dir}/behavior_summaries.py -f ${in_summary_table} -b ${bin_size} -o "${in_summary_table.baseName}_features_${bin_size}.csv"
+    python3 ${params.support_code_dir}/behavior_summaries.py -f ${in_summary_table} -b ${bin_size} -p ${prev_bin_size} -o "${in_summary_table.baseName}_features_${bin_size}.csv"
     """
 }
 

@@ -131,12 +131,20 @@ workflow SINGLE_MOUSE_V6_FEATURES {
         .collect()
     merged_bout_tables = AGGREGATE_BOUT_TABLES(all_bout_tables).merged_bout_tables
 
+    // Compute incremental bin pairs: [bin_size, prev_bin_size]
+    // Each bin_size is paired with the previous feature_bin so that latency
+    // features describe only the incremental time window.
+    sorted_bins = params.feature_bins.sort()
+    bin_pairs = sorted_bins.withIndex().collect { bin_size, idx ->
+        [bin_size, idx == 0 ? 0 : sorted_bins[idx - 1]]
+    }
+
     // Combine table data into feature file
     all_summary_tables = heuristic_tables
         .concat(classifier_tables)
         .map { bout_table, summary_table -> summary_table }
         .flatten()
-        .combine(params.feature_bins)
+        .combine(Channel.fromList(bin_pairs))
     individual_behavior_features = BEHAVIOR_TABLE_TO_FEATURES(all_summary_tables)
     // Features are named columns (wide) split across multiple files
     // Transform them into long format so that we can row-concat without sorting
