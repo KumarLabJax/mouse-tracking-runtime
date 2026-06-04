@@ -594,7 +594,8 @@ def write_pose_clip(
         for key, attrs in all_attrs.items():
             for cur_attr, data in attrs.items():
                 out_f[key].attrs.create(cur_attr, data)
-        out_f["poseest"].attrs.create("clip_start_frame", clip_idxs[0])
+        if len(adjusted_clip_idxs) > 0:
+            out_f["poseest"].attrs.create("clip_start_frame", clip_idxs[0])
 
 
 def downgrade_pose_file(pose_h5_path, disable_id: bool = False):
