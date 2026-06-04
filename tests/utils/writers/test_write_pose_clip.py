@@ -877,7 +877,9 @@ def test_writes_clip_start_frame_attribute():
     try:
         with h5py.File(in_pose_file, "w") as f:
             poseest = f.create_group("poseest")
-            poseest.create_dataset("points", data=np.random.rand(20, 1, 12, 2).astype(np.float32))
+            poseest.create_dataset(
+                "points", data=np.random.rand(20, 1, 12, 2).astype(np.float32)
+            )
             poseest.attrs["version"] = [3, 0]
 
         write_pose_clip(in_pose_file, out_pose_file, range(5, 15))
