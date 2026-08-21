@@ -1,6 +1,6 @@
 [project]
 name = "mouse-tracking"
-version = "0.2.7"
+version = "0.2.8"
 description = "Runtime environment for mouse tracking experiments"
 requires-python = ">=3.10,<3.11"
 packages = ["src/mouse_tracking"]
@@ -12,7 +12,8 @@ dependencies = [
   "imageio[ffmpeg]==2.31.6",
   "pillow==9.4.0",
   "matplotlib==3.7.1",
-  "typer>=0.12.4",
+  "typer>=0.12.4,<0.26",
+  "click>=8.1.7,<8.3",
   "absl-py==1.4.0",
   "pydantic==2.7.4",
   "networkx==3.3",
