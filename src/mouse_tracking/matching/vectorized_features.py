@@ -316,6 +316,11 @@ def compute_vectorized_match_costs(
 
     n1, n2 = features1.n_detections, features2.n_detections
 
+    # Handle empty cases - return properly shaped zero matrix
+    # When one side has no detections, matching is impossible
+    if n1 == 0 or n2 == 0:
+        return np.zeros((n1, n2), dtype=np.float64)
+
     # Compute all distance matrices
     pose_distances = compute_vectorized_pose_distances(
         features1, features2, use_rotation=pose_rotation

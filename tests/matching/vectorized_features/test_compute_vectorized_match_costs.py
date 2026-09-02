@@ -267,13 +267,56 @@ class TestComputeVectorizedMatchCostsEdgeCases:
         assert result.shape == (2, 1)
         assert np.all(np.isfinite(result))
 
-    def test_no_detections(self, features_factory):
-        """Test with no detections."""
-        # Empty detection arrays may cause issues with array broadcasting
-        # Skip this test for now as it's an edge case that may need fixing in the main code
-        pytest.skip(
-            "Empty detection arrays need special handling in vectorized functions"
+    def test_empty_detections_both_sides(self, features_factory):
+        """Test with no detections on both sides."""
+        features1 = features_factory(n_detections=0)
+        features2 = features_factory(n_detections=0)
+
+        result = compute_vectorized_match_costs(features1, features2)
+
+        # Should return properly shaped empty matrix
+        assert result.shape == (0, 0)
+        assert result.dtype == np.float64
+
+    def test_empty_detections_first_side(self, features_factory):
+        """Test with no detections on first side."""
+        features1 = features_factory(n_detections=0)
+        features2 = features_factory(n_detections=3)
+
+        result = compute_vectorized_match_costs(features1, features2)
+
+        # Should return properly shaped empty matrix
+        assert result.shape == (0, 3)
+        assert result.dtype == np.float64
+
+    def test_empty_detections_second_side(self, features_factory):
+        """Test with no detections on second side."""
+        features1 = features_factory(n_detections=3)
+        features2 = features_factory(n_detections=0)
+
+        result = compute_vectorized_match_costs(features1, features2)
+
+        # Should return properly shaped empty matrix
+        assert result.shape == (3, 0)
+        assert result.dtype == np.float64
+
+    def test_empty_detections_with_all_parameters(self, features_factory):
+        """Test empty detections with various parameter combinations."""
+        features1 = features_factory(n_detections=2)
+        features2 = features_factory(n_detections=0)
+
+        # Test with different parameters to ensure robustness
+        result = compute_vectorized_match_costs(
+            features1,
+            features2,
+            max_dist=40.0,
+            default_cost=0.5,
+            beta=(1.0, 1.0, 1.0),
+            pose_rotation=True,
         )
+
+        assert result.shape == (2, 0)
+        assert result.dtype == np.float64
 
     def test_asymmetric_detection_counts(self, features_factory):
         """Test with different numbers of detections."""
