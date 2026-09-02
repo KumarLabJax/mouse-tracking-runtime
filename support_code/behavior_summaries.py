@@ -185,9 +185,9 @@ def aggregate_data_by_bin_size(
     behavior_dist_col = f"{behavior}_behavior_dist"
     behavior_bout_col = f"{behavior}_bout_behavior"
 
-    # Calculate time spent in behavior
+    # Calculate time spent in behavior (in minutes)
     # TODO: Do we need to make `5` a configurable parameter?
-    aggregated[f"bin_sum_{bin_size * 5}.{behavior}_time_secs"] = (
+    aggregated[f"bin_sum_{bin_size * 5}.{behavior}_time_min"] = (
         aggregated[time_behavior_col]
         / (aggregated[time_behavior_col] + aggregated[time_not_behavior_col])
         * bin_size

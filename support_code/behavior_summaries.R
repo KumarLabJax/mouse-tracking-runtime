@@ -29,7 +29,7 @@ data_agg <- lapply(seq_along(row_num), function(x) {
     tmp <- data |> group_by(MouseID) |> filter(row_number() <= row_num[x])
     tmpsum <- rowsum(tmp[,sapply(tmp, is.numeric)], tmp$MouseID)
     
-    tmpsum <- tmpsum |> mutate(!!paste0("bin_avg_", row_num[x]*5, ".", behavior, "_time_secs") := get(paste0(behavior, "_time_behavior"))/(get(paste0(behavior, "_time_behavior")) + get(paste0(behavior, "_time_not_behavior")))*row_num[x]*5, !!paste0("bin_avg_", row_num[x]*5, ".", behavior, "_distance_cm") := get(paste0(behavior, "_behavior_dist"))/(row_num[x]*5))
+    tmpsum <- tmpsum |> mutate(!!paste0("bin_avg_", row_num[x]*5, ".", behavior, "_time_min") := get(paste0(behavior, "_time_behavior"))/(get(paste0(behavior, "_time_behavior")) + get(paste0(behavior, "_time_not_behavior")))*row_num[x]*5, !!paste0("bin_avg_", row_num[x]*5, ".", behavior, "_distance_cm") := get(paste0(behavior, "_behavior_dist"))/(row_num[x]*5))
     
     tmpsum$MouseID <- rownames(tmpsum)
     tmpsum <- tmpsum |> select(!all_of(cols_to_exclude))
