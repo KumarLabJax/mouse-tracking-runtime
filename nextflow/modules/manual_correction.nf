@@ -31,9 +31,19 @@ process EXTRACT_VIDEO_FRAME {
 /**
  * Adds a set of frames to a new SLEAP project file for arena corner annotation.
  *
+ * The frames are copied to params.pubdir/failed_corners (alongside the pose
+ * files for the same videos, see SPLIT_BY_CORNERS) before being referenced by
+ * the SLEAP project, since SLEAP retains the source path of each embedded
+ * frame and re-resolves it on later loads. Pointing at a Nextflow work
+ * directory path would leave that reference dangling once the work directory
+ * is cleaned, causing SLEAP to repeatedly prompt to locate the missing frame
+ * image.
+ *
  * @param video_frames A list of png images to be added to the SLEAP project.
  *
  * @return sleap_file The generated SLEAP project file containing the frames and arena corner skeleton for annotation.
+ *
+ * @publish ./failed_corners/ Extracted corner annotation frame images
  */
 process ADD_EXAMPLES_TO_SLEAP {
     label "sleap"
@@ -48,6 +58,9 @@ process ADD_EXAMPLES_TO_SLEAP {
     """
     #!/usr/bin/env python3
 
+    import os
+    import shutil
+
     import sleap
     from sleap.io.video import Video
     from sleap.skeleton import Skeleton
@@ -60,11 +73,15 @@ process ADD_EXAMPLES_TO_SLEAP {
 
     labels_obj = sleap.Labels(skeletons=[skeleton_obj])
     video_frames = [${video_frames.collect { element -> "\"${element.toString()}\"" }.join(', ')}]
+    frame_dir = "${params.pubdir}/failed_corners"
+    os.makedirs(frame_dir, exist_ok=True)
     for frame in video_frames:
-        new_video = Video.from_filename(frame)
+        published_frame = os.path.join(frame_dir, os.path.basename(frame))
+        shutil.copy(frame, published_frame)
+        new_video = Video.from_filename(published_frame)
         labels_obj.add_video(new_video)
         labels_obj.add_suggestion(new_video, 0)
-    
+
     sleap.Labels.save_file(labels_obj, "corner-correction.slp", all_labeled=True, save_frame_data=True, suggested=True)
     """
 }
