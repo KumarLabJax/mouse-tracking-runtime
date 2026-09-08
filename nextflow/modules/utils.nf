@@ -482,6 +482,7 @@ def validateInputFile(String file_path, String pipeline_type) {
         'single-mouse': ['.avi', '.mp4'],
         'single-mouse-corrected-corners': ['.h5'],
         'single-mouse-v6-features': ['.h5'],
+        'single-mouse-v2-features': ['.h5'],
         'multi-mouse': ['.avi', '.mp4']
     ]
     

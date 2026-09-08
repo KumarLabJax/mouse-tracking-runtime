@@ -163,3 +163,19 @@ Output:
 
 Example Command:
 `nextflow -c nextflow.config -c nextflow/configs/profiles/development.config run main.nf --input_batch /path/to/pose_v6_batch.txt --workflow single-mouse-v6-features --pubdir /path/to/output_folder`
+
+### Pose File (v2) to Features
+
+The nextflow workflow `single-mouse-v2-features` generates pose_v2 features (gait and morphometrics) from pose files.
+
+Input:
+* Pose files (pose_v2)
+
+Output:
+* `workflow_version.txt` information related to the specific workflow run.
+* pose_v2 related features
+ * `gait.csv` feature file containing gait pipeline features.
+ * `morphometrics.csv` feature file containing morphometric features.
+
+Example Command:
+`nextflow -c nextflow.config -c nextflow/configs/profiles/development.config run main.nf --input_batch /path/to/pose_v2_batch.txt --workflow single-mouse-v2-features --pubdir /path/to/output_folder`
